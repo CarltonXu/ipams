@@ -25,7 +25,7 @@ def create_app():
     app.register_blueprint(api_bp, url_prefix='/api')
 
     # Setup scanner
-    setup_scanner(app)
+    #setup_scanner(app)
     
     # Create database tables
     with app.app_context():

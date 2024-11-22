@@ -10,7 +10,7 @@ def scan_network(app, network_range):
     with app.app_context():
         try:
             # 执行网络扫描
-            results = nm.scan(hosts=network_range, arguments='-sn')  # '-sn' 用于仅进行 Ping 扫描
+            results = nm.scan(hosts=network_range, arguments='-sn - -T4')  # '-sn' 用于仅进行 Ping 扫描
             # 处理扫描结果
             scanned_ips = set()
             for host in results['scan']:

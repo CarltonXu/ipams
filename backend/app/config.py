@@ -5,7 +5,7 @@ load_dotenv()
 
 class Config:
     # Database configuration
-    SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL', 'mysql+pymysql://root:root123.@127.0.0.1/ipams')
+    SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL', 'mysql+pymysql://root:root123.@127.0.0.1:13306/ipams')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
     # Scanner configuration

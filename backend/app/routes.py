@@ -39,6 +39,57 @@ def log_action_to_db(user, action, target, details=None):
     db.session.add(log)
     db.session.commit()
 
+@api_bp.route('/users', methods=['POST'])
+@token_required
+def add_users(current_user):
+    """
+    管理员添加新用户。
+    """
+    data = request.json
+
+    # 校验必填字段
+    required_fields = ['username', 'email', 'password', 'is_admin']
+    for field in required_fields:
+        if field not in data:
+            return jsonify({'error': f'{field} is required'}), 400
+
+    username = data.get('username')
+    email = data.get('email')
+    password = data.get('password')
+    is_admin = data.get('is_admin', False)
+
+    # 校验邮箱格式
+    if not is_valid_email(email):
+        return jsonify({'error': 'Invalid email format'}), 400
+
+    # 检查用户名和邮箱是否已存在
+    if User.query.filter_by(username=username).first():
+        return jsonify({'error': 'Username already exists'}), 400
+
+    if User.query.filter_by(email=email).first():
+        return jsonify({'error': 'Email already exists'}), 400
+
+    # 创建新用户
+    new_user = User(
+        username=username,
+        email=email,
+        is_admin=is_admin
+    )
+    new_user.set_password(password)
+    db.session.add(new_user)
+    db.session.commit()
+
+    # 记录日志
+    log_action_to_db(
+        user=current_user,
+        action="Added a new user",
+        target=new_user.id,
+        details=f"User added with username: {username}, email: {email}, is_admin: {is_admin}"
+    )
+
+    return jsonify({'message': 'User added successfully', 'user': new_user.to_dict()}), 201
+
+
 @api_bp.route('/users', methods=['GET'])
 @token_required
 def get_users(current_user):

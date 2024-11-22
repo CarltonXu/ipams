@@ -5,10 +5,14 @@ import type { User } from '../types/user';
 export const useUserStore = defineStore('user', {
   state: () => ({
     users: [] as User[], // 用户列表
-    usersMap: new Map<string, User>(), // 用于快速查找的映射
+    usersMap: new Map<string, User>(), // 用户映射
     currentUser: null as User | null, // 当前用户
-    totalUsers: 0, // 用户总数
-    loading: false, // 加载状态
+    loading: false, // 全局加载状态
+
+    currentPage: 1, // 当前页码
+    pageSize: 10, // 每页条数
+    total: 0, // 总记录数
+    pages: 0, // 总页数
   }),
 
   getters: {
@@ -21,16 +25,33 @@ export const useUserStore = defineStore('user', {
 
   actions: {
     /**
-     * 获取所有用户
-     * 支持分页
+     * 同步用户映射
      */
-    async fetchUsers(page = 1, page_size = 10) {
+    syncUsersMap() {
+      this.usersMap = new Map(this.users.map((user: User) => [user.id, user]));
+    },
+
+    /**
+     * 获取用户列表（分页）
+     */
+    async fetchUsers(page?: number, pageSize?: number) {
       this.loading = true;
+      const currentPage = page ?? this.currentPage;
+      const currentPageSize = pageSize ?? this.pageSize;
+
       try {
-        const response = await axios.get(`/api/users?page=${page}&page_size=${page_size}`);
-        this.users = response.data.users;
-        this.totalUsers = response.data.total;
-        this.usersMap = new Map(response.data.users.map((user: User) => [user.id, user]));
+        const response = await axios.get('/api/users', {
+          params: { page: currentPage, page_size: currentPageSize },
+        });
+        const { users = [], total = 0 } = response.data;
+
+        this.users = Array.isArray(users) ? users : [];
+        this.total = total;
+        this.pages = Math.ceil(total / currentPageSize);
+        this.currentPage = currentPage;
+        this.pageSize = currentPageSize;
+
+        this.syncUsersMap();
       } catch (error: any) {
         console.error('Failed to fetch users:', error);
         throw new Error(error.response?.data?.message || '无法获取用户列表');
@@ -40,15 +61,19 @@ export const useUserStore = defineStore('user', {
     },
 
     /**
-     * 根据用户ID获取用户信息
+     * 获取指定用户信息（支持缓存）
      */
     async fetchUserById(userId: string) {
       try {
-        const cachedUser = this.usersMap.get(userId);
-        if (cachedUser) return cachedUser;
+        if (this.usersMap.has(userId)) {
+          return this.usersMap.get(userId)!;
+        }
 
         const response = await axios.get(`/api/users/${userId}`);
-        return response.data;
+        const user = response.data;
+        this.users.push(user);
+        this.syncUsersMap();
+        return user;
       } catch (error: any) {
         console.warn(`User with ID ${userId} not found.`);
         return null;
@@ -56,15 +81,15 @@ export const useUserStore = defineStore('user', {
     },
 
     /**
-     * 获取当前用户信息
-     * 支持本地缓存
+     * 获取当前用户信息（带缓存）
      */
     async fetchCurrentUser(onLogout?: () => void) {
       try {
         const cachedUser = localStorage.getItem('user');
         if (cachedUser) {
-          this.currentUser = JSON.parse(cachedUser);
-          return this.currentUser;
+          const parsedUser = JSON.parse(cachedUser);
+          this.currentUser = parsedUser;
+          return parsedUser;
         }
 
         const response = await axios.get('/api/users/me');
@@ -81,13 +106,16 @@ export const useUserStore = defineStore('user', {
      * 添加用户
      */
     async addUser(newUser: Partial<User>) {
+      this.loading = true;
       try {
         const response = await axios.post('/api/users', newUser);
         this.users.push(response.data);
-        this.usersMap.set(response.data.id, response.data);
+        this.syncUsersMap();
       } catch (error: any) {
         console.error('Failed to add user:', error);
         throw new Error(error.response?.data?.message || '无法添加用户');
+      } finally {
+        this.loading = false;
       }
     },
 
@@ -95,16 +123,19 @@ export const useUserStore = defineStore('user', {
      * 更新用户信息
      */
     async updateUser(updatedUser: Partial<User>) {
+      this.loading = true;
       try {
         const response = await axios.put(`/api/users/${updatedUser.id}`, updatedUser);
         const index = this.users.findIndex((user) => user.id === updatedUser.id);
         if (index !== -1) {
           this.users[index] = { ...this.users[index], ...response.data };
-          this.usersMap.set(response.data.id, response.data);
+          this.syncUsersMap();
         }
       } catch (error: any) {
         console.error('Failed to update user:', error);
         throw new Error(error.response?.data?.message || '无法更新用户');
+      } finally {
+        this.loading = false;
       }
     },
 
@@ -112,13 +143,16 @@ export const useUserStore = defineStore('user', {
      * 删除用户
      */
     async deleteUser(userId: string) {
+      this.loading = true;
       try {
         await axios.delete(`/api/users/${userId}`);
         this.users = this.users.filter((user) => user.id !== userId);
-        this.usersMap.delete(userId);
+        this.syncUsersMap();
       } catch (error: any) {
         console.error('Failed to delete user:', error);
         throw new Error(error.response?.data?.message || '无法删除用户');
+      } finally {
+        this.loading = false;
       }
     },
   },

@@ -1,7 +1,7 @@
 <template>
   <nav class="header-nav">
     <router-link 
-      v-for="item in navItems"
+      v-for="item in filteredNavItems"
       :key="item.path"
       :to="item.path"
       class="nav-link"
@@ -17,14 +17,24 @@
 </template>
 
 <script setup lang="ts">
-import { ref, markRaw } from 'vue';
+import { ref, markRaw, computed } from 'vue';
 import { Setting, User } from '@element-plus/icons-vue';
+import { useAuthStore } from '../stores/auth'; // 引入认证存储
 
 const navItems = ref([
-  { label: '主机管理', path: '/ips', icon: markRaw(Setting), clicked: false },
-  { label: '用户管理', path: '/users', icon: markRaw(User), clicked: false },
-  { label: '系统设置', path: '/settings', icon: markRaw(Setting), clicked: false },
+  { label: '主机管理', path: '/ips', icon: markRaw(Setting), clicked: false, is_admin_only: false },
+  { label: '用户管理', path: '/users', icon: markRaw(User), clicked: false, is_admin_only: true },
+  { label: '系统设置', path: '/settings', icon: markRaw(Setting), clicked: false, is_admin_only: false },
 ]);
+
+// 获取用户权限状态
+const authStore = useAuthStore();
+const isAdmin = computed(() => authStore.user?.is_admin); // 从存储中获取是否为管理员
+
+// 过滤后的导航项
+const filteredNavItems = computed(() =>
+  navItems.value.filter(item => !item.is_admin_only || isAdmin.value)
+);
 
 // 点击事件处理，设置 clicked 为 true，并将其他按钮的 clicked 设置为 false
 const handleClick = (clickedItem: any) => {

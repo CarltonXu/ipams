@@ -7,20 +7,141 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
-*.local
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Dependency directories
+node_modules/
+jspm_packages/
+
+# Build output directories
+dist/
+dist-ssr/
+out/
+build/
+.cache/
+.next/
+.nuxt/
+.tmp/
+
+# Temporary files
+*.swp
+*.swo
+*.swn
+*.sw?
+*.tmp
+*.temp
+*.bak
+*.backup
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
 
 # Editor directories and files
-.vscode/*
-.venv/*
-*migrations/*
-!.vscode/extensions.json
-.idea
-.DS_Store
+.vscode/
+.idea/
+*.code-workspace
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+.viminfo
+.project
+.classpath
+.settings/
+*.pyc
+*.pyo
+*.pyd
+*.vagrant/
+
+# Environment files
+.env
+.env.*.local
+*.venv/
+.migrations/
+
+# Test coverage
+coverage/
+.nyc_output/
+coverage-final.json
+
+# Debug directories and files
+debug/
+error.log
+stacktrace.log
+
+# Packaging
+*.tgz
+*.zip
+*.tar
+*.rar
+*.7z
+
+# Yarn
+.yarn/
+.pnp.*
+.yarnrc.yml
+
+# Firebase
+.firebase/
+firebaserc
+
+# Storybook
+.storybook-out/
+
+# Database files
+*.sqlite3
+*.db
+*.sql
+
+# Python
+*.py[cod]
+__pycache__/
+*.so
+
+# Svelte
+.svelte-kit/
+
+# Miscellaneous
+*.local
+*.lock
+*.mocha/
+
+# Prevent sensitive files from being added
+secrets.json
+firebase-service-account.json
+auth.json
+private-key.pem
+private-key.p12
+
+# Specific tool-related ignores
+.eslintcache
+.prettiercache
+stylelintcache
+
+# Git hooks
+.githooks/
+
+# Generated files
+*.iml
+*.ipr
+*.iws
+
+# CI/CD
+.npmrc
+.package-lock.json
+.pipfile.lock
+yarn.lock
+pnpm-lock.yaml
+*.sh.lock
+
+# Custom exclusions
+!.vscode/extensions.json

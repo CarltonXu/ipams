@@ -1,3 +1,116 @@
+<template>
+  <div class="ip-list">
+    <!-- 未登录跳转到登录 -->
+    <el-card>
+      <div v-if="!isAuthenticated" class="login-container">
+        <Login />
+      </div>
+      <!-- 登录后的内容 -->
+      <!-- 工具栏 -->
+      <div class="toolbar" v-else>
+        <div class="toolbar-header">
+          <h2>IP Address Management</h2>
+          <p class="subtitle">Easily manage your IP addresses with filters and search functionality.</p>
+        </div>
+        <div class="filters">
+          <el-input
+            v-model="searchQuery"
+            @input="debouncedSearch"
+            placeholder="Search IPs, devices, or purpose"
+            prefix-icon="Search"
+            clearable
+            class="search-input"
+          />
+          <el-select v-model="statusFilter" class="status-filter" placeholder="Filter by Status">
+            <el-option label="All Status" value="all" />
+            <el-option label="Active" value="active" />
+            <el-option label="Inactive" value="inactive" />
+            <el-option label="Unclaimed" value="unclaimed" />
+          </el-select>
+        </div>
+      </div>
+
+      <div class="table-container">
+        <!-- 表格 -->
+        <el-table
+          v-loading="ipStore.loading"
+          :data="filteredIPs"
+          style="width: 100%"
+          :height="tableHeight"
+          empty-text="No IP addresses found"
+          class="ip-table"
+          stripe
+          highlight-current-row
+          border
+          @sort-change="handleSortChange">
+          <el-table-column
+            v-for="column in tableColumns"
+            :key="column.prop"
+            :prop="column.prop"
+            :label="column.label"
+            :sortable="column.sortable ? 'custom' : false"
+            :width="column.width"
+            :min-width="column.minWidth">
+            <template v-if="column.slotName" #default="{ row }">
+              <el-tooltip :content="statusDescriptions[row.status]" placement="top">
+                <el-tag :type="getStatusType(row.status)" effect="light">
+                  {{ row.status }}
+                </el-tag>
+              </el-tooltip>
+            </template>
+          </el-table-column>
+          <el-table-column label="Actions" width="120" align="center">
+            <template #default="{ row }">
+              <el-button
+                v-if="row.status === 'unclaimed'"
+                type="success"
+                size="small"
+                @click="openClaimDialog(row)"
+                round>
+                Claim
+              </el-button>
+              <!-- 只有当前用户的资源才可以修改 -->
+              <el-button
+              v-if="row.status !== 'unclaimed' && (row.assigned_user && row.assigned_user.username === authStore.user.username || authStore.user.is_admin) || (row.status === 'active' && !row.assigned_user)"
+              type="primary"
+              size="small"
+              @click="openUpdateDialog(row)"
+              round>
+              Edit
+            </el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
+
+      <!-- 分页 -->
+      <el-pagination
+        v-model:current-page.sync="ipStore.currentPage"
+        :page-size.sync="ipStore.pageSize"
+        :total="ipStore.total"
+        background
+        layout="prev, pager, next, sizes, jumper"
+        @size-change="handleSizeChange"
+        class="pagination"
+      />
+
+      <!-- Claim IP Dialog -->
+      <ClaimIPDialog
+        v-model="claimDialogVisible"
+        :ip="claimSelectedIP"
+        @claimSuccess="handleClaimSuccess"
+      />
+
+      <!-- Update IP Dialog -->
+      <UPdateIPDialog
+        v-model="updateDialogVisible"
+        :ip="updateSelectedIP"
+        @claimSuccess="handleUpdateSuccess"
+      />
+    </el-card>
+  </div>
+</template>
+
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
@@ -46,10 +159,10 @@ const tableColumns = ref([
   { prop: 'last_scanned', label: 'Last Scanned', minWidth: 180, sortable: true },
 ]);
 
-const tableHeight = ref(window.innerHeight - 200);
+const tableHeight = ref(window.innerHeight - 394);
 
 const updateTableHeight = () => {
-  tableHeight.value = window.innerHeight - 200;
+  tableHeight.value = window.innerHeight - 394;
 };
 
 const debouncedSearch = debounce((query) => {
@@ -62,16 +175,14 @@ const handleSizeChange = (page: number) => {
 
 // 计算属性：过滤后的表格数据
 const filteredIPs = computed(() => {
-  let filtered = ipStore.sortedIPs;
-  console.log('Original Data:', filtered);
+  let filtered = ipStore.sortedIPs
   if (searchQuery.value) {
     const query = searchQuery.value.toLowerCase();
     filtered = ipStore.ips.filter((ip) =>
       [ip.ip_address, ip.device_name, ip.purpose].some((field) =>
         field.toLowerCase().includes(query)
       )
-    );
-   console.log('Filtered by Search Query:', filtered);
+    )
   }
   if (statusFilter.value !== 'all') {
     filtered = ipStore.ips.filter((ip) => ip.status === statusFilter.value);
@@ -84,9 +195,7 @@ const filteredIPs = computed(() => {
 // 组件挂载时检查登录状态
 onMounted(() => {
   if (isAuthenticated.value) {
-    ipStore.fetchAllIPs().then(() => {
-    console.log('Fetched IPs:', ipStore.ips);
-    });;
+    ipStore.fetchAllIPs()
     window.addEventListener('resize', updateTableHeight);
   } else {
     router.push('/login');
@@ -145,127 +254,9 @@ const handleSortChange = ({ prop, order }: { prop: string; order: string }) => {
 };
 </script>
 
-<template>
-  <div class="ip-list">
-    <!-- 未登录跳转到登录 -->
-    <div v-if="!isAuthenticated" class="login-container">
-      <Login />
-    </div>
-
-    <!-- 登录后的内容 -->
-    <div v-else>
-      <!-- 工具栏 -->
-      <div class="toolbar">
-        <div class="toolbar-header">
-          <h2>IP Address Management</h2>
-          <p class="subtitle">Easily manage your IP addresses with filters and search functionality.</p>
-        </div>
-        <div class="filters">
-          <el-input
-            v-model="searchQuery"
-            @input="debouncedSearch"
-            placeholder="Search IPs, devices, or purpose"
-            prefix-icon="Search"
-            clearable
-            class="search-input"
-          />
-          <el-select v-model="statusFilter" class="status-filter" placeholder="Filter by Status">
-            <el-option label="All Status" value="all" />
-            <el-option label="Active" value="active" />
-            <el-option label="Inactive" value="inactive" />
-            <el-option label="Unclaimed" value="unclaimed" />
-          </el-select>
-        </div>
-      </div>
-
-      <!-- 表格 -->
-      <div class="table-container">
-        <el-table
-          v-loading="ipStore.loading"
-          :data="filteredIPs"
-          style="width: 100%"
-          :height="tableHeight"
-          empty-text="No IP addresses found"
-          stripe
-          highlight-current-row
-          border
-          @sort-change="handleSortChange">
-          <el-table-column
-            v-for="column in tableColumns"
-            :key="column.prop"
-            :prop="column.prop"
-            :label="column.label"
-            :sortable="column.sortable ? 'custom' : false"
-            :width="column.width"
-            :min-width="column.minWidth">
-            <template v-if="column.slotName" #default="{ row }">
-              <el-tooltip :content="statusDescriptions[row.status]" placement="top">
-                <el-tag :type="getStatusType(row.status)" effect="light">
-                  {{ row.status }}
-                </el-tag>
-              </el-tooltip>
-            </template>
-          </el-table-column>
-          <el-table-column label="Actions" width="120" align="center">
-            <template #default="{ row }">
-              <el-button
-                v-if="row.status === 'unclaimed'"
-                type="success"
-                size="small"
-                @click="openClaimDialog(row)"
-                round>
-                Claim
-              </el-button>
-              <!-- 只有当前用户的资源才可以修改 -->
-              <el-button
-              v-if="row.status !== 'unclaimed' && (row.assigned_user && row.assigned_user.username === authStore.user.username || authStore.user.is_admin) || (row.status === 'active' && !row.assigned_user)"
-              type="primary"
-              size="small"
-              @click="openUpdateDialog(row)"
-              round>
-              Edit
-            </el-button>
-            </template>
-          </el-table-column>
-        </el-table>
-      </div>
-
-      <!-- 分页 -->
-      <div class="pagination">
-        <el-pagination
-          v-model:current-page.sync="ipStore.currentPage"
-          :page-size.sync="ipStore.pageSize"
-          :total="ipStore.total"
-          background
-          layout="prev, pager, next, sizes, jumper"
-          @size-change="handleSizeChange"
-          class="pagination"
-        />
-      </div>
-
-      <!-- Claim IP Dialog -->
-      <ClaimIPDialog
-        v-model="claimDialogVisible"
-        :ip="claimSelectedIP"
-        @claimSuccess="handleClaimSuccess"
-      />
-
-      <!-- Update IP Dialog -->
-      <UPdateIPDialog
-        v-model="updateDialogVisible"
-        :ip="updateSelectedIP"
-        @claimSuccess="handleUpdateSuccess"
-      />
-    </div>
-  </div>
-</template>
-
 <style scoped>
 .ip-list {
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
-  padding: 1.5rem;
+  padding: 20px;
 }
 
 .toolbar {
@@ -311,8 +302,12 @@ const handleSortChange = ({ prop, order }: { prop: string; order: string }) => {
 }
 
 .table-container {
-  border-radius: 4px;
-  overflow: hidden;
+  height: 100%;
+  position: relative;
+}
+
+.ip-table {
+  margin-top: 20px;
 }
 
 @media (max-width: 768px) {

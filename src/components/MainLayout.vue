@@ -2,13 +2,6 @@
 <template>
   <el-container>
     <!-- 顶部导航栏 -->
-     <!--
-    <el-header class="header">
-      <div class="header-content">
-        <user-menu />
-      </div>
-    </el-header>
-    -->
     <el-header class="header">
       <div class="header-content">
         <!-- 左侧 Logo 和描述 -->
@@ -35,11 +28,9 @@
     <el-main class="content">
       <router-view />
     </el-main>
-    <!--
     <el-footer class="footer">
       <footer-nav />
     </el-footer>
-    -->
   </el-container>
 </template>
 
@@ -95,7 +86,7 @@ import Sidebar from '../components/Sidebar.vue';
 
 .content {
   margin-left: 300px; /* 预留左侧导航栏宽度 */
-  padding: 35px; /* 内边距可根据需要调整 */
+  padding: 32px; /* 内边距可根据需要调整 */
   height: calc(100vh - 64px - 36px); /* 减去顶部导航栏（64px）和底部导航栏（36px）的高度 */
   overflow-y: auto; /* 允许垂直滚动，仅在内容溢出时显示 */
   background-color: #fff;

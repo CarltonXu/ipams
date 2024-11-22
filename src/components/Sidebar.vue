@@ -10,12 +10,15 @@
         <span>主机管理</span>
       </el-menu-item>
     </router-link>
-    <router-link to="/users">
-      <el-menu-item index="2">
-        <el-icon><User /></el-icon>
-        <span>用户管理</span>
-      </el-menu-item>
-    </router-link>
+    <!-- 仅管理员可见 -->
+    <template v-if="authStore.user.is_admin">
+      <router-link to="/users">
+        <el-menu-item index="2">
+          <el-icon><User /></el-icon>
+          <span>用户管理</span>
+        </el-menu-item>
+      </router-link>
+    </template>
     <router-link to="/settings">
       <el-menu-item index="3">
         <el-icon><Setting /></el-icon>
@@ -26,8 +29,11 @@
 </template>
 
 <script setup lang="ts">
-import { ElMenu, ElMenuItem, ElAside, ElIcon } from 'element-plus';
+import { useAuthStore } from "../stores/auth"
+import { ElMenu, ElMenuItem, ElIcon } from 'element-plus';
 import { Setting, User } from '@element-plus/icons-vue';  // 引入 Element Plus 的图标
+
+const authStore = useAuthStore();
 </script>
 
 <style scoped>
