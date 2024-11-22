@@ -67,6 +67,7 @@ $RECYCLE.BIN/
 .env.*.local
 *.venv/
 .migrations/
+*migrations/
 
 # Test coverage
 coverage/
