@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request
-from .models import db, IP, User, ActionLog
-from .auth import token_required, admin_required, generate_token
+from backend.app.models import db, IP, User, ActionLog
+from backend.app.auth import token_required, admin_required, generate_token
 from datetime import datetime
 import re
 

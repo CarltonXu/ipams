@@ -98,3 +98,121 @@ class ActionLog(db.Model):
         self.target = target
         self.details = details
         self.source_ip = source_ip
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "user_id": self.user_id,
+            "action": self.action,
+            "target": self.target,
+            "details": self.details,
+            "source_ip": self.source_ip,
+            "created_at": self.created_at.isoformat() if self.created_at else None
+        }
+
+class ScanSubnet(db.Model):
+    __tablename__ = 'scan_subnets'
+
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+
+    user_id = db.Column(db.String(36), db.ForeignKey('users.id'), nullable=False)
+    name = db.Column(db.String(255), nullable=False) # 网段名称
+    subnet = db.Column(db.String(32), nullable=False)  # 网段地址
+    deleted = db.Column(db.Boolean, default=False, nullable=False)  # 软删除标志
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    def __repr__(self):
+        return f"<ScanSubnet {self.subnet} by User {self.user_id}>"
+
+    def __init__(self, user_id, subnet):
+        self.id = str(uuid.uuid4())
+        self.user_id = user_id
+        self.subnet = subnet
+    
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "user_id": self.user_id,
+            "name": self.name,
+            "subnet": self.subnet,
+            "deleted": self.deleted,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None
+        }
+
+class ScanPolicy(db.Model):
+    __tablename__ = 'scan_policies'
+
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    name = db.Column(db.String(255), nullable=False)
+    user_id = db.Column(db.String(36), db.ForeignKey('users.id'), nullable=False)
+    subnet_id = db.Column(db.String(36), db.ForeignKey('scan_subnets.id'), nullable=False)
+    strategies = db.Column(db.String(255) , nullable=False)  # 扫描策略
+    threads = db.Column(db.Integer, default=1, nullable=False)  # 并发线程数，默认1
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    def __repr__(self):
+        return f"<ScanPolicy {self.strategies} on Subnet {self.subnet_id}>"
+
+    def __init__(self, name, user_id, subnet_id, strategies, threads=1):
+        self.id = str(uuid.uuid4())
+        self.name = name
+        self.user_id = user_id
+        self.subnet_id = subnet_id
+        self.strategies = strategies
+        self.threads = threads
+    
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "name": self.name,
+            "user_id": self.user_id,
+            "subnet_id": self.subnet_id,
+            "strategies": self.strategies,
+            "threads": self.threads,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.created_at else None
+        }
+
+
+class ScanJob(db.Model):
+    __tablename__ = 'scan_jobs'
+
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = db.Column(db.String(36), db.ForeignKey('users.id'), nullable=False)
+    subnet_id = db.Column(db.String(36), db.ForeignKey('scan_subnets.id'), nullable=False)
+    status = db.Column(db.Enum('pending', 'running', 'completed', 'failed', name='scan_status'), default='pending', nullable=False)
+    progress = db.Column(db.Integer, default=0, nullable=False)  # 扫描进度百分比
+    start_time = db.Column(db.DateTime, nullable=True)
+    end_time = db.Column(db.DateTime, nullable=True)
+    machines_found = db.Column(db.Integer, default=0, nullable=False)  # 发现的机器数量
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    def __repr__(self):
+        return f"<ScanJob {self.id} on Subnet {self.subnet_id}>"
+
+    def __init__(self, user_id, subnet_id, status='pending', start_time=None, end_time=None, machines_found=0):
+        self.id = str(uuid.uuid4())
+        self.user_id = user_id
+        self.subnet_id = subnet_id
+        self.status = status
+        self.start_time = start_time
+        self.end_time = end_time
+        self.machines_found = machines_found
+    
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "user_id": self.user_id,
+            "subnet_id": self.subnet_id,
+            "status": self.status,
+            "progress": self.progress,
+            "start_time": self.start_time,
+            "end_time": self.end_time,
+            "machines_found": self.machines_found,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None
+        }

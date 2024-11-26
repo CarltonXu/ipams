@@ -18,9 +18,15 @@
           <span>用户管理</span>
         </el-menu-item>
       </router-link>
+      <router-link to="/scans">
+        <el-menu-item index="3">
+          <el-icon><Setting /></el-icon>
+          配置扫描
+        </el-menu-item>
+      </router-link>
     </template>
     <router-link to="/settings">
-      <el-menu-item index="3">
+      <el-menu-item index="4">
         <el-icon><Setting /></el-icon>
         <span>系统设置</span>
       </el-menu-item>

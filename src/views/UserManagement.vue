@@ -1,12 +1,15 @@
 <template>
   <div class="user-management">
     <el-card class="box-card">
-      <el-row justify="space-between" align="middle" class="header-row">
-        <h2>用户管理</h2>
+      <div class="toolbar">
+        <div class="toolbar-header">
+          <h2 class="title">用户管理</h2>
+          <p class="subtitle">Easily manage your IP addresses with filters and search functionality.</p>
+        </div>
         <el-button v-if="isAdmin" type="primary" size="medium" @click="openUserDialog">
           <el-icon><Edit /></el-icon> 添加用户
         </el-button>
-      </el-row>
+      </div>
 
       <!-- 用户列表表格 -->
       <el-table
@@ -181,6 +184,27 @@ const deleteUser = async (user: any) => {
   padding: 20px;
 }
 
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.toolbar-header h2 {
+  font-size: 24px;
+  margin: 0;
+  color: #333;
+}
+
+.toolbar-header .subtitle {
+  color: #666;
+  margin: 0;
+  font-size: 14px;
+}
+
 .header-row {
   margin-bottom: 20px;
 }
@@ -196,5 +220,9 @@ const deleteUser = async (user: any) => {
 
 .el-icon {
   margin-right: 5px;
+}
+
+.dialog-footer {
+  margin-left: 335px;
 }
 </style>
