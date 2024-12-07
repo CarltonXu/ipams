@@ -4,8 +4,10 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from .config import Config
 from .models import db
-from .routes.user import api_bp
 from .routes.scan import scan_bp
+from .routes.user.user import user_bp
+from .routes.auth.auth import auth_bp
+from .routes.ip.ips import ips_bp
 from .scanner import setup_scanner
 
 # 创建 db 实例
@@ -23,8 +25,10 @@ def create_app():
     CORS(app)
     
     # Register blueprints
-    app.register_blueprint(api_bp, url_prefix="/api")
-    app.register_blueprint(scan_bp, url_prefix="/api/scan")
+    app.register_blueprint(user_bp, url_prefix="/api")
+    app.register_blueprint(auth_bp, url_prefix="/api")
+    app.register_blueprint(scan_bp, url_prefix="/api")
+    app.register_blueprint(ips_bp, url_prefix="/api")
 
     # Setup scanner
     #setup_scanner(app)

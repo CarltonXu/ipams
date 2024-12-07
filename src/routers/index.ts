@@ -7,7 +7,7 @@ import UserManagement from '../views/UserManagement.vue';
 import Settings from '../views/Settings.vue';
 import Login from '../views/Login.vue';
 import Register from '../views/Register.vue';
-import ScanConfig from '../views/ScanConfig.vue';
+import ScanPolicyList from '../components/ScanPolicyList.vue';
 
 const routes = [
     {
@@ -16,7 +16,7 @@ const routes = [
         children: [
           { path: 'ips', name: 'ShowIPs', component: IPList, meta: { requiresAuth: true } },
           { path: 'users', name: 'UserManagement', component: UserManagement, meta: { requiresAuth: true } },
-          { path: 'scans', name: 'scan', component: ScanConfig, meta: { requiresAuth: true } },
+          { path: 'scans', name: 'scan', component: ScanPolicyList, meta: { requiresAuth: true } },
           { path: 'settings', name: 'Settings', component: Settings, meta: { requiresAuth: true } },
           { path: 'profile', name: 'Profile', component: Profile, meta: { requiresAuth: true }, // 如果需要鉴权
           },
