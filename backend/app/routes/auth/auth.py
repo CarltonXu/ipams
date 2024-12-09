@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request
 from backend.app.models import db, User
-from backend.app.auth import token_required, admin_required, generate_token
+from backend.app.utils.auth import token_required, admin_required, generate_token
 from backend.app.utils import utils
 import re
 

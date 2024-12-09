@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request
 from backend.app.models import db, User
-from backend.app.auth import token_required, admin_required, generate_token
+from backend.app.utils.auth import token_required, admin_required, generate_token
 from backend.app.utils import utils
 import re
 
@@ -56,6 +56,28 @@ def add_users(current_user):
 
     return jsonify({'message': 'User added successfully', 'user': new_user.to_dict()}), 201
 
+@user_bp.route('/users/<string:user_id>', methods=['DELETE'])
+@token_required
+def delete_users(current_user, user_id):
+    # 检查是否有权限删除该用户
+    if not current_user.is_admin:
+        return jsonify({'error': 'Permission denied'}), 403
+    
+    # 删除用户逻辑
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    user.deleted = True
+    db.session.commit()
+
+    utils.log_action_to_db(
+        user=current_user,
+        action="Delete a user",
+        target=user_id
+        details=f""
+    )
+    return jsonify({'message': f'User {user_id} deleted successfully'}), 200
 
 @user_bp.route('/users', methods=['GET'])
 @token_required

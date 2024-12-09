@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
-from ...models import db, ScanJob, ScanPolicy, ScanSubnet
-from ...auth import token_required
+from backend.app.models import db, ScanJob, ScanPolicy, ScanSubnet
+from backend.app.utils.auth import token_required
 from datetime import datetime
 
 job_bp = Blueprint('job', __name__)

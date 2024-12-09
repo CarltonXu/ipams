@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
-from ...models import db, ScanPolicy, ScanSubnet
-from ...auth import token_required
+from backend.app.models import db, ScanPolicy, ScanSubnet
+from backend.app.utils.auth import token_required
 from .validators import validate_scan_request
 from datetime import datetime
 
