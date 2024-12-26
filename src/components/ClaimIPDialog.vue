@@ -130,7 +130,7 @@ watch(
   <el-dialog
     :model-value="modelValue"
     @update:model-value="emit('update:modelValue', $event)"
-    title="Claim IP Address"
+    :title="$t('ip.dialog.claim.title')"
     :before-close="handleClose"
     width="500px"
     class="claim-dialog"
@@ -139,17 +139,17 @@ watch(
       <!-- IP信息展示 -->
       <div class="ip-info-group">
         <div class="ip-info">
-          <span class="label">Host UUID:</span>
+          <span class="label">{{ $t('ip.dialog.claim.hostUUID') }}:</span>
           <span class="value">{{ ip.id || 'N/A' }}</span>
         </div>
         <div class="ip-info">
-          <span class="label">Host IP:</span>
+          <span class="label">{{ $t('ip.dialog.claim.hostIP') }}:</span>
           <span class="value">{{ ip.ip_address || 'N/A' }}</span>
         </div>
       </div>
       <el-form :model="form" label-position="top" class="claim-form">
-        <el-form-item v-if="isAdmin" label="Assign to User">
-          <el-select v-model="form.assigned_user" placeholder="Select a user">
+        <el-form-item v-if="isAdmin" :label="$t('ip.dialog.claim.assignUser')">
+          <el-select v-model="form.assigned_user" :placeholder="$t('ip.dialog.claim.selectUser')">
             <el-option
               v-for="user in users"
               :key="user.id"
@@ -158,51 +158,50 @@ watch(
             />
           </el-select>
         </el-form-item>
-        <el-form-item label="Device Name" required>
-            <el-input v-model="form.device_name" placeholder="Enter your device name, Like (e.g., Nginx, Other)." />
+        <el-form-item :label="$t('ip.dialog.claim.deviceName')" required>
+          <el-input 
+            v-model="form.device_name" 
+            :placeholder="$t('ip.dialog.claim.deviceNamePlaceholder')" 
+          />
         </el-form-item>
-        <el-form-item label="OS Type" required>
-          <el-tooltip content="Select the operating system running on this device (e.g., Linux, Windows, Other)." placement="top">
-            <el-select v-model="form.os_type" placeholder="Select OS Type">
+        <el-form-item :label="$t('ip.dialog.claim.osType')" required>
+          <el-tooltip :content="$t('ip.dialog.claim.osTypeTip')" placement="top">
+            <el-select v-model="form.os_type" :placeholder="$t('ip.dialog.claim.osType')">
               <el-option v-for="os in osOptions" :key="os" :label="os" :value="os" />
             </el-select>
           </el-tooltip>
         </el-form-item>
 
-        <!-- Device Type -->
-        <el-form-item label="Device Type" required>
-          <el-tooltip content="Specify the type of device using this IP (e.g., Router, Switch, Server)." placement="top">
-            <el-select v-model="form.device_type" placeholder="Select Device Type">
+        <el-form-item :label="$t('ip.dialog.claim.deviceType')" required>
+          <el-tooltip :content="$t('ip.dialog.claim.deviceTypeTip')" placement="top">
+            <el-select v-model="form.device_type" :placeholder="$t('ip.dialog.claim.deviceType')">
               <el-option v-for="type in deviceTypeOptions" :key="type" :label="type" :value="type" />
             </el-select>
           </el-tooltip>
         </el-form-item>
 
-        <!-- Manufacturer -->
-        <el-form-item label="Manufacturer" required>
-          <el-tooltip content="Indicate where the device is deployed (e.g., VMware, OpenStack, Physical)." placement="top">
-            <el-select v-model="form.manufacturer" placeholder="Select Manufacturer">
+        <el-form-item :label="$t('ip.dialog.claim.manufacturer')" required>
+          <el-tooltip :content="$t('ip.dialog.claim.manufacturerTip')" placement="top">
+            <el-select v-model="form.manufacturer" :placeholder="$t('ip.dialog.claim.manufacturer')">
               <el-option v-for="manufacturer in manufacturerOptions" :key="manufacturer" :label="manufacturer" :value="manufacturer" />
             </el-select>
           </el-tooltip>
         </el-form-item>
 
-        <!-- Model -->
-        <el-form-item label="Model" required>
-          <el-tooltip content="Provide the device model (e.g., PowerEdge R730, DELL R720)." placement="top">
-            <el-select v-model="form.model" placeholder="Select Model">
+        <el-form-item :label="$t('ip.dialog.claim.model')" required>
+          <el-tooltip :content="$t('ip.dialog.claim.modelTip')" placement="top">
+            <el-select v-model="form.model" :placeholder="$t('ip.dialog.claim.model')">
               <el-option v-for="model in modelOptions" :key="model" :label="model" :value="model" />
             </el-select>
           </el-tooltip>
         </el-form-item>
 
-        <!-- Purpose -->
-        <el-form-item label="Purpose" required>
+        <el-form-item :label="$t('ip.dialog.claim.purpose')" required>
           <el-input
             v-model="form.purpose"
             type="textarea"
             :rows="3"
-            placeholder="Describe the purpose of this IP address"
+            :placeholder="$t('ip.dialog.claim.purposePlaceholder')"
           />
         </el-form-item>
       </el-form>
@@ -210,9 +209,9 @@ watch(
 
     <template #footer>
       <div class="dialog-footer">
-        <el-button @click="handleClose">Cancel</el-button>
+        <el-button @click="handleClose">{{ $t('common.cancel') }}</el-button>
         <el-button type="primary" @click="handleClaim" :loading="loading">
-          Confirm Claim
+          {{ $t('ip.dialog.claim.confirmClaim') }}
         </el-button>
       </div>
     </template>

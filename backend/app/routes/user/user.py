@@ -74,8 +74,8 @@ def delete_users(current_user, user_id):
     utils.log_action_to_db(
         user=current_user,
         action="Delete a user",
-        target=user_id
-        details=f""
+        target=user_id,
+        details=f"User {user_id} deleted successfully"
     )
     return jsonify({'message': f'User {user_id} deleted successfully'}), 200
 

@@ -3,11 +3,11 @@
     <el-card class="card">
       <div class="toolbar">
         <div class="toolbar-header">
-          <h2 class="title">扫描策略管理</h2>
-          <p class="subtitle">Manage and monitor your scanning policies effectively</p>
+          <h2 class="title">{{ t('scan.policy.title') }}</h2>
+          <p class="subtitle">{{ t('scan.policy.subtitle') }}</p>
         </div>
         <el-button type="primary" @click="showAddPolicyDialog">
-          <el-icon><Plus /></el-icon> 添加策略
+          <el-icon><Plus /></el-icon> {{ t('scan.form.buttons.add') }}
         </el-button>
       </div>
 
@@ -17,9 +17,9 @@
         style="width: 100%" 
         border
       >
-        <el-table-column prop="name" label="策略名称" width="180" />
-        <el-table-column prop="description" label="执行计划" min-width="250" show-overflow-tooltip />
-        <el-table-column prop="subnets" label="扫描网段" min-width="200">
+        <el-table-column prop="name" :label="t('scan.policy.show.columns.name')" width="180" />
+        <el-table-column prop="description" :label="t('scan.policy.show.columns.description')" min-width="250" show-overflow-tooltip />
+        <el-table-column prop="subnets" :label="t('scan.policy.show.columns.subnets')" min-width="200">
           <template #default="{ row }">
             <el-tag 
               v-for="subnet in row.subnets" 
@@ -31,15 +31,15 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="created_at" label="创建时间" width="180" />
-        <el-table-column prop="status" label="状态" width="100">
+        <el-table-column prop="created_at" :label="t('scan.policy.show.columns.createdAt')" width="180" />
+        <el-table-column prop="status" :label="t('scan.policy.show.columns.status.title')" width="100">
           <template #default="{ row }">
             <el-tag :type="row.status === 'active' ? 'success' : 'info'">
-              {{ row.status === 'active' ? '启用' : '禁用' }}
+              {{ t(`scan.policy.show.columns.status.${row.status}`) }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="200" fixed="right">
+        <el-table-column :label="t('scan.policy.show.columns.actions.title')" width="200" fixed="right">
           <template #default="{ row }">
             <el-button-group>
               <el-button 
@@ -47,21 +47,21 @@
                 size="small"
                 @click="togglePolicyStatus(row)"
               >
-                {{ row.status === 'active' ? '禁用' : '启用' }}
+                {{ t(`scan.policy.show.columns.actions.${row.status === 'active' ? 'disable' : 'enable'}`) }}
               </el-button>
               <el-button 
                 type="primary"
                 size="small"
                 @click="editPolicy(row)"
               >
-                编辑
+                {{ t('scan.policy.show.columns.actions.edit') }}
               </el-button>
               <el-button 
                 type="danger"
                 size="small"
                 @click="deletePolicy(row)"
               >
-                删除
+                {{ t('scan.policy.show.columns.actions.delete') }}
               </el-button>
             </el-button-group>
           </template>
@@ -72,7 +72,7 @@
     <!-- 添加/编辑策略对话框 -->
     <el-dialog
       v-model="dialogVisible"
-      :title="editingPolicy ? '编辑策略' : '添加策略'"
+      :title="t(editingPolicy ? 'scan.policy.show.dialog.editTitle' : 'scan.policy.show.dialog.addTitle')"
       width="80%"
       destroy-on-close
     >
@@ -89,9 +89,11 @@
 import { ref } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { Plus } from '@element-plus/icons-vue';
+import { useI18n } from 'vue-i18n';
 import ScanPolicyForm from './ScanPolicyForm.vue';
 import type { Policy } from '@/types/policy';
 
+const { t } = useI18n();
 const dialogVisible = ref(false);
 const editingPolicy = ref<Policy | null>(null);
 
@@ -130,18 +132,17 @@ const editPolicy = (policy: Policy) => {
 const deletePolicy = async (policy: Policy) => {
   try {
     await ElMessageBox.confirm(
-      `确定要删除策略 "${policy.name}" 吗？`,
-      '删除确认',
+      t('scan.policy.show.dialog.deleteConfirm', { name: policy.name }),
+      t('scan.policy.show.dialog.deleteTitle'),
       {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
+        confirmButtonText: t('common.confirm'),
+        cancelButtonText: t('common.cancel'),
         type: 'warning'
       }
     );
     
-    // 实际应用中应调用API
     policies.value = policies.value.filter(p => p.id !== policy.id);
-    ElMessage.success('策略已删除');
+    ElMessage.success(t('scan.policy.show.messages.deleteSuccess'));
   } catch {
     // 用户取消删除
   }
@@ -149,28 +150,28 @@ const deletePolicy = async (policy: Policy) => {
 
 const togglePolicyStatus = (policy: Policy) => {
   policy.status = policy.status === 'active' ? 'inactive' : 'active';
-  ElMessage.success(`策略已${policy.status === 'active' ? '启用' : '禁用'}`);
+  const action = policy.status === 'active' ? 'enabled' : 'disabled';
+  ElMessage.success(t('scan.policy.show.messages.updateSuccess', { action }));
 };
 
 const handleSavePolicy = (policyData: Policy) => {
   if (editingPolicy.value) {
-    // 更新现有策略
     const index = policies.value.findIndex(p => p.id === editingPolicy.value?.id);
     if (index !== -1) {
       policies.value[index] = { ...policyData, id: editingPolicy.value.id };
     }
+    ElMessage.success(t('scan.policy.show.messages.editSuccess'));
   } else {
-    // 添加新策略
     policies.value.push({
       ...policyData,
       id: Date.now().toString(),
       created_at: new Date().toLocaleString(),
       status: 'active'
     });
+    ElMessage.success(t('scan.policy.show.messages.addSuccess'));
   }
   
   dialogVisible.value = false;
-  ElMessage.success(`策略${editingPolicy.value ? '更新' : '添加'}成功`);
 };
 </script>
 

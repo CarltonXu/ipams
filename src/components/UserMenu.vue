@@ -6,30 +6,30 @@
     </span>
     <template #dropdown>
       <el-dropdown-menu>
-        <el-dropdown-item command="profile">个人中心</el-dropdown-item>
-        <el-dropdown-item command="logout">退出登录</el-dropdown-item>
+        <el-dropdown-item command="profile">{{ $t('user.profile') }}</el-dropdown-item>
+        <el-dropdown-item command="logout">{{ $t('auth.logout') }}</el-dropdown-item>
       </el-dropdown-menu>
     </template>
   </el-dropdown>
 </template>
 
 <script setup lang="ts">
-import { useAuthStore } from '../stores/auth';  // 引入 Pinia store
+import { useAuthStore } from '../stores/auth';
 import { useRouter } from 'vue-router';
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 
-// 获取用户数据
+const { t } = useI18n();
 const authStore = useAuthStore();
 const user = computed(() => authStore.user);
 const router = useRouter();
 
-// 处理下拉菜单命令
 const handleCommand = (command: string) => {
   if (command === 'logout') {
-    authStore.logout();  // 执行登出操作
-    router.push('/login')
+    authStore.logout();
+    router.push('/login');
   } else if (command === 'profile') {
-    router.push('/profile')
+    router.push('/profile');
   }
 };
 </script>

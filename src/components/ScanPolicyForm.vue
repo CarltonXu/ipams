@@ -3,35 +3,35 @@
     <el-card class="card">
       <div class="toolbar">
         <div class="toolbar-header">
-          <h2 class="title">扫描配置</h2>
-          <p class="subtitle">Easily manage your IP addresses with filters and search functionality.</p>
+          <h2 class="title">{{ $t('scan.title') }}</h2>
+          <p class="subtitle">{{ $t('scan.subtitle') }}</p>
         </div>
       </div>
       <!-- 添加扫描网段 -->
       <div class="section">
         <el-form label-position="top">
-          <h4>添加扫描网段</h4>
-          <el-form-item label="网段名称" required>
-            <el-input v-model="subnetName" placeholder="请输入网段名称" style="width: 300px;" />
+          <h4>{{ $t('scan.subnet.title') }}</h4>
+          <el-form-item :label="$t('scan.subnet.name')" required>
+            <el-input v-model="subnetName" :placeholder="$t('scan.subnet.namePlaceholder')" style="width: 300px;" />
           </el-form-item>
 
-          <el-form-item label="网段" required>
-            <el-input v-model="newSubnet" placeholder="请输入扫描网段 (例如: 192.168.0.0/24)" style="width: 300px;" />
+          <el-form-item :label="$t('scan.subnet.range')" required>
+            <el-input v-model="newSubnet" :placeholder="$t('scan.subnet.rangePlaceholder')" style="width: 300px;" />
           </el-form-item>
-          <el-button type="primary" @click="handleAddSubnet" :disabled="loading">添加</el-button>
+          <el-button type="primary" @click="handleAddSubnet" :disabled="loading">{{ $t('scan.subnet.add') }}</el-button>
         </el-form>
       </div>
 
       <!-- 显示网段列表 -->
       <div class="section">
-        <h4>已添加网段</h4>
-        <el-table :data="cachedSubnets" border empty-text="暂无网段数据">
-          <el-table-column prop="name" label="网段名称" />
-          <el-table-column prop="subnet" label="网段" />
-          <el-table-column prop="created_at" label="创建时间" />
-          <el-table-column label="操作">
+        <h4>{{ $t('scan.subnet.list') }}</h4>
+        <el-table :data="cachedSubnets" border :empty-text="$t('scan.subnet.noData')">
+          <el-table-column prop="name" :label="$t('scan.subnet.columns.name')" />
+          <el-table-column prop="subnet" :label="$t('scan.subnet.columns.subnet')" />
+          <el-table-column prop="created_at" :label="$t('scan.subnet.columns.createdAt')" />
+          <el-table-column :label="$t('scan.subnet.columns.actions')">
             <template #default="scope">
-              <el-button type="danger" size="mini" @click="removeSubnet(scope.row)">删除</el-button>
+              <el-button type="danger" size="mini" @click="removeSubnet(scope.row)">{{ $t('scan.subnet.delete') }}</el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -41,138 +41,178 @@
 
       <!-- 策略配置 -->
       <div class="section">
-        <h4>扫描策略配置</h4>
+        <h4>{{ $t('scan.policy.title') }}</h4>
         <el-form label-position="top">
           <!-- 策略名称 -->
-          <el-form-item label="策略名称" required>
-            <el-input v-model="strategyName" placeholder="请输入策略名称" style="width: 300px;" />
+          <el-form-item :label="$t('scan.policy.name')" required>
+            <el-input v-model="strategyName" :placeholder="$t('scan.policy.namePlaceholder')" style="width: 300px;" />
           </el-form-item>
 
-          <el-form-item label="策略类型" :rules="[{ required: true, message: '请选择策略类型', trigger: 'change' }]">
+          <el-form-item :label="$t('scan.policy.type')" :rules="[{ required: true, message: $t('scan.policy.typeRequired'), trigger: 'change' }]">
             <el-radio-group v-model="scheduleType">
-              <el-radio value="每分钟">每分钟</el-radio>
-              <el-radio value="每小时">每小时</el-radio>
-              <el-radio value="每天">每天</el-radio>
-              <el-radio value="每周">每周</el-radio>
-              <el-radio value="每月">每月</el-radio>
-              <el-radio value="自定义">自定义</el-radio>
+              <el-radio :value="$t('scan.policy.types.everyMinute')">{{ $t('scan.policy.types.everyMinute') }}</el-radio>
+              <el-radio :value="$t('scan.policy.types.everyHour')">{{ $t('scan.policy.types.everyHour') }}</el-radio>
+              <el-radio :value="$t('scan.policy.types.everyDay')">{{ $t('scan.policy.types.everyDay') }}</el-radio>
+              <el-radio :value="$t('scan.policy.types.everyWeek')">{{ $t('scan.policy.types.everyWeek') }}</el-radio>
+              <el-radio :value="$t('scan.policy.types.everyMonth')">{{ $t('scan.policy.types.everyMonth') }}</el-radio>
+              <el-radio :value="$t('scan.policy.types.custom')">{{ $t('scan.policy.types.custom') }}</el-radio>
             </el-radio-group>
           </el-form-item>
 
           <!-- 每几分钟 -->
-          <el-form-item v-if="scheduleType === '每分钟'" label="间隔N分钟" :rules="[{ required: true, message: '请选择时间', trigger: 'blur' }]">
+          <el-form-item 
+            v-if="scheduleType === t('scan.form.types.everyMinute')" 
+            :label="t('scan.form.interval.minutes')" 
+            :rules="[{ required: true, message: t('scan.form.interval.selectTime'), trigger: 'blur' }]"
+          >
             <el-input-number v-model="intervalMinutes" :min="1" style="width: 100px;" default="30"/>
           </el-form-item>
 
           <!-- 每几小时 -->
-          <el-form-item v-if="scheduleType === '每小时'" label="间隔N小时" :rules="[{ required: true, message: '请选择时间', trigger: 'blur' }]">
+          <el-form-item 
+            v-if="scheduleType === t('scan.form.types.everyHour')" 
+            :label="t('scan.form.interval.hours')" 
+            :rules="[{ required: true, message: t('scan.form.interval.selectTime'), trigger: 'blur' }]"
+          >
             <el-input-number v-model="intervalHours" :min="1" style="width: 100px;" />
           </el-form-item>
 
           <!-- 每几天 -->
-          <el-form-item v-if="scheduleType === '每天'" label="间隔N天" :rules="[{ required: true, message: '请选择时间', trigger: 'blur' }]">
+          <el-form-item 
+            v-if="scheduleType === t('scan.form.types.everyDay')" 
+            :label="t('scan.form.interval.days')" 
+            :rules="[{ required: true, message: t('scan.form.interval.selectTime'), trigger: 'blur' }]"
+          >
             <el-input-number v-model="intervalDays" :min="1" style="width: 100px;" />
           </el-form-item>
 
           <!-- 开始执行时间 -->
-          <el-form-item v-if="['每分钟', '每小时', '每天'].includes(scheduleType)" label="开始时间" :rules="[{ required: true, message: '请选择开始时间', trigger: 'blur' }]">
-            <el-date-picker v-model="startExecutionTime" type="datetime" placeholder="开始执行时间" style="width: 200px;" />
+          <el-form-item 
+            v-if="[t('scan.form.types.everyMinute'), t('scan.form.types.everyHour'), t('scan.form.types.everyDay')].includes(scheduleType)" 
+            :label="t('scan.form.time.start')" 
+            :rules="[{ required: true, message: t('scan.form.time.select'), trigger: 'blur' }]"
+          >
+            <el-date-picker 
+              v-model="startExecutionTime" 
+              type="datetime" 
+              :placeholder="t('scan.form.time.execution')" 
+              style="width: 200px;" 
+            />
           </el-form-item>
 
           <!-- 每周 -->
-          <el-form-item v-if="scheduleType === '每周'" label="日期">
+          <el-form-item 
+            v-if="scheduleType === t('scan.form.types.everyWeek')" 
+            :label="t('scan.policy.monthDays')"
+          >
             <el-checkbox-group v-model="weeklyDays">
-              <el-checkbox label="周一" value="1"/>
-              <el-checkbox label="周二" value="2"/>
-              <el-checkbox label="周三" value="3"/>
-              <el-checkbox label="周四" value="4"/>
-              <el-checkbox label="周五" value="5"/>
-              <el-checkbox label="周六" value="6"/>
-              <el-checkbox label="周日" value="0"/>
+              <el-checkbox :label="t('scan.policy.weekDays.1')" value="1"/>
+              <el-checkbox :label="t('scan.policy.weekDays.2')" value="2"/>
+              <el-checkbox :label="t('scan.policy.weekDays.3')" value="3"/>
+              <el-checkbox :label="t('scan.policy.weekDays.4')" value="4"/>
+              <el-checkbox :label="t('scan.policy.weekDays.5')" value="5"/>
+              <el-checkbox :label="t('scan.policy.weekDays.6')" value="6"/>
+              <el-checkbox :label="t('scan.policy.weekDays.0')" value="0"/>
             </el-checkbox-group>
           </el-form-item>
 
           <!-- 每周开始时间 -->
-           <el-form-item v-if="scheduleType === '每周'" label="时间" :rules="[{ required: true, message: '请选择开始时间', trigger: 'blur' }]">
-            <el-time-picker v-model="startExecutionTime" placeholder="选择时间" format="HH:mm" style="width: 120px;" />
-           </el-form-item>
+          <el-form-item 
+            v-if="scheduleType === t('scan.form.types.everyWeek')" 
+            :label="t('scan.form.time.execution')" 
+            :rules="[{ required: true, message: t('scan.form.time.select'), trigger: 'blur' }]"
+          >
+            <el-time-picker 
+              v-model="startExecutionTime" 
+              :placeholder="t('scan.form.time.select')" 
+              format="HH:mm" 
+              style="width: 120px;" 
+            />
+          </el-form-item>
 
           <!-- 每月 -->
           <!-- 多选日期 -->
-          <el-form-item v-if="scheduleType === '每月'" label="日期" :rules="[{ required: true, message: '请选择日期', trigger: 'blur' }]">
+          <el-form-item 
+            v-if="scheduleType === t('scan.form.types.everyMonth')" 
+            :label="t('scan.form.monthDays.select')"
+          >
             <el-checkbox-group v-model="monthlyDays">
-              <el-checkbox label="1" value="1"/>
-              <el-checkbox label="2" value="2"/>
-              <el-checkbox label="3" value="3"/>
-              <el-checkbox label="4" value="4"/>
-              <el-checkbox label="5" value="5"/>
-              <el-checkbox label="6" value="6"/>
-              <el-checkbox label="7" value="7"/>
-              <el-checkbox label="8" value="8"/>
-              <el-checkbox label="9" value="9"/>
-              <el-checkbox label="10" value="10"/>
-              <el-checkbox label="11" value="11"/>
-              <el-checkbox label="12" value="12"/>
-              <el-checkbox label="13" value="13"/>
-              <el-checkbox label="14" value="14"/>
-              <el-checkbox label="15" value="15"/>
-              <el-checkbox label="16" value="16"/>
-              <el-checkbox label="17" value="17"/>
-              <el-checkbox label="18" value="18"/>
-              <el-checkbox label="19" value="19" />
-              <el-checkbox label="20" value="20"/>
-              <el-checkbox label="21" value="21" />
-              <el-checkbox label="22" value="22"/>
-              <el-checkbox label="23" value="23" />
-              <el-checkbox label="24" value="24"/>
-              <el-checkbox label="25" value="25" />
-              <el-checkbox label="26" value="26"/>
-              <el-checkbox label="27" value="27" />
-              <el-checkbox label="28" value="28"/>
-              <el-checkbox label="29" value="29" />
-              <el-checkbox label="30" value="30"/>
-              <el-checkbox label="31" value="31" />
-              <el-checkbox label="月末" value="last_day"/>
+              <el-checkbox 
+                v-for="day in 31" 
+                :key="day" 
+                :label="day.toString()"
+              >
+                {{ day }}
+              </el-checkbox>
+              <el-checkbox label="last_day">
+                {{ t('scan.form.monthDays.last') }}
+              </el-checkbox>
             </el-checkbox-group>
           </el-form-item>
 
           <!-- 执行时间 -->
-          <el-form-item v-if="scheduleType === '每月'" label="时间" :rules="[{ required: true, message: '请选择开始时间', trigger: 'blur' }]">
-            <el-time-picker v-model="startExecutionTime" placeholder="选择时间" format="HH:mm" style="width: 120px;"/>
+          <el-form-item 
+            v-if="scheduleType === t('scan.form.types.everyMonth')" 
+            :label="t('scan.form.time.execution')" 
+            :rules="[{ required: true, message: t('scan.form.time.select'), trigger: 'blur' }]"
+          >
+            <el-time-picker 
+              v-model="startExecutionTime" 
+              :placeholder="t('scan.form.time.select')" 
+              format="HH:mm" 
+              style="width: 120px;"
+            />
           </el-form-item>
 
           <!-- 自定义 -->
-          <el-form-item v-if="scheduleType === '自定义'" label="Cron 表达式" :rules="[{ required: true, message: '请输入 Cron 表达式', trigger: 'blur' }]">
-            <el-input v-model="customCron" placeholder="输入 Cron 表达式" style="width: 300px;" />
-            <el-time-picker v-model="startExecutionTime" placeholder="选择时间" format="HH:mm" style="width: 120px;"/>
+          <el-form-item 
+            v-if="scheduleType === t('scan.form.types.custom')" 
+            :label="t('scan.form.cronExpression.label')"
+          >
+            <el-input 
+              v-model="customCron" 
+              :placeholder="t('scan.form.cronExpression.placeholder')"
+            >
+              <template #append>
+                <el-tooltip :content="cronExpressionTip" placement="top">
+                  <i class="el-icon-info"></i>
+                </el-tooltip>
+              </template>
+            </el-input>
           </el-form-item>
+
+          <!-- 加载状态 -->
+          <div v-if="loading" class="loading-status">
+            {{ t('scan.form.status.loading') }}
+          </div>
+
           <!-- 添加策略 -->
-          <el-button type="primary" @click="handleAddPolicy" :disabled="loading">添加策略</el-button>
+          <el-button type="primary" @click="handleAddPolicy" :disabled="loading">{{ $t('scan.form.buttons.add') }}</el-button>
         </el-form>
       </div>
 
       <!-- 显示策略列表 -->
       <div class="section">
-        <h4>已添加策略</h4>
-        <el-table :data="cachedPolicies" border empty-text="暂无策略数据">
-          <el-table-column prop="name" label="策略名称" />
-          <el-table-column prop="description" label="策略描述" />
-          <el-table-column prop="created_at" label="创建时间" />
-          <el-table-column label="操作">
+        <h4>{{ $t('scan.policy.list') }}</h4>
+        <el-table :data="cachedPolicies" border :empty-text="$t('scan.policy.noData')">
+          <el-table-column prop="name" :label="$t('scan.policy.columns.name')" />
+          <el-table-column prop="description" :label="$t('scan.policy.columns.description')" />
+          <el-table-column prop="created_at" :label="$t('scan.policy.columns.createdAt')" />
+          <el-table-column :label="$t('scan.policy.columns.actions')">
             <template #default="scope">
-              <el-button type="danger" size="mini" @click="removePolicy(scope.row)">删除</el-button>
+              <el-button type="danger" size="mini" @click="removePolicy(scope.row)">{{ $t('scan.policy.delete') }}</el-button>
             </template>
           </el-table-column>
         </el-table>
       </div>
 
-      <el-button type="success" @click="handleSavePolicy" :disabled="loading">保存策略</el-button>
+      <el-button type="success" @click="handleSavePolicy" :disabled="loading">{{ $t('scan.form.buttons.save') }}</el-button>
       <el-divider />
 
       <!-- 执行扫描 -->
       <div class="section">
-        <h4>执行扫描</h4>
-        <el-select v-model="selectedSubnet" placeholder="选择网段" style="width: 200px;">
+        <h4>{{ $t('scan.execution.title') }}</h4>
+        <el-select v-model="selectedSubnet" :placeholder="$t('scan.execution.selectSubnet')" style="width: 200px;">
           <el-option
             v-for="(subnet, index) in cachedSubnets"
             :key="index"
@@ -180,7 +220,7 @@
             :value="subnet.subnet"
           />
         </el-select>
-        <el-button type="primary" @click="handleExecuteScan" :disabled="loading">执行扫描</el-button>
+        <el-button type="primary" @click="handleExecuteScan" :disabled="loading">{{ $t('scan.execution.execute') }}</el-button>
       </div>
     </el-card>
   </div>
@@ -188,7 +228,10 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
-import { ElMessage } from 'element-plus';
+import { useI18n } from 'vue-i18n';
+import { ElMessage, ElMessageBox } from 'element-plus';
+
+const { t } = useI18n();
 
 const subnetName = ref('');
 const newSubnet = ref('');
@@ -197,7 +240,7 @@ const selectedSubnet = ref(null);
 
 // 输入字段
 const strategyName = ref('');
-const scheduleType = ref('每天');
+const scheduleType = ref(t('scan.form.types.everyDay'));
 const intervalMinutes = ref(null);
 const intervalHours = ref(null);
 const intervalDays = ref(null);
@@ -228,144 +271,197 @@ const isValidSubnet = (subnet: string) => {
 
 const validateInputs = () => {
   if (!strategyName.value.trim()) {
-    ElMessage.error('策略名称不能为空');
+    ElMessage.error(t('scan.form.validation.strategyName'));
     return false;
   }
-  if (['每分钟', '每小时', '每天'].includes(scheduleType.value) && !startExecutionTime.value) {
-    ElMessage.error('请选择开始时间');
+
+  const scheduleTypes = {
+    [t('scan.form.types.everyMinute')]: true,
+    [t('scan.form.types.everyHour')]: true,
+    [t('scan.form.types.everyDay')]: true
+  };
+
+  if (scheduleTypes[scheduleType.value] && !startExecutionTime.value) {
+    ElMessage.error(t('scan.form.validation.selectStartTime'));
     return false;
   }
-  if (scheduleType.value === "每分钟" && !intervalMinutes.value) {
-    ElMessage.error('请选择间隔周期');
+
+  if (scheduleType.value === t('scan.form.types.everyMinute') && !intervalMinutes.value) {
+    ElMessage.error(t('scan.form.validation.selectInterval'));
     return false;
   }
-  if (scheduleType.value === "每小时" && !intervalHours.value) {
-    ElMessage.error('请选择间隔周期');
+
+  if (scheduleType.value === t('scan.form.types.everyHour') && !intervalHours.value) {
+    ElMessage.error(t('scan.form.validation.selectInterval'));
     return false;
   }
-  if (scheduleType.value === "每天" && !intervalDays.value) {
-    ElMessage.error('请选择间隔周期');
+
+  if (scheduleType.value === t('scan.form.types.everyDay') && !intervalDays.value) {
+    ElMessage.error(t('scan.form.validation.selectInterval'));
     return false;
   }
-  if (scheduleType.value === '每周' && (weeklyDays.value.length === 0 || !startExecutionTime.value)) {
-    ElMessage.error('请填写完整的每周策略配置');
+
+  if (scheduleType.value === t('scan.form.types.everyWeek') && 
+      (weeklyDays.value.length === 0 || !startExecutionTime.value)) {
+    ElMessage.error(t('scan.form.validation.weeklyConfig'));
     return false;
   }
-  if (scheduleType.value === '每月' && (monthlyDays.value.length === 0 || !startExecutionTime.value)) {
-    ElMessage.error('请填写完整的每月策略配置');
+
+  if (scheduleType.value === t('scan.form.types.everyMonth') && 
+      (monthlyDays.value.length === 0 || !startExecutionTime.value)) {
+    ElMessage.error(t('scan.form.validation.monthlyConfig'));
     return false;
   }
-  if (scheduleType.value === '自定义' && (!customCron.value.trim() || !startExecutionTime.value)) {
-    ElMessage.error('请输入 Cron 表达式');
+
+  if (scheduleType.value === t('scan.form.types.custom') && 
+      (!customCron.value.trim() || !startExecutionTime.value)) {
+    ElMessage.error(t('scan.form.validation.cronRequired'));
     return false;
   }
+
   return true;
 };
 
 // 格式化时间函数
-const formatTime = (time: Date | null) => time ? `${time.getHours()}点${time.getMinutes() > 0 ? time.getMinutes() + '分' : ''}` : '';
+const formatTime = (time: Date | null) => {
+  if (!time) return '';
+  return `${time.getHours()}:${time.getMinutes().toString().padStart(2, '0')}`;
+};
 
 // 策略描述生成
 const generatePolicyDescription = () => {
-  if (!startExecutionTime.value) return '未定义开始时间';
+  if (!startExecutionTime.value) return '';
   const startTime = formatTime(startExecutionTime.value);
+
   switch (scheduleType.value) {
-    case '每分钟':
-      return `每隔 ${intervalMinutes.value || 1} 分钟，从 ${startTime} 开始执行`;
-    case '每小时':
-      return `每隔 ${intervalHours.value || 1} 小时，从 ${startTime} 开始执行`;
-    case '每天':
-      return `每隔 ${intervalDays.value || 1} 天，从 ${startTime} 开始执行`;
-    case '每周':
-      const weekDays = weeklyDays.value.map(day => `周${['日', '一', '二', '三', '四', '五', '六'][day - 0]}`).join('、');
-      return `每 [${weekDays}], 从 ${formatTime(startExecutionTime.value)} 开始执行`;
-    case '每月':
-      const days = monthlyDays.value.map(day => (day === 'last_day' ? '月末' : `${day}号`)).join('、');
-      return `每 [${days}]，从 ${formatTime(startExecutionTime.value)} 开始执行`;
-    case '自定义':
-      return `自定义策略 (${customCron.value || '未定义'})，从 ${formatTime(startExecutionTime.value)} 开始执行`;
+    case t('scan.form.types.everyMinute'):
+      return t('scan.policy.description.everyMinute', {
+        minutes: intervalMinutes.value || 1,
+        time: startTime
+      });
+    case t('scan.form.types.everyHour'):
+      return t('scan.policy.description.everyHour', {
+        hours: intervalHours.value || 1,
+        time: startTime
+      });
+    case t('scan.form.types.everyDay'):
+      return t('scan.policy.description.everyDay', {
+        days: intervalDays.value || 1,
+        time: startTime
+      });
+    case t('scan.form.types.everyWeek'):
+      const weekDays = weeklyDays.value
+        .map(day => t(`scan.policy.weekDays.${day}`))
+        .join('、');
+      return t('scan.policy.description.everyWeek', {
+        weekdays: weekDays,
+        time: startTime
+      });
+    case t('scan.form.types.everyMonth'):
+      const days = monthlyDays.value
+        .map(day => day === 'last_day' ? t('scan.policy.lastDay') : day)
+        .join('、');
+      return t('scan.policy.description.everyMonth', {
+        days,
+        time: startTime
+      });
+    case t('scan.form.types.custom'):
+      return t('scan.policy.description.custom', {
+        cron: customCron.value
+      });
     default:
-      return '未知策略';
+      return '';
   }
 };
 
 // 生成 Cron 表达式
 const generateCrontabExpression = () => {
-  if (!startExecutionTime.value) return '';
-  const minutes = startExecutionTime.value.getMinutes();
-  const hours = startExecutionTime.value.getHours();
+  const time = startExecutionTime.value;
+  if (!time) {
+    ElMessage.error(t('scan.validation.selectExecutionTime'));
+    return '';
+  }
+
+  const minutes = time.getMinutes();
+  const hours = time.getHours();
 
   switch (scheduleType.value) {
-    case '每分钟':
-      // 每分钟间隔，默认间隔1分钟
+    case t('scan.form.types.everyMinute'):
       return `*/${intervalMinutes.value || 1} * * * *`;
-    case '每小时':
-      // 每小时间隔，从具体分钟开始，默认间隔1小时
+    case t('scan.form.types.everyHour'):
       return `${minutes} */${intervalHours.value || 1} * * *`;
-    case '每天':
-      // 每天间隔，从具体时间点开始，默认间隔1天
+    case t('scan.form.types.everyDay'):
       return `${minutes} ${hours} */${intervalDays.value || 1} * *`;
-    case '每周':
-      // 每周指定星期几，默认全部星期
-      // weeklyDays.value 应为 [0-6]，0表示周日
-      const weekDays = weeklyDays.value && weeklyDays.value.length > 0
-        ? weeklyDays.value.join(',')
-        : '*';
-      return `${minutes} ${hours} * * ${weekDays}`;
-    case '每月':
-      // 每月的具体日期，支持'last_day'的特殊处理
-      // 如果 monthlyDays.value 是空数组，则默认为所有日期 '*'
-      const monthDays = monthlyDays.value && monthlyDays.value.length > 0
-        ? monthlyDays.value.map(day => (day === 'last_day' ? 'L' : day)).join(',')
-        : '*';
-      return `${minutes} ${hours} ${monthDays} * *`;
-    case '自定义':
-      // 自定义表达式直接返回
-      return customCron.value || '';
+    case t('scan.form.types.everyWeek'):
+      return `${minutes} ${hours} * * ${weeklyDays.value.join(',')}`;
+    case t('scan.form.types.everyMonth'):
+      const days = monthlyDays.value.includes('last_day') 
+        ? 'L' 
+        : monthlyDays.value.join(',');
+      return `${minutes} ${hours} ${days} * *`;
+    case t('scan.form.types.custom'):
+      return customCron.value;
     default:
-      // 默认返回空字符串
       return '';
   }
 };
 
-// 处理添加网段
-const handleAddSubnet = () => {
-  const subnet = newSubnet.value.trim();
-  if (!subnet) {
-    ElMessage.error('请输入有效的网段！');
-    return;
-  }
-
+// 添加网段验证
+const validateSubnet = () => {
   if (!subnetName.value.trim()) {
-    ElMessage.error('网段名称不能为空!');
+    ElMessage.error(t('scan.validation.subnetName'));
     return false;
   }
 
-  // 校验 IP 地址格式
-  const [ip] = subnet.split('/');
-  if (!isValidIP(ip)) {
-    ElMessage.error('无效的 IP 地址格式！');
-    return;
+  if (!newSubnet.value.trim()) {
+    ElMessage.error(t('scan.validation.subnetRange'));
+    return false;
   }
 
-  // 校验网段格式
-  if (!isValidSubnet(subnet)) {
-    ElMessage.error('无效的网段格式，正确格式为：IP/掩码（如：192.168.0.0/24）');
-    return;
+  const [ip] = newSubnet.value.split('/');
+  if (!isValidIP(ip)) {
+    ElMessage.error(t('scan.form.validation.invalidIPFormat'));
+    return false;
   }
+
+  if (!isValidSubnet(newSubnet.value)) {
+    ElMessage.error(t('scan.form.validation.invalidSubnetFormat'));
+    return false;
+  }
+
+  return true;
+};
+
+// 处理添加网段
+const handleAddSubnet = () => {
+  if (!validateSubnet()) return;
 
   cachedSubnets.value.push({
     name: subnetName.value,
-    subnet: subnet,
-    created_at: new Date().toISOString(),
+    subnet: newSubnet.value,
+    created_at: new Date().toLocaleString()
   });
 
+  ElMessage.success(t('scan.messages.success.addSubnet'));
+  subnetName.value = '';
   newSubnet.value = '';
 };
 
 // 删除网段
-const removeSubnet = (subnet: any) => {
-  cachedSubnets.value = cachedSubnets.value.filter(s => s !== subnet);
+const removeSubnet = async (subnet: any) => {
+  try {
+    await ElMessageBox.confirm(
+      t('scan.messages.confirm.deleteSubnet'),
+      t('common.warning'),
+      {
+        type: 'warning'
+      }
+    );
+    cachedSubnets.value = cachedSubnets.value.filter(s => s !== subnet);
+    ElMessage.success(t('scan.messages.success.deleteSubnet'));
+  } catch (error) {
+    // 用户取消删除操作
+  }
 };
 
 // 处理添加策略
@@ -379,19 +475,34 @@ const handleAddPolicy = () => {
     startTime: startExecutionTime.value,
   };
   cachedPolicies.value.push(newPolicy);
-  // 重置表单
+  ElMessage.success(t('scan.messages.success.addPolicy'));
   resetForm();
 };
 
-const handleSavePolicy = () => {
-  console.log(cachedPolicies)
-  console.log(cachedSubnets)
+const handleSavePolicy = async () => {
+  try {
+    await ElMessageBox.confirm(
+      t('scan.form.confirm.save'),
+      t('common.warning'),
+      {
+        confirmButtonText: t('common.confirm'),
+        cancelButtonText: t('common.cancel'),
+        type: 'warning'
+      }
+    );
+    
+    console.log(cachedPolicies);
+    console.log(cachedSubnets);
+    ElMessage.success(t('scan.messages.success.savePolicy'));
+  } catch (error) {
+    // 用户取消操作
+  }
 };
 
 // 重置表单
 const resetForm = () => {
   strategyName.value = '';
-  scheduleType.value = '每天';
+  scheduleType.value = t('scan.form.types.everyDay');
   intervalMinutes.value = null;
   intervalHours.value = null;
   intervalDays.value = null;
@@ -406,36 +517,119 @@ const resetForm = () => {
 };
 
 // 删除策略
-const removePolicy = (policy: any) => {
-  cachedPolicies.value = cachedPolicies.value.filter(p => p !== policy);
+const removePolicy = async (policy: any) => {
+  try {
+    await ElMessageBox.confirm(
+      t('scan.messages.confirm.deletePolicy'),
+      t('common.warning'),
+      {
+        type: 'warning'
+      }
+    );
+    cachedPolicies.value = cachedPolicies.value.filter(p => p !== policy);
+    ElMessage.success(t('scan.messages.success.deletePolicy'));
+  } catch (error) {
+    // 用户取消删除操作
+  }
 };
 
 // 执行扫描
-const handleExecuteScan = () => {
+const handleExecuteScan = async () => {
   if (!selectedSubnet.value) {
-    ElMessage.warning('请选择网段！');
+    ElMessage.warning(t('scan.form.validation.subnetRequired'));
+    return;
   }
-  console.log(`执行扫描：${selectedSubnet.value}`);
+
+  try {
+    await ElMessageBox.confirm(
+      t('scan.form.confirm.execute'),
+      t('common.warning'),
+      {
+        confirmButtonText: t('common.confirm'),
+        cancelButtonText: t('common.cancel'),
+        type: 'warning'
+      }
+    );
+    
+    loading.value = true;
+    ElMessage.info(t('scan.form.status.executing'));
+    
+    // 执行扫描逻辑
+    console.log(`执行扫描：${selectedSubnet.value}`);
+    
+  } catch (error) {
+    // 用户取消操作
+  } finally {
+    loading.value = false;
+  }
 };
 
-// 策略类型变化时重置相关字段
+// 监听策略类型变化
 watch(scheduleType, (newType) => {
   intervalMinutes.value = null;
   intervalHours.value = null;
   intervalDays.value = null;
   startExecutionTime.value = null;
 
-  if (newType === '每天') {
+  if (newType === t('scan.form.types.everyDay')) {
     dailyTime.value = null;
-  } else if (newType === '每周') {
+  } else if (newType === t('scan.form.types.everyWeek')) {
     weeklyTime.value = null;
     weeklyDays.value = [];
-  } else if (newType === '每月') {
+  } else if (newType === t('scan.form.types.everyMonth')) {
     monthlyTime.value = null;
     monthlyDays.value = [];
-  } else if (newType === '自定义') {
+  } else if (newType === t('scan.form.types.custom')) {
     customCron.value = '';
   }
+});
+
+// 更新模板中的表格空数据提示
+const tableConfig = {
+  emptyText: t('scan.form.table.noData')
+};
+
+// 更新按钮文本
+const buttonLabels = {
+  add: t('scan.form.buttons.add'),
+  save: t('scan.form.buttons.save'),
+  execute: t('scan.form.buttons.execute')
+};
+
+// 添加表单验证提示
+const validateWeeklyConfig = () => {
+  if (weeklyDays.value.length === 0) {
+    ElMessage.warning(t('scan.form.tips.weekDays'));
+    return false;
+  }
+  return true;
+};
+
+const validateMonthlyConfig = () => {
+  if (monthlyDays.value.length === 0) {
+    ElMessage.warning(t('scan.form.tips.monthDays'));
+    return false;
+  }
+  return true;
+};
+
+// 更新模板中的时间选择器标签
+const getTimePickerLabel = computed(() => {
+  switch (scheduleType.value) {
+    case t('scan.form.types.everyWeek'):
+      return t('scan.form.time.weekly');
+    case t('scan.form.types.everyMonth'):
+      return t('scan.form.time.monthly');
+    default:
+      return t('scan.form.time.daily');
+  }
+});
+
+// 自定义Cron表达式提示
+const cronExpressionTip = computed(() => {
+  return scheduleType.value === t('scan.form.types.custom') 
+    ? t('scan.form.tips.customCron') 
+    : '';
 });
 </script>
 

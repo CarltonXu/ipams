@@ -1,0 +1,334 @@
+export default {
+  common: {
+    success: '操作成功',
+    error: '操作失败',
+    confirm: '确认',
+    cancel: '取消',
+    save: '保存',
+    delete: '删除',
+    edit: '编辑',
+    add: '添加',
+    search: '搜索',
+    reset: '重置',
+    loading: '加载中...',
+    more: '更多',
+    yes: '是',
+    no: '否',
+    actions: '操作',
+  },
+  menu: {
+    home: '首页',
+    ipManagement: '主机管理',
+    scanConfig: '配置扫描',
+    settings: '系统设置',
+    userManagement: '用户管理',
+  },
+  auth: {
+    login: '登录',
+    logout: '退出登录',
+    register: '注册',
+    username: '用户名',
+    password: '密码',
+    email: '邮箱',
+    loginSuccess: '登录成功',
+    loginError: '登录失败',
+    tokenExpired: '登录已过期，请重新登录',
+  },
+  user: {
+    profile: '个人中心',
+    settings: '个人设置',
+    account: '账号信息',
+    changePassword: '修改密码',
+    currentUser: '当前用户',
+  },
+  theme: {
+    title: '主题设置',
+    light: '浅色模式',
+    dark: '深色模式',
+    system: '跟随系统',
+  },
+  language: {
+    title: '语言设置',
+    zh: '中文',
+    en: '英文',
+  },
+  ip: {
+    title: 'IP地址管理',
+    subtitle: '使用过滤器和搜索功能轻松管理您的IP地址',
+    search: '搜索IP、设备或用途',
+    status: {
+      all: '所有状态',
+      active: '活跃',
+      inactive: '未使用',
+      unclaimed: '未认领',
+      description: {
+        active: '此IP当前处于活跃状态',
+        inactive: '此IP未在使用',
+        unclaimed: '此IP可供认领',
+        danger: '未知状态'
+      }
+    },
+    columns: {
+      hostUUID: '主机UUID',
+      ipAddress: 'IP地址',
+      osVersion: '操作系统',
+      status: '状态',
+      deviceName: '设备名称',
+      deviceType: '设备类型',
+      architecture: '架构',
+      model: '型号',
+      owningUser: '所属用户',
+      purpose: '用途',
+      lastScanned: '最后扫描时间'
+    },
+    actions: {
+      claim: '认领',
+      edit: '编辑',
+      claimSuccess: '成功认领IP：{ip}',
+      updateSuccess: '成功更新IP：{ip}'
+    },
+    noData: '未找到IP地址',
+    dialog: {
+      claim: {
+        title: '认领IP地址',
+        hostUUID: '主机UUID',
+        hostIP: '主机IP',
+        assignUser: '分配给用户',
+        selectUser: '选择用户',
+        deviceName: '设备名称',
+        deviceNamePlaceholder: '输入设备名称，如(Nginx, Other)',
+        osType: '操作系统',
+        osTypeTip: '选择设备运行的操作系统(如Linux, Windows, Other)',
+        deviceType: '设备类型',
+        deviceTypeTip: '指定使用此IP的设备类型(如Router, Switch, Server)',
+        manufacturer: '制造商',
+        manufacturerTip: '指定设备部署位置(如VMware, OpenStack, Physical)',
+        model: '型号',
+        modelTip: '提供设备型号(如PowerEdge R730, DELL R720)',
+        purpose: '用途',
+        purposePlaceholder: '描述此IP地址的用途',
+        confirmClaim: '确认认领',
+        required: '必填',
+      }
+    }
+  },
+  profile: {
+    title: '个人资料',
+    changeAvatar: '更换头像',
+    editProfile: '编辑资料',
+    editDialogTitle: '编辑个人资料',
+    wechatPlaceholder: '待补充',
+    fields: {
+      username: '用户名',
+      email: '邮箱',
+      wechatId: '微信号',
+    },
+    buttons: {
+      save: '保存',
+      cancel: '取消',
+    },
+    messages: {
+      updateSuccess: '个人资料更新成功',
+      updateFailed: '更新失败',
+      avatarSuccess: '头像更新成功',
+      avatarFailed: '头像更新失败',
+    }
+  },
+  scan: {
+    title: '扫描配置',
+    subtitle: '管理扫描网段和策略配置',
+    subnet: {
+      title: '添加扫描网段',
+      name: '网段名称',
+      namePlaceholder: '请输入网段名称',
+      range: '网段',
+      rangePlaceholder: '请输入扫描网段 (例如: 192.168.0.0/24)',
+      add: '添加',
+      list: '已添加网段',
+      columns: {
+        name: '网段名称',
+        subnet: '网段',
+        createdAt: '创建时间',
+        actions: '操作'
+      },
+      noData: '暂无网段数据',
+      delete: '删除'
+    },
+    policy: {
+      title: '扫描策略配置',
+      name: '策略名称',
+      namePlaceholder: '请输入策略名称',
+      type: '策略类型',
+      typeRequired: '请选择策略类型',
+      types: {
+        everyMinute: '每分钟',
+        everyHour: '每小时',
+        everyDay: '每天',
+        everyWeek: '每周',
+        everyMonth: '每月',
+        custom: '自定义'
+      },
+      interval: {
+        minute: '间隔N分钟',
+        hour: '间隔N小时',
+        day: '间隔N天'
+      },
+      startTime: '开始时间',
+      startTimeRequired: '请选择开始时间',
+      weekdays: {
+        mon: '周一',
+        tue: '周二',
+        wed: '周三',
+        thu: '周四',
+        fri: '周五',
+        sat: '周六',
+        sun: '周日'
+      },
+      monthDays: '日期',
+      monthDaysRequired: '请选择日期',
+      lastDay: '月末',
+      time: '时间',
+      cronExpression: 'Cron 表达式',
+      cronPlaceholder: '输入 Cron 表达式',
+      add: '添加策略',
+      list: '已添加策略',
+      save: '保存策略',
+      columns: {
+        name: '策略名称',
+        description: '策略描述',
+        createdAt: '创建时间',
+        actions: '操作'
+      },
+      noData: '暂无策略数据',
+      show: {
+        columns: {
+          name: '策略名称',
+          description: '策略描述', 
+          createdAt: '创建时间',
+          subnets: '扫描网段',
+          status: {
+            title: '状态',
+            active: '活跃',
+            inactive: '未使用'
+          },
+          actions: {
+            title: '操作',
+            enable: '启用',
+            disable: '禁用',
+            edit: '编辑',
+            delete: '删除'
+          },
+        },
+        noData: '暂无策略数据',
+        dialog: {
+          addTitle: '添加策略',
+          editTitle: '编辑策略',
+          deleteConfirm: '确定要删除此策略吗？',
+          deleteTitle: '删除策略'
+        },
+        messages: {
+          addSuccess: '策略添加成功',
+          saveSuccess: '策略保存成功',
+          deleteSuccess: '策略删除成功',
+          updateSuccess: '策略更新成功'
+        }
+      },
+      description: {
+        everyMinute: '每隔 {minutes} 分钟，从 {time} 开始执行',
+        everyHour: '每隔 {hours} 小时，从 {time} 开始执行',
+        everyDay: '每隔 {days} 天，从 {time} 开始执行',
+        everyWeek: '每 {weekdays}，从 {time} 开始执行',
+        everyMonth: '每月 {days}，从 {time} 开始执行',
+        custom: '自定义执行: {cron}'
+      },
+      weekDays: {
+        0: '周日',
+        1: '周一',
+        2: '周二',
+        3: '周三',
+        4: '周四',
+        5: '周五',
+        6: '周六'
+      }
+    },
+    execution: {
+      title: '执行扫描',
+      selectSubnet: '选择网段',
+      execute: '执行扫描'
+    },
+    form: {
+      interval: {
+        minutes: '间隔N分钟',
+        hours: '间隔N小时',
+        days: '间隔N天',
+        selectTime: '请选择时间'
+      },
+      time: {
+        start: '开始时间',
+        execution: '开始执行时间',
+        select: '选择时间',
+        weekly: '每周执行时间',
+        monthly: '每月执行时间',
+        daily: '每日执行时间'
+      },
+      cron: {
+        label: 'Cron 表达式',
+        placeholder: '输入 Cron 表达式'
+      },
+      validation: {
+        invalidSubnet: '请输入有效的网段！',
+        subnetNameRequired: '网段名称不能为空!',
+        invalidIPFormat: '无效的 IP 地址格式！',
+        invalidSubnetFormat: '无效的网段格式，正确格式为：IP/掩码（如：192.168.0.0/24）'
+      },
+      monthDays: {
+        last: '月末',
+        select: '选择日期'
+      },
+      cronExpression: {
+        label: 'Cron 表达式',
+        placeholder: '请输入 Cron 表达式',
+        time: '执行时间'
+      },
+      buttons: {
+        add: '添加',
+        save: '保存',
+        execute: '执行扫描'
+      },
+      table: {
+        noData: '暂无数据'
+      },
+      status: {
+        loading: '处理中...',
+        executing: '正在执行扫描...'
+      },
+      confirm: {
+        save: '确认保存当前配置？',
+        execute: '确认执行扫描？'
+      },
+      tips: {
+        weekDays: '请选择至少一个星期',
+        monthDays: '请选择至少一个日期',
+        customCron: 'Cron表达式格式：分 时 日 月 星期'
+      }
+    },
+    messages: {
+      success: {
+        addPolicy: '策略添加成功',
+        savePolicy: '策略保存成功',
+        addSubnet: '网段添加成功',
+        deleteSubnet: '网段删除成功',
+        deletePolicy: '策略删除成功'
+      },
+      confirm: {
+        deleteSubnet: '确定要删除该网段吗？',
+        deletePolicy: '确定要删除该策略吗？'
+      }
+    },
+    validation: {
+      subnetName: '请输入网段名称',
+      subnetRange: '请输入网段范围',
+      selectExecutionTime: '请选择执行时间'
+    }
+  }
+};

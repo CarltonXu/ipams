@@ -9,23 +9,23 @@
       <!-- 工具栏 -->
       <div class="toolbar" v-else>
         <div class="toolbar-header">
-          <h2>IP Address Management</h2>
-          <p class="subtitle">Easily manage your IP addresses with filters and search functionality.</p>
+          <h2>{{ $t('ip.title') }}</h2>
+          <p class="subtitle">{{ $t('ip.subtitle') }}</p>
         </div>
         <div class="filters">
           <el-input
             v-model="searchQuery"
             @input="debouncedSearch"
-            placeholder="Search IPs, devices, or purpose"
+            :placeholder="$t('ip.search')"
             prefix-icon="Search"
             clearable
             class="search-input"
           />
-          <el-select v-model="statusFilter" class="status-filter" placeholder="Filter by Status">
-            <el-option label="All Status" value="all" />
-            <el-option label="Active" value="active" />
-            <el-option label="Inactive" value="inactive" />
-            <el-option label="Unclaimed" value="unclaimed" />
+          <el-select v-model="statusFilter" class="status-filter" :placeholder="$t('ip.status.all')">
+            <el-option :label="$t('ip.status.all')" value="all" />
+            <el-option :label="$t('ip.status.active')" value="active" />
+            <el-option :label="$t('ip.status.inactive')" value="inactive" />
+            <el-option :label="$t('ip.status.unclaimed')" value="unclaimed" />
           </el-select>
         </div>
       </div>
@@ -37,7 +37,7 @@
           :data="filteredIPs"
           style="width: 100%"
           :height="tableHeight"
-          empty-text="No IP addresses found"
+          :empty-text="$t('ip.noData')"
           class="ip-table"
           stripe
           highlight-current-row
@@ -47,19 +47,19 @@
             v-for="column in tableColumns"
             :key="column.prop"
             :prop="column.prop"
-            :label="column.label"
+            :label="$t(`ip.columns.${column.translationKey}`)"
             :sortable="column.sortable ? 'custom' : false"
             :width="column.width"
             :min-width="column.minWidth">
             <template v-if="column.slotName" #default="{ row }">
-              <el-tooltip :content="statusDescriptions[row.status]" placement="top">
+              <el-tooltip :content="$t(`ip.status.description.${row.status}`)" placement="top">
                 <el-tag :type="getStatusType(row.status)" effect="light">
-                  {{ row.status }}
+                  {{ $t(`ip.status.${row.status}`) }}
                 </el-tag>
               </el-tooltip>
             </template>
           </el-table-column>
-          <el-table-column label="Actions" width="120" align="center">
+          <el-table-column :label="$t('common.actions')" width="120" align="center">
             <template #default="{ row }">
               <el-button
                 v-if="row.status === 'unclaimed'"
@@ -67,17 +67,17 @@
                 size="small"
                 @click="openClaimDialog(row)"
                 round>
-                Claim
+                {{ $t('ip.actions.claim') }}
               </el-button>
               <!-- 只有当前用户的资源才可以修改 -->
               <el-button
-              v-if="row.status !== 'unclaimed' && (row.assigned_user && row.assigned_user.username === authStore.user.username || authStore.user.is_admin) || (row.status === 'active' && !row.assigned_user)"
-              type="primary"
-              size="small"
-              @click="openUpdateDialog(row)"
-              round>
-              Edit
-            </el-button>
+                v-if="row.status !== 'unclaimed' && (row.assigned_user && row.assigned_user.username === authStore.user.username || authStore.user.is_admin) || (row.status === 'active' && !row.assigned_user)"
+                type="primary"
+                size="small"
+                @click="openUpdateDialog(row)"
+                round>
+                {{ $t('ip.actions.edit') }}
+              </el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -146,17 +146,17 @@ const statusDescriptions: Record<string, string> = {
 };
 
 const tableColumns = ref([
-  { prop: 'id', label: 'Host UUID', minWidth: 110 },
-  { prop: 'ip_address', label: 'IP Address', minWidth: 120, sortable: true },
-  { prop: 'os_type', label: 'OS Version', minWidth: 150, sortable: true },
-  { prop: 'status', label: 'Status', width: 120, slotName: 'status', sortable: true},
-  { prop: 'device_name', label: 'Device Name', minWidth: 150, sortable: true },
-  { prop: 'device_type', label: 'Device Type', minWidth: 150, sortable: true },
-  { prop: 'manufacturer', label: 'Architerture', minWidth: 150, sortable: true },
-  { prop: 'model', label: 'Model', minWidth: 150, sortable: true },
-  { prop: 'assigned_user.username', label: 'Owning User', minWidth: 150, sortable: true },
-  { prop: 'purpose', label: 'Purpose', minWidth: 180 },
-  { prop: 'last_scanned', label: 'Last Scanned', minWidth: 180, sortable: true },
+  { prop: 'id', translationKey: 'hostUUID', minWidth: 110 },
+  { prop: 'ip_address', translationKey: 'ipAddress', minWidth: 120, sortable: true },
+  { prop: 'os_type', translationKey: 'osVersion', minWidth: 150, sortable: true },
+  { prop: 'status', translationKey: 'status', width: 120, slotName: 'status', sortable: true},
+  { prop: 'device_name', translationKey: 'deviceName', minWidth: 150, sortable: true },
+  { prop: 'device_type', translationKey: 'deviceType', minWidth: 150, sortable: true },
+  { prop: 'manufacturer', translationKey: 'architecture', minWidth: 150, sortable: true },
+  { prop: 'model', translationKey: 'model', minWidth: 150, sortable: true },
+  { prop: 'assigned_user.username', translationKey: 'owningUser', minWidth: 150, sortable: true },
+  { prop: 'purpose', translationKey: 'purpose', minWidth: 180 },
+  { prop: 'last_scanned', translationKey: 'lastScanned', minWidth: 180, sortable: true },
 ]);
 
 const tableHeight = ref(window.innerHeight - 394);
@@ -224,8 +224,8 @@ const openClaimDialog = (ip: IP) => {
 
 // 处理认领成功事件
 const handleClaimSuccess = (ip: IP) => {
-  ElMessage.success(`Successfully claimed IP: ${ip.ip_address}`);
-  ipStore.fetchAllIPs(); // 刷新表格数据
+  ElMessage.success(t('ip.actions.claimSuccess', { ip: ip.ip_address }));
+  ipStore.fetchAllIPs();
   claimDialogVisible.value = false;
 };
 
@@ -237,8 +237,8 @@ const openUpdateDialog = (ip: IP) => {
 
 // 处理更新成功事件
 const handleUpdateSuccess = (ip: IP) => {
-  ElMessage.success(`Successfully updated IP: ${ip.ip_address}`);
-  ipStore.fetchAllIPs(); // 刷新表格数据
+  ElMessage.success(t('ip.actions.updateSuccess', { ip: ip.ip_address }));
+  ipStore.fetchAllIPs();
   updateDialogVisible.value = false;
 };
 
