@@ -111,7 +111,6 @@ export default {
   ip: {
     title: 'IP地址管理',
     subtitle: '使用过滤器和搜索功能轻松管理您的IP地址',
-    search: '搜索IP、设备或用途',
     status: {
       all: '所有状态',
       active: '活跃',
@@ -125,7 +124,14 @@ export default {
         unassigned: '此IP未分配',
         danger: '未知状态',
         undefined: '未知状态'
-      }
+      },
+    },
+    search: {
+      title: '搜索IP、设备或用途',
+      selectColumn: '选择搜索列',
+      allColumns: '所有列',
+      all: '搜索所有列...',
+      specific: '搜索 {column}...'
     },
     columns: {
       hostUUID: '主机UUID',

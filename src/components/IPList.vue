@@ -13,15 +13,33 @@
           <p class="subtitle">{{ $t('ip.subtitle') }}</p>
         </div>
         <div class="filters">
+          <el-select
+            v-model="searchColumn"
+            class="column-filter"
+            :placeholder="$t('ip.search.selectColumn')"
+          >
+            <el-option value="all" :label="$t('ip.search.allColumns')" />
+            <el-option
+              v-for="column in searchableColumns"
+              :key="column.prop"
+              :label="$t(`ip.columns.${column.translationKey}`)"
+              :value="column.prop"
+            />
+          </el-select>
+          
           <el-input
             v-model="searchQuery"
-            @input="debouncedSearch"
-            :placeholder="$t('ip.search')"
+            :placeholder="searchColumn === 'all' ? $t('ip.search.all') : $t('ip.search.specific', { column: $t(`ip.columns.${getColumnTranslationKey(searchColumn)}`) })"
             prefix-icon="Search"
             clearable
             class="search-input"
           />
-          <el-select v-model="statusFilter" class="status-filter" :placeholder="$t('ip.status.all')">
+          
+          <el-select 
+            v-model="statusFilter" 
+            class="status-filter" 
+            :placeholder="$t('ip.status.all')"
+          >
             <el-option :label="$t('ip.status.all')" value="all" />
             <el-option :label="$t('ip.status.active')" value="active" />
             <el-option :label="$t('ip.status.inactive')" value="inactive" />
@@ -146,6 +164,7 @@ const authStore = useAuthStore();
 const ipStore = useIPStore();
 
 const searchQuery = ref('');
+const searchColumn = ref('all');
 const statusFilter = ref('all');
 const claimDialogVisible = ref(false);
 const updateDialogVisible = ref(false);
@@ -190,22 +209,49 @@ const handleCurrentChange = (page: number) => {
   }
 };
 
-// 计算属性：过滤后的表格数据
+// 可搜索的列
+const searchableColumns = computed(() => tableColumns.value.filter(col => 
+  ['ip_address', 'device_name', 'os_type', 'device_type', 'manufacturer', 'model', 'purpose', 'assigned_user.username'].includes(col.prop)
+));
+
+// 获取列的翻译键
+const getColumnTranslationKey = (prop: string) => {
+  const column = tableColumns.value.find(col => col.prop === prop);
+  return column ? column.translationKey : '';
+};
+
+// 修改过滤逻辑
 const filteredIPs = computed(() => {
-  let filtered = ipStore.sortedIPs
+  let filtered = ipStore.sortedIPs;
+
+  // 搜索过滤
   if (searchQuery.value) {
     const query = searchQuery.value.toLowerCase();
-    filtered = ipStore.ips.filter((ip) =>
-      [ip.ip_address, ip.device_name, ip.purpose].some((field) =>
-        field.toLowerCase().includes(query)
-      )
-    )
+    filtered = filtered.filter((ip) => {
+      if (searchColumn.value === 'all') {
+        // 搜索所有可搜索列
+        return searchableColumns.value.some(column => {
+          const value = column.prop === 'assigned_user.username'
+            ? ip.assigned_user?.username
+            : ip[column.prop];
+          return value?.toString().toLowerCase().includes(query);
+        });
+      } else {
+        // 搜索指定列
+        if (searchColumn.value === 'assigned_user.username') {
+          return ip.assigned_user?.username?.toLowerCase().includes(query);
+        }
+        const value = ip[searchColumn.value];
+        return value?.toString().toLowerCase().includes(query);
+      }
+    });
   }
+
+  // 状态过滤
   if (statusFilter.value !== 'all') {
-    filtered = ipStore.ips.filter((ip) => ip.status === statusFilter.value);
-    console.log('Filtered by Status:', filtered);
+    filtered = filtered.filter((ip) => ip.status === statusFilter.value);
   }
-  
+
   return filtered;
 });
 
@@ -313,6 +359,11 @@ const handleSortChange = ({ prop, order }: { prop: string; order: string }) => {
 .filters {
   display: flex;
   gap: 1rem;
+  align-items: center;
+}
+
+.column-filter {
+  width: 150px;
 }
 
 .search-input {

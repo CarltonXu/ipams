@@ -111,7 +111,6 @@ export default {
   ip: {
     title: 'IP Address Management',
     subtitle: 'Easily manage your IP addresses with filters and search functionality',
-    search: 'Search IPs, devices, or purpose',
     status: {
       all: 'All Status',
       active: 'Active',
@@ -125,7 +124,14 @@ export default {
         unassigned: 'This IP is unassigned',
         danger: 'Unknown status',
         undefined: 'Unknown status',
-      }
+      },
+    },
+    search: {
+      title: 'Search IP, Device or Purpose',
+      selectColumn: 'Select Search Column',
+      allColumns: 'All Columns',
+      all: 'Search All Columns...',
+      specific: 'Search {column}...'
     },
     columns: {
       hostUUID: 'Host UUID',
