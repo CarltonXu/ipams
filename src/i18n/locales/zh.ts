@@ -3,6 +3,7 @@ export default {
     success: '操作成功',
     error: '操作失败',
     confirm: '确认',
+    warning: '警告',
     cancel: '取消',
     save: '保存',
     delete: '删除',
@@ -40,6 +41,61 @@ export default {
     account: '账号信息',
     changePassword: '修改密码',
     currentUser: '当前用户',
+    management: {
+      title: '用户管理',
+      subtitle: '管理系统用户及其权限',
+      button: {
+        add: '添加用户'
+      },
+      table: {
+        columns: {
+          uuid: 'UUID',
+          username: '用户名',
+          email: '邮箱',
+          createdAt: '创建时间',
+          isAdmin: '管理员',
+          actions: '操作'
+        },
+        noData: '暂无用户数据'
+      },
+      dialog: {
+        title: '用户信息',
+        labels: {
+          username: '用户名',
+          email: '邮箱',
+          password: '密码',
+          wechatId: '微信 ID',
+          isAdmin: '管理员'
+        },
+        placeholders: {
+          username: '请输入用户名',
+          email: '请输入邮箱',
+          password: '请输入密码',
+          wechatId: '请输入微信 ID'
+        }
+      },
+      buttons: {
+        edit: '编辑',
+        delete: '删除',
+        save: '保存',
+        cancel: '取消'
+      },
+      messages: {
+        deleteConfirm: '确定删除用户 {username} 吗？',
+        deleteSuccess: '用户删除成功',
+        saveSuccess: '用户保存成功',
+        fetchError: '获取用户列表失败',
+        saveError: '保存用户失败'
+      },
+      validation: {
+        username: '请输入用户名',
+        email: {
+          required: '请输入邮箱',
+          invalid: '请输入有效的邮箱地址'
+        },
+        password: '请输入密码'
+      }
+    }
   },
   theme: {
     title: '主题设置',
@@ -65,7 +121,8 @@ export default {
         active: '此IP当前处于活跃状态',
         inactive: '此IP未在使用',
         unclaimed: '此IP可供认领',
-        danger: '未知状态'
+        danger: '未知状态',
+        undefined: '未知状态'
       }
     },
     columns: {
@@ -108,7 +165,13 @@ export default {
         purpose: '用途',
         purposePlaceholder: '描述此IP地址的用途',
         confirmClaim: '确认认领',
+        confirmUpdate: "确认更新",
         required: '必填',
+        success: 'IP认领成功',
+        updateSuccess: 'IP认领更新成功',
+        error: '认领 IP 失败: {error}',
+        deviceNameRequired: '设备名称不能为空',
+        purposeRequired: '用途不能为空',
       }
     }
   },
@@ -156,6 +219,7 @@ export default {
     },
     policy: {
       title: '扫描策略配置',
+      subtitle: '管理您的扫描策略及其配置',
       name: '策略名称',
       namePlaceholder: '请输入策略名称',
       type: '策略类型',
@@ -330,5 +394,83 @@ export default {
       subnetRange: '请输入网段范围',
       selectExecutionTime: '请选择执行时间'
     }
-  }
+  },
+  settings: {
+    title: '系统设置',
+    subtitle: '在这里您可以配置您的系统偏好设置，包括主题、语言等',
+    sections: {
+      basic: '基本设置',
+      interface: '界面设置',
+      account: '账户设置'
+    },
+    form: {
+      language: {
+        label: '语言',
+        placeholder: '选择语言',
+        options: {
+          zh: '中文',
+          en: '英文'
+        }
+      },
+      theme: {
+        label: '主题',
+        placeholder: '选择主题',
+        options: {
+          light: '浅色',
+          dark: '深色'
+        }
+      },
+      notifications: {
+        label: '通知开关',
+        on: '开',
+        off: '关'
+      },
+      timeFormat: {
+        label: '时间格式',
+        placeholder: '选择时间格式',
+        options: {
+          '12h': '12小时制',
+          '24h': '24小时制'
+        }
+      },
+      password: {
+        label: '修改密码',
+        button: '修改密码',
+        dialog: {
+          title: '修改密码',
+          old: '旧密码',
+          new: '新密码',
+          confirm: '确认密码'
+        }
+      }
+    },
+    validation: {
+      language: '请选择语言',
+      theme: '请选择主题',
+      oldPassword: '请输入旧密码',
+      newPassword: '请输入新密码',
+      confirmPassword: '请确认新密码'
+    },
+    messages: {
+      saveSuccess: '设置已保存',
+      passwordMismatch: '新密码与确认密码不匹配',
+      passwordSuccess: '密码修改成功',
+      passwordSuccessRedirect: '密码修改成功，5秒后将返回登录页面...',
+      passwordFailed: '修改密码失败',
+      updateUserFailed: '更新用户信息失败: {error}'
+    },
+    buttons: {
+      save: '保存设置',
+      cancel: '取 消',
+      confirm: '确 定'
+    }
+  },
+  pagination: {
+    total: '共 {total} 条',
+    pageSize: '条/页',
+    jumper: '前往',
+    page: '页',
+    prev: '上一页',
+    next: '下一页',
+  },
 };

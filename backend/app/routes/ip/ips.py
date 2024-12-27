@@ -72,28 +72,41 @@ def get_ips(current_user):
 @token_required
 def claim_ip(current_user, ip_id):
     ip = IP.query.get_or_404(ip_id)
-
-    if ip.status != 'unclaimed':
-        return jsonify({'error': 'IP is already claimed'}), 400
-
     data = request.json
+
+    # 修改这里，添加用户分配逻辑
+    if current_user.is_admin:
+        # 如果是管理员，使用传入的 assigned_user_id
+        assigned_user_id = data.get('assigned_user_id')
+        if assigned_user_id:
+            # 验证用户是否存在
+            assigned_user = User.query.get(assigned_user_id)
+            if not assigned_user:
+                return jsonify({'error': 'Assigned user not found'}), 404
+            ip.assigned_user_id = assigned_user_id
+        else:
+            ip.assigned_user_id = None
+    else:
+        # 如果是普通用户，自动分配给自己
+        ip.assigned_user_id = current_user.id
+
     ip.device_name = data.get('device_name')
     ip.device_type = data.get('device_type')
     ip.manufacturer = data.get('manufacturer')
     ip.model = data.get('model')
     ip.purpose = data.get('purpose')
     ip.status = 'active'
-    ip.assigned_user_id = current_user.id
 
     db.session.commit()
 
     # 记录日志
     utils.log_action_to_db(
         user=current_user,
-        action="Claimed IP",
+        action=f"Claimed IP {ip.ip_address}",
         target=ip.id,
-        details=f"IP {ip.ip_address} claimed with device details: {data}"
+        details=f"Claimed by user {current_user.username}"
     )
+
     return jsonify(ip.to_dict())
 
 @ips_bp.route('/ips/<ip_id>', methods=['POST'])

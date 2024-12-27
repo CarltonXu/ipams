@@ -4,6 +4,7 @@ import { useAuthStore } from '../stores/auth';
 import { useUserStore } from '../stores/user'
 import { useIPStore } from '../stores/ip';
 import { ElMessage } from 'element-plus';
+import { useI18n } from 'vue-i18n';
 
 // Props 和 Emits
 const props = defineProps({
@@ -45,6 +46,8 @@ const loading = ref(false);
 const isAdmin = computed(() => authStore.user?.is_admin);
 const users = computed(() => userStore.users);
 
+const { t } = useI18n();
+
 // 表单初始化
 const initForm = (ip: typeof props.ip) => {
   form.value = {
@@ -57,7 +60,7 @@ const initForm = (ip: typeof props.ip) => {
     manufacturer: ip.manufacturer || 'Other',
     model: ip.model || 'Other',
     purpose: ip.purpose || '',
-    assigned_user_id: ip.assigned_user_id || '', // 新增字段
+    assigned_user_id: ip.assigned_user_id || '',
   };
 };
 
@@ -72,7 +75,7 @@ const resetForm = () => {
   initForm(props.ip);
 };
 
-// 提交认领操作
+// 修改更新处理函数
 const handleUpdate = async () => {
   if (!validateForm()) return;
 
@@ -86,14 +89,14 @@ const handleUpdate = async () => {
       manufacturer: form.value.manufacturer,
       model: form.value.model,
       purpose: form.value.purpose,
-      assigned_user_id: form.value.assigned_user_id,
+      assigned_user_id: form.value.assigned_user_id || null,
     });
 
-    ElMessage.success('IP updated successfully');
+    ElMessage.success(t('ip.dialog.claim.updateSuccess'));
     emit('updateSuccess', props.ip);
     handleClose();
   } catch (error: any) {
-    ElMessage.error(`Failed to update IP: ${error.message || 'Unknown error'}`);
+    ElMessage.error(t('ip.dialog.claim.error', { error: error.message || t('common.unknownError') }));
   } finally {
     loading.value = false;
   }
@@ -102,18 +105,22 @@ const handleUpdate = async () => {
 // 表单验证
 const validateForm = () => {
   if (!form.value.device_name.trim()) {
-    ElMessage.error('Device Name is required');
+    ElMessage.error(t('ip.dialog.claim.deviceNameRequired'));
     return false;
   }
   if (!form.value.purpose.trim()) {
-    ElMessage.error('Purpose is required');
+    ElMessage.error(t('ip.dialog.claim.purposeRequired'));
     return false;
   }
   return true;
 };
 
-onMounted(() => {
-   userStore.fetchUsers();
+onMounted(async () => {
+  try {
+    await userStore.fetchUsers();
+  } catch (error) {
+    ElMessage.error(t('common.fetchError'));
+  }
 });
 
 // 监听 props.ip 的变化并重新初始化表单
@@ -132,26 +139,25 @@ watch(
   <el-dialog
     :model-value="modelValue"
     @update:model-value="emit('update:modelValue', $event)"
-    title="Update IP Address"
+    :title="t('ip.dialog.claim.title')"
     :before-close="handleClose"
     width="500px"
     class="update-dialog"
   >
     <div v-if="ip" class="dialog-content">
-      <!-- IP信息展示 -->
       <div class="ip-info-group">
         <div class="ip-info">
-          <span class="label">Host UUID:</span>
+          <span class="label">{{ t('ip.dialog.claim.hostUUID') }}:</span>
           <span class="value">{{ ip.id || 'N/A' }}</span>
         </div>
         <div class="ip-info">
-          <span class="label">Host IP:</span>
+          <span class="label">{{ t('ip.dialog.claim.hostIP') }}:</span>
           <span class="value">{{ ip.ip_address || 'N/A' }}</span>
         </div>
       </div>
       <el-form :model="form" label-position="top" class="update-form">
-        <el-form-item v-if="isAdmin" label="Assign to User">
-        <el-select v-model="form.assigned_user_id" placeholder="Select a user">
+        <el-form-item v-if="isAdmin" :label="$t('ip.dialog.claim.assignUser')">
+        <el-select v-model="form.assigned_user_id" :placeholder="$t('ip.dialog.claim.selectUser')">
           <el-option
           :label="'Unassigned'"
           :value="null" 
@@ -164,51 +170,52 @@ watch(
           />
         </el-select>
       </el-form-item>
-        <el-form-item label="Device Name" required>
-            <el-input v-model="form.device_name" placeholder="Enter your device name, Like (e.g., Nginx, Other)." />
+        <el-form-item :label="$t('ip.dialog.claim.deviceName')" required>
+            <el-input v-model="form.device_name" 
+            :placeholder="$t('ip.dialog.claim.deviceNamePlaceholder')" />
         </el-form-item>
-        <el-form-item label="OS Type" required>
-          <el-tooltip content="Select the operating system running on this device (e.g., Linux, Windows, Other)." placement="top">
-            <el-select v-model="form.os_type" placeholder="Select OS Type">
+        <el-form-item :label="$t('ip.dialog.claim.osType')" required>
+          <el-tooltip :content="$t('ip.dialog.claim.osTypeTip')" placement="top">
+            <el-select v-model="form.os_type" :placeholder="$t('ip.dialog.claim.osType')">
               <el-option v-for="os in osOptions" :key="os" :label="os" :value="os" />
             </el-select>
           </el-tooltip>
         </el-form-item>
 
         <!-- Device Type -->
-        <el-form-item label="Device Type" required>
-          <el-tooltip content="Specify the type of device using this IP (e.g., Router, Switch, Server)." placement="top">
-            <el-select v-model="form.device_type" placeholder="Select Device Type">
+        <el-form-item :label="$t('ip.dialog.claim.deviceType')" required>
+          <el-tooltip :content="$t('ip.dialog.claim.deviceTypeTip')" placement="top">
+            <el-select v-model="form.device_type" :placeholder="$t('ip.dialog.claim.deviceType')">
               <el-option v-for="type in deviceTypeOptions" :key="type" :label="type" :value="type" />
             </el-select>
           </el-tooltip>
         </el-form-item>
 
         <!-- Manufacturer -->
-        <el-form-item label="Manufacturer" required>
-          <el-tooltip content="Indicate where the device is deployed (e.g., VMware, OpenStack, Physical)." placement="top">
-            <el-select v-model="form.manufacturer" placeholder="Select Manufacturer">
+        <el-form-item :label="$t('ip.dialog.claim.manufacturer')" required>
+          <el-tooltip :content="$t('ip.dialog.claim.manufacturerTip')" placement="top">
+            <el-select v-model="form.manufacturer" :placeholder="$t('ip.dialog.claim.manufacturer')">
               <el-option v-for="manufacturer in manufacturerOptions" :key="manufacturer" :label="manufacturer" :value="manufacturer" />
             </el-select>
           </el-tooltip>
         </el-form-item>
 
         <!-- Model -->
-        <el-form-item label="Model" required>
-          <el-tooltip content="Provide the device model (e.g., PowerEdge R730, DELL R720)." placement="top">
-            <el-select v-model="form.model" placeholder="Select Model">
+        <el-form-item :label="$t('ip.dialog.claim.model')" required>
+          <el-tooltip :content="$t('ip.dialog.claim.modelTip')" placement="top">
+            <el-select v-model="form.model" :placeholder="$t('ip.dialog.claim.model')">
               <el-option v-for="model in modelOptions" :key="model" :label="model" :value="model" />
             </el-select>
           </el-tooltip>
         </el-form-item>
 
         <!-- Purpose -->
-        <el-form-item label="Purpose" required>
+        <el-form-item :label="$t('ip.dialog.claim.purpose')" required>
           <el-input
             v-model="form.purpose"
             type="textarea"
             :rows="3"
-            placeholder="Describe the purpose of this IP address"
+            :placeholder="$t('ip.dialog.claim.purposePlaceholder')"
           />
         </el-form-item>
       </el-form>
@@ -216,9 +223,9 @@ watch(
 
     <template #footer>
       <div class="dialog-footer">
-        <el-button @click="handleClose">Cancel</el-button>
+        <el-button @click="handleClose">{{ t('common.cancel') }}</el-button>
         <el-button type="primary" @click="handleUpdate" :loading="loading">
-          Confirm Update
+          {{ t('ip.dialog.claim.confirmUpdate') }}
         </el-button>
       </div>
     </template>

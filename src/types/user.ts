@@ -25,6 +25,12 @@ export interface AuthState {
   token: string | null;
 }
 
+export interface updatePassword {
+  id: string;
+  old_password: string;
+  new_password: string;
+}
+
 export interface UpdateUser {
   id: string;
   username: string;

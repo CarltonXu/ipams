@@ -195,6 +195,7 @@ const handleSavePolicy = (policyData: Policy) => {
 
 .toolbar-header .subtitle {
   margin: 5px 0 0;
+  font-size: 14px;
   color: var(--el-text-color-secondary);
 }
 

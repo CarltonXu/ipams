@@ -85,12 +85,21 @@
 
       <!-- 分页 -->
       <el-pagination
-        v-model:current-page.sync="ipStore.currentPage"
-        :page-size.sync="ipStore.pageSize"
+        v-model:current-page="ipStore.currentPage"
+        :page-size="ipStore.pageSize"
         :total="ipStore.total"
+        :page-sizes="[10, 20, 50, 100]"
         background
-        layout="prev, pager, next, sizes, jumper"
+        :pager-count="7"
+        layout="total, sizes, prev, pager, next, jumper"
+        :prev-text="$t('pagination.prev')"
+        :next-text="$t('pagination.next')"
+        :total-template="`${$t('pagination.total', { total: ipStore.total })}`"
+        :page-size-template="`{size}${$t('pagination.pageSize')}`"
+        :jumper-template="`${$t('pagination.jumper')}${$t('pagination.page')}`"
+        :sizes-text="$t('pagination.pageSize')"
         @size-change="handleSizeChange"
+        @current-change="handleCurrentChange"
         class="pagination"
       />
 
@@ -105,7 +114,7 @@
       <UPdateIPDialog
         v-model="updateDialogVisible"
         :ip="updateSelectedIP"
-        @claimSuccess="handleUpdateSuccess"
+        @updateSuccess="handleUpdateSuccess"
       />
     </el-card>
   </div>
@@ -116,6 +125,7 @@ import { ref, onMounted, onUnmounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
 import { useIPStore } from '../stores/ip';
+import { useI18n } from 'vue-i18n';
 import { debounce } from 'lodash';
 import type { IP } from '../types/ip';
 import { ElMessage } from 'element-plus';
@@ -123,6 +133,8 @@ import ClaimIPDialog from './ClaimIPDialog.vue';
 import UPdateIPDialog from './UpdateIPDialog.vue';
 import Login from '../views/Login.vue';
 import { Search } from '@element-plus/icons-vue';
+
+const { t } = useI18n();
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -137,13 +149,6 @@ const updateSelectedIP = ref<IP | null>(null); // 当前选中的 IP 信息
 
 // 计算属性：是否已登录
 const isAuthenticated = computed(() => !!authStore.user);
-
-const statusDescriptions: Record<string, string> = {
-  active: 'This IP is currently active.',
-  inactive: 'This IP is not in use.',
-  unclaimed: 'This IP is available for claiming.',
-  danger: 'Unknown status.',
-};
 
 const tableColumns = ref([
   { prop: 'id', translationKey: 'hostUUID', minWidth: 110 },
@@ -171,6 +176,13 @@ const debouncedSearch = debounce((query) => {
 
 const handleSizeChange = (page: number) => {
   ipStore.pageSize = page;
+};
+
+const handleCurrentChange = (page: number) => {
+  ipStore.currentPage = page;
+  if (!ipStore.useGlobalFilter) {
+    ipStore.fetchPaginatedIPs(page);
+  }
 };
 
 // 计算属性：过滤后的表格数据
@@ -276,7 +288,7 @@ const handleSortChange = ({ prop, order }: { prop: string; order: string }) => {
 
 .toolbar-header .subtitle {
   color: #666;
-  margin: 0;
+  margin: 5px 0 0;
   font-size: 14px;
 }
 

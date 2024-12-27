@@ -3,9 +3,32 @@ import { useAuthStore } from './stores/auth';
 import { onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import axios from 'axios';
+import { ElMessage } from 'element-plus';
+import { useI18n } from 'vue-i18n';
 
+const { t } = useI18n();
 const authStore = useAuthStore();
 const router = useRouter();
+
+// 添加响应拦截器
+axios.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    // 处理 token 过期的情况
+    if (error.response?.data?.message === 'Token has expired') {
+      // 清除认证状态
+      authStore.logout();
+      
+      // 显示提示信息
+
+      ElMessage.error(t('auth.tokenExpired'));
+      
+      // 跳转到登录页
+      router.push('/login');
+    }
+    return Promise.reject(error);
+  }
+);
 
 // 在挂载后检查身份认证状态
 onMounted(() => {

@@ -1,6 +1,9 @@
 import { defineStore } from 'pinia';
 import axios from 'axios';
 import type { User } from '../types/user';
+import i18n from '../i18n';
+
+const { t } = i18n.global;
 
 export const useUserStore = defineStore('user', {
   state: () => ({
@@ -36,25 +39,17 @@ export const useUserStore = defineStore('user', {
      */
     async fetchUsers(page?: number, pageSize?: number) {
       this.loading = true;
-      const currentPage = page ?? this.currentPage;
-      const currentPageSize = pageSize ?? this.pageSize;
-
       try {
         const response = await axios.get('/api/users', {
-          params: { page: currentPage, page_size: currentPageSize },
+          params: { page: page ?? this.currentPage, page_size: pageSize ?? this.pageSize },
         });
         const { users = [], total = 0 } = response.data;
-
         this.users = Array.isArray(users) ? users : [];
         this.total = total;
-        this.pages = Math.ceil(total / currentPageSize);
-        this.currentPage = currentPage;
-        this.pageSize = currentPageSize;
-
         this.syncUsersMap();
       } catch (error: any) {
         console.error('Failed to fetch users:', error);
-        throw new Error(error.response?.data?.message || '无法获取用户列表');
+        throw new Error(error.response?.data?.message || t('settings.messages.fetchUsersFailed'));
       } finally {
         this.loading = false;
       }
@@ -98,7 +93,7 @@ export const useUserStore = defineStore('user', {
         return response.data;
       } catch (error: any) {
         if (onLogout) onLogout();
-        throw new Error(error.response?.data?.message || '获取当前用户失败');
+        throw new Error(error.response?.data?.message || t('settings.messages.fetchCurrentUserFailed'));
       }
     },
 
@@ -113,12 +108,31 @@ export const useUserStore = defineStore('user', {
         this.syncUsersMap();
       } catch (error: any) {
         console.error('Failed to add user:', error);
-        throw new Error(error.response?.data?.message || '无法添加用户');
+        throw new Error(error.response?.data?.message || t('settings.messages.addUserFailed'));
       } finally {
         this.loading = false;
       }
     },
 
+    /**
+     * 更新用户密码
+     */
+    async updatePassword(user_id: string, oldPassword: string, newPassword: string) {
+      this.loading = true;
+      try {
+        const response = await axios.post(`/api/users/change-password`, {
+          user_id,
+          old_password: oldPassword,
+          new_password: newPassword
+        });
+        return response.data;
+      } catch (error: any) {
+        console.error('Failed to change password:', error);
+        throw new Error(error.response?.data?.message || t('settings.messages.passwordFailed'));
+      } finally {
+        this.loading = false;
+      }
+    },
     /**
      * 更新用户信息
      */
@@ -133,7 +147,7 @@ export const useUserStore = defineStore('user', {
         }
       } catch (error: any) {
         console.error('Failed to update user:', error);
-        throw new Error(error.response?.data?.message || '无法更新用户');
+        throw new Error(error.response?.data?.message || t('settings.messages.updateUserFailed'));
       } finally {
         this.loading = false;
       }
@@ -150,7 +164,7 @@ export const useUserStore = defineStore('user', {
         this.syncUsersMap();
       } catch (error: any) {
         console.error('Failed to delete user:', error);
-        throw new Error(error.response?.data?.message || '无法删除用户');
+        throw new Error(error.response?.data?.message || t('settings.messages.deleteUserFailed'));
       } finally {
         this.loading = false;
       }

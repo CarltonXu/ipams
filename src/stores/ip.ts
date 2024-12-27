@@ -1,5 +1,8 @@
 import { defineStore } from 'pinia';
 import axios from 'axios';
+import i18n from '../i18n'; // 导入 i18n 实例
+
+const { t } = i18n.global; // 在 store 中使用 global t 函数
 import type { IP } from '../types/ip';
 
 export const useIPStore = defineStore('ip', {
@@ -88,13 +91,21 @@ export const useIPStore = defineStore('ip', {
     },
 
     // 分配 IP
-    async claimIP(ipId: string, data: { device_name: string; purpose: string }) {
+    async claimIP(ipId: string, data: { 
+      device_name: string; 
+      purpose: string;
+      os_type: string;
+      device_type: string;
+      manufacturer: string;
+      model: string;
+      assigned_user_id?: string;
+    }) {
       try {
         await axios.post(`/api/ips/${ipId}/claim`, data);
         await this.fetchAllIPs(); // 更新列表
       } catch (err: any) {
         this.error = err.message;
-        throw err;
+        throw new Error(t('ip.dialog.claim.error', { error: err.message || t('common.unknownError') }));
       }
     },
 

@@ -4,6 +4,7 @@ import { useAuthStore } from '../stores/auth';
 import { useUserStore } from '../stores/user';
 import { useIPStore } from '../stores/ip';
 import { ElMessage } from 'element-plus';
+import { useI18n } from 'vue-i18n';
 
 // Props 和 Emits
 const props = defineProps({
@@ -18,6 +19,7 @@ const emit = defineEmits(['update:modelValue', 'claimSuccess']); // 更新 visib
 
 const userStore = useUserStore()
 const authStore = useAuthStore()
+const { t } = useI18n();
 
 // 表单数据
 const form = ref({
@@ -30,6 +32,7 @@ const form = ref({
   manufacturer: '',
   model: '',
   purpose: '',
+  assigned_user_id: '',
 });
 
 // 下拉选项
@@ -56,6 +59,7 @@ const initForm = (ip: typeof props.ip) => {
     manufacturer: ip.manufacturer || 'Other',
     model: ip.model || 'Other',
     purpose: ip.purpose || '',
+    assigned_user_id: ip.assigned_user_id || '',
   };
 };
 
@@ -84,14 +88,14 @@ const handleClaim = async () => {
       manufacturer: form.value.manufacturer,
       model: form.value.model,
       purpose: form.value.purpose,
-      assigned_user_id: form.assigned_user_id,
+      assigned_user_id: form.value.assigned_user_id || null,
     });
 
-    ElMessage.success('IP claimed successfully');
+    ElMessage.success(t('ip.dialog.claim.success'));
     emit('claimSuccess', props.ip); // 通知父组件认领成功
     handleClose();
   } catch (error: any) {
-    ElMessage.error(`Failed to claim IP: ${error.message || 'Unknown error'}`);
+    ElMessage.error(t('ip.dialog.claim.error', { error: error.message || t('common.unknownError') }));
   } finally {
     loading.value = false;
   }
@@ -100,18 +104,22 @@ const handleClaim = async () => {
 // 表单验证
 const validateForm = () => {
   if (!form.value.device_name.trim()) {
-    ElMessage.error('Device Name is required');
+    ElMessage.error(t('ip.dialog.claim.deviceNameRequired'));
     return false;
   }
   if (!form.value.purpose.trim()) {
-    ElMessage.error('Purpose is required');
+    ElMessage.error(t('ip.dialog.claim.purposeRequired'));
     return false;
   }
   return true;
 };
 
-onMounted(() => {
-  userStore.fetchUsers();
+onMounted(async () => {
+  try {
+    await userStore.fetchUsers();
+  } catch (error) {
+    ElMessage.error(t('common.fetchError'));
+  }
 });
 
 // 监听 props.ip 的变化并重新初始化表单
@@ -149,7 +157,11 @@ watch(
       </div>
       <el-form :model="form" label-position="top" class="claim-form">
         <el-form-item v-if="isAdmin" :label="$t('ip.dialog.claim.assignUser')">
-          <el-select v-model="form.assigned_user" :placeholder="$t('ip.dialog.claim.selectUser')">
+          <el-select v-model="form.assigned_user_id" :placeholder="$t('ip.dialog.claim.selectUser')">
+            <el-option
+              :label="'Unassigned'"
+              :value="null" 
+            />
             <el-option
               v-for="user in users"
               :key="user.id"

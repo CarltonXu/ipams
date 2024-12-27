@@ -23,13 +23,19 @@ def log_action_to_db(user, action, target, details=None):
     :param target: 操作的目标，例如 IP 的唯一标识
     :param details: 可选，操作的额外细节描述
     """
+    # 没有 user.id, 则记录为匿名用户
+    if not user:
+        user_id = "Anonymous"
+    else:
+        user_id = user.id
+
     source_ip = request.remote_addr
     log = ActionLog(
-        user_id=user.id,
+        user_id=user_id,
         action=action,
         target=target,
         details=details,
-        source_ip = request.remote_addr
+        source_ip = source_ip
     )
     db.session.add(log)
     db.session.commit()

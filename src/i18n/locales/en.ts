@@ -3,6 +3,7 @@ export default {
     success: 'Operation Successful',
     error: 'Operation Failed',
     confirm: 'Confirm',
+    warning: 'Warning',
     cancel: 'Cancel',
     save: 'Save',
     delete: 'Delete',
@@ -40,6 +41,61 @@ export default {
     account: 'Account',
     changePassword: 'Change Password',
     currentUser: 'Current User',
+    management: {
+      title: 'User Management',
+      subtitle: 'Manage system users and their permissions',
+      button: {
+        add: 'Add User'
+      },
+      table: {
+        columns: {
+          uuid: 'UUID',
+          username: 'Username',
+          email: 'Email',
+          createdAt: 'Created At',
+          isAdmin: 'Admin',
+          actions: 'Actions'
+        },
+        noData: 'No user data'
+      },
+      dialog: {
+        title: 'User Information',
+        labels: {
+          username: 'Username',
+          email: 'Email',
+          password: 'Password',
+          wechatId: 'WeChat ID',
+          isAdmin: 'Admin'
+        },
+        placeholders: {
+          username: 'Enter username',
+          email: 'Enter email',
+          password: 'Enter password',
+          wechatId: 'Enter WeChat ID'
+        }
+      },
+      buttons: {
+        edit: 'Edit',
+        delete: 'Delete',
+        save: 'Save',
+        cancel: 'Cancel'
+      },
+      messages: {
+        deleteConfirm: 'Are you sure to delete user {username}?',
+        deleteSuccess: 'User deleted successfully',
+        saveSuccess: 'User saved successfully',
+        fetchError: 'Failed to fetch user list',
+        saveError: 'Failed to save user'
+      },
+      validation: {
+        username: 'Username is required',
+        email: {
+          required: 'Email is required',
+          invalid: 'Please enter a valid email address'
+        },
+        password: 'Password is required'
+      }
+    }
   },
   theme: {
     title: 'Theme',
@@ -65,7 +121,8 @@ export default {
         active: 'This IP is currently active',
         inactive: 'This IP is not in use',
         unclaimed: 'This IP is available for claiming',
-        danger: 'Unknown status'
+        danger: 'Unknown status',
+        undefined: 'Unknown status',
       }
     },
     columns: {
@@ -108,7 +165,13 @@ export default {
         purpose: 'Purpose',
         purposePlaceholder: 'Describe the purpose of this IP address',
         confirmClaim: 'Confirm Claim',
+        confirmUpdate: 'Confirm Update',
         required: 'Required',
+        success: 'IP claimed successfully',
+        updateSuccess: 'IP updated successfully',
+        error: 'Failed to claim IP: {error}',
+        deviceNameRequired: 'Device Name is required',
+        purposeRequired: 'Purpose is required',
       }
     }
   },
@@ -229,6 +292,7 @@ export default {
     },
     policy: {
         title: 'Scan Policy Configuration',
+        subtitle: 'Manage your scan policies and their configurations',
         name: 'Policy Name',
         namePlaceholder: 'Please enter policy name',
         type: 'Policy Type',
@@ -338,5 +402,83 @@ export default {
         selectSubnet: 'Select Subnet',
         execute: 'Execute Scan'
     },
-  }
+  },
+  settings: {
+    title: 'System Settings',
+    subtitle: 'Configure your system preferences including theme, language, etc.',
+    sections: {
+      basic: 'Basic Settings',
+      interface: 'Interface Settings',
+      account: 'Account Settings'
+    },
+    form: {
+      language: {
+        label: 'Language',
+        placeholder: 'Select language',
+        options: {
+          zh: 'Chinese',
+          en: 'English'
+        }
+      },
+      theme: {
+        label: 'Theme',
+        placeholder: 'Select theme',
+        options: {
+          light: 'Light',
+          dark: 'Dark'
+        }
+      },
+      notifications: {
+        label: 'Notifications',
+        on: 'On',
+        off: 'Off'
+      },
+      timeFormat: {
+        label: 'Time Format',
+        placeholder: 'Select time format',
+        options: {
+          '12h': '12-hour',
+          '24h': '24-hour'
+        }
+      },
+      password: {
+        label: 'Change Password',
+        button: 'Change Password',
+        dialog: {
+          title: 'Change Password',
+          old: 'Old Password',
+          new: 'New Password',
+          confirm: 'Confirm Password'
+        }
+      }
+    },
+    validation: {
+      language: 'Please select a language',
+      theme: 'Please select a theme',
+      oldPassword: 'Please enter old password',
+      newPassword: 'Please enter new password',
+      confirmPassword: 'Please confirm new password'
+    },
+    messages: {
+      saveSuccess: 'Settings saved',
+      passwordMismatch: 'New password and confirm password do not match',
+      passwordSuccess: 'Password changed successfully',
+      passwordSuccessRedirect: 'Password changed successfully, 5 seconds will return to the login page...',
+      passwordFailed: 'Failed to change password',
+      updateUserFailed: 'Failed to update user: {error}'
+    },
+    buttons: {
+      save: 'Save Settings',
+      cancel: 'Cancel',
+      confirm: 'Confirm'
+    }
+  },
+  pagination: {
+    total: 'Total {total} items',
+    pageSize: ' items/page',
+    jumper: 'Go to',
+    page: 'Page',
+    prev: 'Previous',
+    next: 'Next',
+  },
 };
