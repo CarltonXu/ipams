@@ -58,6 +58,11 @@
                 </el-tag>
               </el-tooltip>
             </template>
+            <template v-if="column.slotName === 'owningUser'" #default="{ row }">
+              <el-tag :type="row.assigned_user ? 'success' : 'info'" effect="plain">
+                {{ row.assigned_user ? row.assigned_user.username : t('ip.status.unassigned') }}
+              </el-tag>
+            </template>
           </el-table-column>
           <el-table-column :label="$t('common.actions')" width="120" align="center">
             <template #default="{ row }">
@@ -159,7 +164,7 @@ const tableColumns = ref([
   { prop: 'device_type', translationKey: 'deviceType', minWidth: 150, sortable: true },
   { prop: 'manufacturer', translationKey: 'architecture', minWidth: 150, sortable: true },
   { prop: 'model', translationKey: 'model', minWidth: 150, sortable: true },
-  { prop: 'assigned_user.username', translationKey: 'owningUser', minWidth: 150, sortable: true },
+  { prop: 'assigned_user.username', translationKey: 'owningUser', slotName: 'owningUser', minWidth: 150, sortable: true },
   { prop: 'purpose', translationKey: 'purpose', minWidth: 180 },
   { prop: 'last_scanned', translationKey: 'lastScanned', minWidth: 180, sortable: true },
 ]);
@@ -259,9 +264,22 @@ const handleSortChange = ({ prop, order }: { prop: string; order: string }) => {
 
   const sortOrder = order === 'ascending' ? 1 : -1;
   ipStore.sortedIPs.sort((a, b) => {
-    if (a[prop] < b[prop]) return -sortOrder;
-    if (a[prop] > b[prop]) return sortOrder;
-    return 0;
+    // 处理嵌套属性的情况
+    if (prop === 'assigned_user.username') {
+      const aUsername = a.assigned_user?.username || '';
+      const bUsername = b.assigned_user?.username || '';
+      return sortOrder * aUsername.localeCompare(bUsername);
+    }
+    
+    // 处理普通属性
+    const aValue = a[prop] || '';
+    const bValue = b[prop] || '';
+    
+    if (typeof aValue === 'string' && typeof bValue === 'string') {
+      return sortOrder * aValue.localeCompare(bValue);
+    }
+    
+    return sortOrder * (aValue < bValue ? -1 : aValue > bValue ? 1 : 0);
   });
 };
 </script>

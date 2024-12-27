@@ -117,10 +117,12 @@ export default {
       active: '活跃',
       inactive: '未使用',
       unclaimed: '未认领',
+      unassigned: '未分配',
       description: {
         active: '此IP当前处于活跃状态',
         inactive: '此IP未在使用',
         unclaimed: '此IP可供认领',
+        unassigned: '此IP未分配',
         danger: '未知状态',
         undefined: '未知状态'
       }

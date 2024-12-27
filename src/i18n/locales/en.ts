@@ -117,10 +117,12 @@ export default {
       active: 'Active',
       inactive: 'Inactive',
       unclaimed: 'Unclaimed',
+      unassigned: 'Unassigned',
       description: {
         active: 'This IP is currently active',
         inactive: 'This IP is not in use',
         unclaimed: 'This IP is available for claiming',
+        unassigned: 'This IP is unassigned',
         danger: 'Unknown status',
         undefined: 'Unknown status',
       }
