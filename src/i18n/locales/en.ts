@@ -100,7 +100,8 @@ export default {
         saveError: 'Failed to save user',
         hasAssociatedIPs: 'Users are still associated with IP addresses, please reclaim the IP addresses first, and then delete the users.',
         batchDeleteConfirm: 'Are you sure to delete {count} users?',
-        batchDeleteSuccess: 'Users deleted successfully'
+        batchDeleteSuccess: 'Users deleted successfully',
+        deleteSelfError: 'Cannot delete yourself'
       },
       validation: {
         username: 'Username is required',

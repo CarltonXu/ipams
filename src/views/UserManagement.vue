@@ -86,6 +86,7 @@
               @click="deleteUser(scope.row)"
               size="mini"
               type="danger"
+              :disabled="scope.row.id === authStore.user.id"
             >
               <el-icon><Delete /></el-icon> {{ t('user.management.buttons.delete') }}
             </el-button>
@@ -368,6 +369,10 @@ const saveUser = async () => {
 
 // 删除用户
 const deleteUser = async (user: any) => {
+  if (user.id === authStore.user.id) {
+    ElMessage.error(t('user.management.messages.deleteSelfError'));
+    return;
+  }
   ElMessageBox.confirm(
     t('user.management.messages.deleteConfirm', { username: user.username }), 
     t('common.warning'),

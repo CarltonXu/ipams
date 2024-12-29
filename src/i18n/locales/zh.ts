@@ -101,6 +101,7 @@ export default {
         hasAssociatedIPs: '用户仍与IP地址关联，请先收回IP地址，然后删除用户',
         batchDeleteConfirm: '确定删除 {count} 用户吗？',
         batchDeleteSuccess: '用户删除成功',
+        deleteSelfError: '不能删除自己',
       },
       validation: {
         username: '请输入用户名',
