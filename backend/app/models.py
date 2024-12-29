@@ -1,6 +1,7 @@
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 import uuid
+import json
 from werkzeug.security import generate_password_hash, check_password_hash
 
 db = SQLAlchemy()
@@ -121,14 +122,17 @@ class ScanSubnet(db.Model):
     deleted = db.Column(db.Boolean, default=False, nullable=False)  # 软删除标志
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    deleted_at = db.Column(db.DateTime, nullable=True)
 
     def __repr__(self):
         return f"<ScanSubnet {self.subnet} by User {self.user_id}>"
 
-    def __init__(self, user_id, subnet):
+    def __init__(self, user_id, name, subnet):
         self.id = str(uuid.uuid4())
+        self.name = name
         self.user_id = user_id
         self.subnet = subnet
+        self.deleted = False
     
     def to_dict(self):
         return {
@@ -138,7 +142,8 @@ class ScanSubnet(db.Model):
             "subnet": self.subnet,
             "deleted": self.deleted,
             "created_at": self.created_at.isoformat() if self.created_at else None,
-            "updated_at": self.updated_at.isoformat() if self.updated_at else None
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+            "deleted_at": self.deleted_at.isoformat() if self.deleted_at else None
         }
 
 class ScanPolicy(db.Model):
@@ -147,21 +152,27 @@ class ScanPolicy(db.Model):
     id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     name = db.Column(db.String(255), nullable=False)
     user_id = db.Column(db.String(36), db.ForeignKey('users.id'), nullable=False)
-    subnet_id = db.Column(db.String(36), db.ForeignKey('scan_subnets.id'), nullable=False)
+    subnet_ids = db.Column(db.String(500), nullable=False)
     strategies = db.Column(db.String(255) , nullable=False)  # 扫描策略
+    description = db.Column(db.String(255), nullable=False)  # 扫描策略描述
+    start_time = db.Column(db.String(255), nullable=False)  # 扫描开始时间
     threads = db.Column(db.Integer, default=1, nullable=False)  # 并发线程数，默认1
+    deleted = db.Column(db.Boolean, default=False, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    deleted_at = db.Column(db.DateTime, nullable=True)
 
     def __repr__(self):
-        return f"<ScanPolicy {self.strategies} on Subnet {self.subnet_id}>"
+        return f"<ScanPolicy {self.strategies} on Subnet {self.subnet_ids}>"
 
-    def __init__(self, name, user_id, subnet_id, strategies, threads=1):
+    def __init__(self, name, user_id, subnet_ids, strategies, description, start_time, threads=1):
         self.id = str(uuid.uuid4())
         self.name = name
         self.user_id = user_id
-        self.subnet_id = subnet_id
+        self.subnet_ids = json.dumps(subnet_ids)
         self.strategies = strategies
+        self.description = description
+        self.start_time = start_time
         self.threads = threads
     
     def to_dict(self):
@@ -169,11 +180,15 @@ class ScanPolicy(db.Model):
             "id": self.id,
             "name": self.name,
             "user_id": self.user_id,
-            "subnet_id": self.subnet_id,
+            "subnet_ids": json.loads(self.subnet_ids),
             "strategies": self.strategies,
+            "description": self.description,
+            "start_time": self.start_time,
             "threads": self.threads,
+            "deleted": self.deleted,
             "created_at": self.created_at.isoformat() if self.created_at else None,
-            "updated_at": self.updated_at.isoformat() if self.created_at else None
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+            "deleted_at": self.deleted_at.isoformat() if self.deleted_at else None
         }
 
 
@@ -190,6 +205,7 @@ class ScanJob(db.Model):
     machines_found = db.Column(db.Integer, default=0, nullable=False)  # 发现的机器数量
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    deleted_at = db.Column(db.DateTime, nullable=True)
 
     def __repr__(self):
         return f"<ScanJob {self.id} on Subnet {self.subnet_id}>"
@@ -214,5 +230,6 @@ class ScanJob(db.Model):
             "end_time": self.end_time,
             "machines_found": self.machines_found,
             "created_at": self.created_at.isoformat() if self.created_at else None,
-            "updated_at": self.updated_at.isoformat() if self.updated_at else None
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+            "deleted_at": self.deleted_at.isoformat() if self.deleted_at else None,
         }

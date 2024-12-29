@@ -1,5 +1,6 @@
 from flask import Blueprint, jsonify, request
-from backend.app.models import db, User
+from sqlalchemy import desc, asc
+from backend.app.models import db, User, IP
 from backend.app.utils.auth import token_required, admin_required, generate_token
 from backend.app.utils import utils
 import re
@@ -85,28 +86,80 @@ def get_users(current_user):
     # 获取分页参数，默认值为第1页，每页10条记录
     page = request.args.get('page', 1, type=int)
     page_size = request.args.get('page_size', 10, type=int)
+    query = request.args.get('query')
+    column = request.args.get('column')
+    is_admin_str = request.args.get('is_admin')
+    sort_by = request.args.get('sort_by')
+    sort_order = request.args.get('sort_order', 'asc')
+    no_pagination = request.args.get('no_pagination', type=lambda x: x.lower() == 'true', default=False)
 
-    # 使用 SQLAlchemy 的 paginate 方法
-    users_paginated = User.query.filter_by(deleted=False).paginate(
-        page=page,
-        per_page=page_size,
-        error_out=False
-    )
+    
+    is_admin = None
+    if is_admin_str is not None:
+        if is_admin_str.lower() == 'true':
+            is_admin = True
+        elif is_admin_str.lower() == 'false':
+            is_admin = False
+    
+    try:
+        users_query = User.query.filter_by(deleted=False)
 
-    # 记录日志
-    utils.log_action_to_db(
-        user=current_user,
-        action="Viewed all users",
-        target="users",
-        details="User fetched the list of all users"
-    )
+        if query and column:
+            if column == 'username':
+                users_query = users_query.filter(User.username.ilike(f'%{query}%'))
+            elif column == "id":
+                users_query = users_query.filter(User.id == query)
+            elif column == 'email':
+                users_query = users_query.filter(User.email.ilike(f'%{query}%'))
+            elif column == 'is_admin':
+                users_query = users_query.filter(User.is_admin == is_admin)
+            elif column == 'wechat_id':
+                users_query = users_query.filter(User.wechat_id.ilike(f'%{query}%'))
 
-    return jsonify({
-        'users': [user.to_dict() for user in users_paginated.items],
-        'total': users_paginated.total,
-        'pages': users_paginated.pages,
-        'current_page': users_paginated.page
-    })
+        if is_admin is not None:
+            users_query = users_query.filter(User.is_admin == is_admin)
+        
+        if sort_by:
+            sort_column = getattr(User, sort_by, None)
+            if sort_column is not None:
+                users_query = users_query.order_by(
+                    desc(sort_column) if sort_order == 'desc' else asc(sort_column)
+                )
+        
+        # 判断是否需要分页
+        if no_pagination or (page is None and page_size is None):
+            # 全量模式
+            users = users_query.filter_by(deleted=False).all()
+            return jsonify({
+                'users': [user.to_dict() for user in users],
+                'total': len(users),
+            })
+        else:
+            # 使用 SQLAlchemy 的 paginate 方法
+            users_paginated = users_query.paginate(
+                page=page,
+                per_page=page_size,
+                error_out=False
+            )
+
+            # 记录日志
+            utils.log_action_to_db(
+                user=current_user,
+                action="Viewed all users",
+                target="users",
+                details="User fetched the list of all users"
+            )
+
+            return jsonify({
+                'users': [user.to_dict() for user in users_paginated.items],
+                'total': users_paginated.total,
+                'pages': users_paginated.pages,
+                'page_size': page_size,
+                'current_page': users_paginated.page
+            })
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @user_bp.route('/users/me', methods=['GET'])
 @token_required
@@ -214,3 +267,110 @@ def update_user(current_user, user_id):
         'message': 'User updated successfully',
         'user': user.to_dict()
     })
+
+@user_bp.route('/users/check-ips', methods=['POST'])
+@token_required
+def check_users_ips(current_user):
+    """
+    检查用户关联的 IP 地址
+    """
+    data = request.json
+    if not data or 'user_ids' not in data:
+        return jsonify({'error': 'Missing user_ids parameter'}), 400
+
+    user_ids = data['user_ids']
+    users_with_ips = []
+
+    try:
+        for user_id in user_ids:
+            user = User.query.get(user_id)
+            if user:
+                # 获取用户关联的 IP 地址
+                ips = IP.query.filter_by(
+                    assigned_user_id=user_id,
+                    deleted=False
+                ).all()
+                
+                if ips:
+                    users_with_ips.append({
+                        'id': user.id,
+                        'username': user.username,
+                        'ips': [ip.to_dict() for ip in ips]
+                    })
+
+        return jsonify({
+            'usersWithIPs': users_with_ips
+        })
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@user_bp.route('/users/batch-delete', methods=['POST'])
+@token_required
+@admin_required
+def batch_delete_users(current_user):
+    """
+    批量删除用户
+    - 只有管理员可以执行此操作
+    - 如果用户有关联的 IP，会先检查并返回错误
+    """
+    data = request.json
+    if not data or 'user_ids' not in data:
+        return jsonify({'error': 'Missing user_ids parameter'}), 400
+
+    user_ids = data['user_ids']
+
+    try:
+        # 检查是否有用户关联了 IP
+        users_with_ips = []
+        for user_id in user_ids:
+            user = User.query.get(user_id)
+            if not user:
+                continue
+
+            # 检查用户关联的 IP
+            ips = IP.query.filter_by(
+                assigned_user_id=user_id,
+                deleted=False
+            ).all()
+            
+            if ips:
+                users_with_ips.append({
+                    'id': user.id,
+                    'username': user.username,
+                    'ips': [ip.to_dict() for ip in ips]
+                })
+
+        # 如果有用户关联了 IP，返回错误
+        if users_with_ips:
+            return jsonify({
+                'error': 'Users have associated IPs',
+                'usersWithIPs': users_with_ips
+            }), 400
+
+        # 执行批量删除
+        deleted_count = 0
+        for user_id in user_ids:
+            user = User.query.get(user_id)
+            if user and user.id != current_user.id:  # 不能删除自己
+                user.deleted = True
+                deleted_count += 1
+
+        db.session.commit()
+
+        # 记录日志
+        utils.log_action_to_db(
+            user=current_user,
+            action="Batch delete users",
+            target="users",
+            details=f"Deleted {deleted_count} users: {', '.join(user_ids)}"
+        )
+
+        return jsonify({
+            'message': f'Successfully deleted {deleted_count} users',
+            'deleted_count': deleted_count
+        })
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500

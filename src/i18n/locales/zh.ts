@@ -2,6 +2,7 @@ export default {
   common: {
     success: '操作成功',
     error: '操作失败',
+    fetchError: '获取数据失败',
     confirm: '确认',
     warning: '警告',
     cancel: '取消',
@@ -72,20 +73,34 @@ export default {
           email: '请输入邮箱',
           password: '请输入密码',
           wechatId: '请输入微信 ID'
+        },
+        batchDelete: {
+          title: '批量删除 {count} 用户',
+          confirm: '确定删除 {count} 用户吗？',
+          success: '用户删除成功',
+          error: '删除用户失败',
+          warning: '这是一个危险操作，请谨慎操作',
+          description: '用户仍与IP地址关联，请先收回IP地址，然后删除用户'
         }
       },
       buttons: {
         edit: '编辑',
         delete: '删除',
         save: '保存',
-        cancel: '取消'
+        cancel: '取消',
+        add: '添加用户',
+        batchDelete: '批量删除 {count} 用户',
+        batchDeleteConfirm: '确定删除 {count} 用户吗？'
       },
       messages: {
         deleteConfirm: '确定删除用户 {username} 吗？',
         deleteSuccess: '用户删除成功',
         saveSuccess: '用户保存成功',
         fetchError: '获取用户列表失败',
-        saveError: '保存用户失败'
+        saveError: '保存用户失败',
+        hasAssociatedIPs: '用户仍与IP地址关联，请先收回IP地址，然后删除用户',
+        batchDeleteConfirm: '确定删除 {count} 用户吗？',
+        batchDeleteSuccess: '用户删除成功',
       },
       validation: {
         username: '请输入用户名',
@@ -94,6 +109,16 @@ export default {
           invalid: '请输入有效的邮箱地址'
         },
         password: '请输入密码'
+      },
+      search: {
+        selectColumn: '选择搜索列',
+        allColumns: '所有列',
+        all: '搜索所有列...',
+        specific: '搜索 {column}...',
+        adminStatus: '管理员状态',
+        allUsers: '所有用户',
+        adminOnly: '管理员',
+        normalOnly: '普通用户'
       }
     }
   },
@@ -150,7 +175,11 @@ export default {
       claim: '认领',
       edit: '编辑',
       claimSuccess: '成功认领IP：{ip}',
-      updateSuccess: '成功更新IP：{ip}'
+      updateSuccess: '成功更新IP：{ip}',
+      batchClaim: '批量认领',
+      batchUpdate: '批量更新',
+      batchClaimSuccess: '成功批量认领IP：{ip}',
+      batchUpdateSuccess: '成功批量更新IP：{ip}'
     },
     noData: '未找到IP地址',
     dialog: {
@@ -180,6 +209,17 @@ export default {
         error: '认领 IP 失败: {error}',
         deviceNameRequired: '设备名称不能为空',
         purposeRequired: '用途不能为空',
+      },
+      batchClaim: {
+        title: '批量认领IP地址',
+        commonConfig: '通用配置',
+        applyToAll: '批量设置',
+        individualConfig: '单个配置',
+        selectIPs: '选择要认领的IP地址',
+        confirmClaim: '确认认领',
+        success: 'IP批量认领成功',
+        error: '批量认领IP失败: {error}',
+        validation: '请填写所有必填字段'
       }
     }
   },
@@ -276,6 +316,8 @@ export default {
         columns: {
           name: '策略名称',
           description: '策略描述', 
+          strategy: '策略执行Cron',
+          startTime: '开始时间',
           createdAt: '创建时间',
           subnets: '扫描网段',
           status: {
@@ -351,7 +393,15 @@ export default {
         invalidSubnet: '请输入有效的网段！',
         subnetNameRequired: '网段名称不能为空!',
         invalidIPFormat: '无效的 IP 地址格式！',
-        invalidSubnetFormat: '无效的网段格式，正确格式为：IP/掩码（如：192.168.0.0/24）'
+        invalidSubnetFormat: '无效的网段格式，正确格式为：IP/掩码（如：192.168.0.0/24）',
+        weeklyConfig: '请完整配置每周执行时间和日期',
+        monthlyConfig: '请完整配置每月执行时间和日期',
+        cronRequired: '请输入 cron 表达式和开始时间',
+        subnetRequired: '请选择要扫描的网段',
+        strategyName: '请输入策略名称',
+        strategyDescription: '请输入策略描述',
+        selectStartTime: '请选择执行时间',
+        selectInterval: '请选择周期时间',
       },
       monthDays: {
         last: '月末',
@@ -363,25 +413,36 @@ export default {
         time: '执行时间'
       },
       buttons: {
-        add: '添加',
-        save: '保存',
-        execute: '执行扫描'
+        add: '添加策略',
+        save: '保存配置',
+        execute: '执行扫描',
+        delete: '删除'
       },
       table: {
         noData: '暂无数据'
       },
       status: {
-        loading: '处理中...',
-        executing: '正在执行扫描...'
+        loading: '加载中...',
+        executing: '正在执行扫描...',
+        saving: '正在保存...'
       },
       confirm: {
         save: '确认保存当前配置？',
-        execute: '确认执行扫描？'
+        execute: '确认执行扫描？',
+        delete: '确认删除？'
       },
       tips: {
-        weekDays: '请选择至少一个星期',
-        monthDays: '请选择至少一个日期',
-        customCron: 'Cron表达式格式：分 时 日 月 星期'
+        weekDays: '请至少选择一个星期',
+        monthDays: '请至少选择一个日期',
+        customCron: 'Cron表达式格式：分 时 日 月 星期 (*/1 * * * *)'
+      },
+      types: {
+        everyMinute: '每隔N分钟',
+        everyHour: '每隔N小时',
+        everyDay: '每隔N天',
+        everyWeek: '每周',
+        everyMonth: '每月',
+        custom: '自定义'
       }
     },
     messages: {
@@ -400,7 +461,13 @@ export default {
     validation: {
       subnetName: '请输入网段名称',
       subnetRange: '请输入网段范围',
-      selectExecutionTime: '请选择执行时间'
+      selectExecutionTime: '请选择执行时间',
+      strategyName: '请输入策略名称',
+      strategyDescription: '请输入策略描述',
+      noSubnets: '请至少添加一个扫描网段',
+      noPolicy: '请至少添加一个扫描策略',
+      invalidIPFormat: '请输入有效的IP地址',
+      invalidSubnetFormat: '请输入有效的网段格式，正确格式为：IP/掩码（如：192.168.0.0/24）'
     }
   },
   settings: {
@@ -465,7 +532,8 @@ export default {
       passwordSuccess: '密码修改成功',
       passwordSuccessRedirect: '密码修改成功，5秒后将返回登录页面...',
       passwordFailed: '修改密码失败',
-      updateUserFailed: '更新用户信息失败: {error}'
+      updateUserFailed: '更新用户信息失败: {error}',
+      fetchUsersFailed: '获取用户列表失败'
     },
     buttons: {
       save: '保存设置',

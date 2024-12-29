@@ -116,7 +116,7 @@ const validateForm = () => {
 
 onMounted(async () => {
   try {
-    await userStore.fetchUsers();
+    await userStore.fetchAllUsers();
   } catch (error) {
     ElMessage.error(t('common.fetchError'));
   }

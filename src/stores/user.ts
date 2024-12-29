@@ -5,6 +5,14 @@ import i18n from '../i18n';
 
 const { t } = i18n.global;
 
+interface FetchParams {
+  page: number;
+  pageSize: number;
+  query?: string;
+  column?: string;
+  isAdmin?: boolean;
+}
+
 export const useUserStore = defineStore('user', {
   state: () => ({
     users: [] as User[], // 用户列表
@@ -37,16 +45,31 @@ export const useUserStore = defineStore('user', {
     /**
      * 获取用户列表（分页）
      */
-    async fetchUsers(page?: number, pageSize?: number) {
+    async fetchFilteredUsers(params: FetchParams) {
       this.loading = true;
       try {
         const response = await axios.get('/api/users', {
-          params: { page: page ?? this.currentPage, page_size: pageSize ?? this.pageSize },
+          params: {
+            page: params.page ?? this.currentPage,
+            page_size: params.pageSize ?? this.pageSize,
+            query: params.query || undefined,
+            column: params.column === 'all' ? undefined : params.column,
+            is_admin: params.isAdmin
+          }
         });
-        const { users = [], total = 0 } = response.data;
-        this.users = Array.isArray(users) ? users : [];
-        this.total = total;
+
+        if (!response.data) {
+          throw new Error(t('common.fetchError'));
+        }
+
         this.syncUsersMap();
+
+        return {
+          users: response.data.users,
+          total: response.data.total,
+          currentPage: response.data.current_page,
+          pages: response.data.pages
+        };
       } catch (error: any) {
         console.error('Failed to fetch users:', error);
         throw new Error(error.response?.data?.message || t('settings.messages.fetchUsersFailed'));
@@ -100,12 +123,11 @@ export const useUserStore = defineStore('user', {
     /**
      * 添加用户
      */
-    async addUser(newUser: Partial<User>) {
+    async addUser(userData: Partial<User>) {
       this.loading = true;
       try {
-        const response = await axios.post('/api/users', newUser);
-        this.users.push(response.data);
-        this.syncUsersMap();
+        const response = await axios.post('/api/users', userData);
+        return response.data;
       } catch (error: any) {
         console.error('Failed to add user:', error);
         throw new Error(error.response?.data?.message || t('settings.messages.addUserFailed'));
@@ -127,7 +149,6 @@ export const useUserStore = defineStore('user', {
         });
         return response.data;
       } catch (error: any) {
-        console.error('Failed to change password:', error);
         throw new Error(error.response?.data?.message || t('settings.messages.passwordFailed'));
       } finally {
         this.loading = false;
@@ -136,17 +157,16 @@ export const useUserStore = defineStore('user', {
     /**
      * 更新用户信息
      */
-    async updateUser(updatedUser: Partial<User>) {
+    async updateUser(userData: Partial<User>) {
       this.loading = true;
       try {
-        const response = await axios.put(`/api/users/${updatedUser.id}`, updatedUser);
-        const index = this.users.findIndex((user) => user.id === updatedUser.id);
+        const response = await axios.put(`/api/users/${userData.id}`, userData);
+        const index = this.users.findIndex((user) => user.id === userData.id);
         if (index !== -1) {
           this.users[index] = { ...this.users[index], ...response.data };
           this.syncUsersMap();
         }
       } catch (error: any) {
-        console.error('Failed to update user:', error);
         throw new Error(error.response?.data?.message || t('settings.messages.updateUserFailed'));
       } finally {
         this.loading = false;
@@ -163,11 +183,63 @@ export const useUserStore = defineStore('user', {
         this.users = this.users.filter((user) => user.id !== userId);
         this.syncUsersMap();
       } catch (error: any) {
-        console.error('Failed to delete user:', error);
         throw new Error(error.response?.data?.message || t('settings.messages.deleteUserFailed'));
       } finally {
         this.loading = false;
       }
     },
+
+    /**
+     * 获取所有用户（不分页）
+     */
+    async fetchAllUsers() {
+      try {
+        const response = await axios.get('/api/users', {
+          params: {
+            no_pagination: true
+          }
+        });
+        
+        if (!response.data || !response.data.users) {
+          throw new Error(t('common.fetchError'));
+        }
+        
+        this.users = response.data.users;
+        return this.users;
+      } catch (err: any) {
+        throw new Error(t('common.fetchError'));
+      }
+    },
+
+    // 检查用户关联的 IP
+    async checkUsersIPs(userIds: string[]) {
+      try {
+        const response = await axios.post('/api/users/check-ips', { user_ids: userIds });
+        return response.data;
+      } catch (error: any) {
+        throw new Error(error.response?.data?.message || t('common.fetchError'));
+      }
+    },
+
+    // 批量删除用户
+    async batchDeleteUsers(userIds: string[]) {
+      this.loading = true;
+      try {
+        await axios.post('/api/users/batch-delete', { user_ids: userIds });
+        // 更新本地数据
+        this.users = this.users.filter(user => !userIds.includes(user.id));
+        this.syncUsersMap();
+      } catch (error: any) {
+        if (error.response?.status === 400) {
+          // 如果有关联的 IP，抛出特定错误
+          if (error.response.data.error === 'Users have associated IPs') {
+            throw new Error(t('user.management.messages.hasAssociatedIPs'));
+          }
+        }
+        throw new Error(error.response?.data?.message || t('common.fetchError'));
+      } finally {
+        this.loading = false;
+      }
+    }
   },
 });

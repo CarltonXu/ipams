@@ -2,6 +2,7 @@ export default {
   common: {
     success: 'Operation Successful',
     error: 'Operation Failed',
+    fetchError: 'Failed to fetch data',
     confirm: 'Confirm',
     warning: 'Warning',
     cancel: 'Cancel',
@@ -72,20 +73,34 @@ export default {
           email: 'Enter email',
           password: 'Enter password',
           wechatId: 'Enter WeChat ID'
+        },
+        batchDelete: {
+          title: 'Batch Delete {count} Users',
+          confirm: 'Are you sure to delete {count} users?',
+          success: 'Users deleted successfully',
+          error: 'Failed to delete users',
+          warning: 'This is a dangerous operation, please be careful!!!',
+          description: 'Users are still associated with IP addresses, please reclaim the IP addresses first, and then delete the users.'
         }
       },
       buttons: {
         edit: 'Edit',
         delete: 'Delete',
         save: 'Save',
-        cancel: 'Cancel'
+        cancel: 'Cancel',
+        add: 'Add User',
+        batchDelete: 'Batch Delete {count} Users',
+        batchDeleteConfirm: 'Are you sure to delete {count} users?'
       },
       messages: {
         deleteConfirm: 'Are you sure to delete user {username}?',
         deleteSuccess: 'User deleted successfully',
         saveSuccess: 'User saved successfully',
         fetchError: 'Failed to fetch user list',
-        saveError: 'Failed to save user'
+        saveError: 'Failed to save user',
+        hasAssociatedIPs: 'Users are still associated with IP addresses, please reclaim the IP addresses first, and then delete the users.',
+        batchDeleteConfirm: 'Are you sure to delete {count} users?',
+        batchDeleteSuccess: 'Users deleted successfully'
       },
       validation: {
         username: 'Username is required',
@@ -94,6 +109,16 @@ export default {
           invalid: 'Please enter a valid email address'
         },
         password: 'Password is required'
+      },
+      search: {
+        selectColumn: 'Select Search Column',
+        allColumns: 'All Columns',
+        all: 'Search All Columns...',
+        specific: 'Search {column}...',
+        adminStatus: 'Admin Status',
+        allUsers: 'All Users',
+        adminOnly: 'Admin Only',
+        normalOnly: 'Normal Only'
       }
     }
   },
@@ -150,7 +175,11 @@ export default {
       claim: 'Claim',
       edit: 'Edit',
       claimSuccess: 'Successfully claimed IP: {ip}',
-      updateSuccess: 'Successfully updated IP: {ip}'
+      updateSuccess: 'Successfully updated IP: {ip}',
+      batchClaim: 'Batch Claim',
+      batchUpdate: 'Batch Update',
+      batchClaimSuccess: 'Successfully batch claimed IP: {ip}',
+      batchUpdateSuccess: 'Successfully batch updated IP: {ip}'
     },
     noData: 'No IP addresses found',
     dialog: {
@@ -180,6 +209,17 @@ export default {
         error: 'Failed to claim IP: {error}',
         deviceNameRequired: 'Device Name is required',
         purposeRequired: 'Purpose is required',
+      },
+      batchClaim: {
+        title: 'Batch Claim IP Address',
+        commonConfig: 'Common Config',
+        applyToAll: 'Apply to All',
+        individualConfig: 'Individual Config',
+        selectIPs: 'Select IP Address',
+        confirmClaim: 'Confirm Claim',
+        success: 'IP batch claimed successfully',
+        error: 'Batch claim IP failed: {error}',
+        validation: 'Please fill in all required fields'
       }
     }
   },
@@ -357,6 +397,8 @@ export default {
           columns: {
             name: 'Policy Name',
             description: 'Policy Description',
+            strategy: 'Policy Execution Cron',
+            startTime: 'Start Time',
             createdAt: 'Created At',
             subnets: 'Scan Subnets',
             status: {
@@ -473,7 +515,8 @@ export default {
       passwordSuccess: 'Password changed successfully',
       passwordSuccessRedirect: 'Password changed successfully, 5 seconds will return to the login page...',
       passwordFailed: 'Failed to change password',
-      updateUserFailed: 'Failed to update user: {error}'
+      updateUserFailed: 'Failed to update user: {error}',
+      fetchUsersFailed: 'Failed to fetch user list'
     },
     buttons: {
       save: 'Save Settings',

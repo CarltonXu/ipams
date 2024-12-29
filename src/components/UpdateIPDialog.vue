@@ -19,6 +19,7 @@ const emit = defineEmits(['update:modelValue', 'updateSuccess']); // 更新 visi
 
 const userStore = useUserStore()
 const authStore = useAuthStore()
+const ipStore = useIPStore()
 
 // 表单数据
 const form = ref({
@@ -78,25 +79,23 @@ const resetForm = () => {
 // 修改更新处理函数
 const handleUpdate = async () => {
   if (!validateForm()) return;
-
+  
   loading.value = true;
   try {
-    const store = useIPStore();
-    await store.updateIP(props.ip.id, {
+    await ipStore.updateIP(form.value.id, {
       os_type: form.value.os_type,
       device_name: form.value.device_name,
       device_type: form.value.device_type,
       manufacturer: form.value.manufacturer,
       model: form.value.model,
       purpose: form.value.purpose,
-      assigned_user_id: form.value.assigned_user_id || null,
+      assigned_user_id: form.value.assigned_user_id
     });
-
-    ElMessage.success(t('ip.dialog.claim.updateSuccess'));
-    emit('updateSuccess', props.ip);
+    
+    emit('updateSuccess', form.value);
     handleClose();
   } catch (error: any) {
-    ElMessage.error(t('ip.dialog.claim.error', { error: error.message || t('common.unknownError') }));
+    ElMessage.error(error.message);
   } finally {
     loading.value = false;
   }
@@ -117,7 +116,7 @@ const validateForm = () => {
 
 onMounted(async () => {
   try {
-    await userStore.fetchUsers();
+    await userStore.fetchAllUsers();
   } catch (error) {
     ElMessage.error(t('common.fetchError'));
   }

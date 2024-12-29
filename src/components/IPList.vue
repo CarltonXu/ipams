@@ -13,6 +13,21 @@
           <p class="subtitle">{{ $t('ip.subtitle') }}</p>
         </div>
         <div class="filters">
+          <!-- 批量操作按钮 -->
+          <el-button-group v-if="selectedIPs.length > 0">
+            <el-button 
+              type="primary"
+              @click="handleBatchClaim"
+              :disabled="!canBatchClaim">
+              {{ $t('ip.actions.batchClaim') }}
+            </el-button>
+            <el-button 
+              type="warning"
+              @click="handleBatchUpdate"
+              :disabled="!canBatchUpdate">
+              {{ $t('ip.actions.batchUpdate') }}
+            </el-button>
+          </el-button-group>
           <el-select
             v-model="searchColumn"
             class="column-filter"
@@ -30,7 +45,7 @@
           <el-input
             v-model="searchQuery"
             :placeholder="searchColumn === 'all' ? $t('ip.search.all') : $t('ip.search.specific', { column: $t(`ip.columns.${getColumnTranslationKey(searchColumn)}`) })"
-            prefix-icon="Search"
+            :prefix-icon="Search"
             clearable
             class="search-input"
           />
@@ -52,7 +67,7 @@
         <!-- 表格 -->
         <el-table
           v-loading="ipStore.loading"
-          :data="filteredIPs"
+          :data="tableData"
           style="width: 100%"
           :height="tableHeight"
           :empty-text="$t('ip.noData')"
@@ -60,7 +75,12 @@
           stripe
           highlight-current-row
           border
-          @sort-change="handleSortChange">
+          @sort-change="handleSortChange"
+          @selection-change="handleSelectionChange">
+          <el-table-column
+            type="selection"
+            width="55"
+          />
           <el-table-column
             v-for="column in tableColumns"
             :key="column.prop"
@@ -108,28 +128,29 @@
 
       <!-- 分页 -->
       <el-pagination
-        v-model:current-page="ipStore.currentPage"
-        :page-size="ipStore.pageSize"
-        :total="ipStore.total"
+        v-model:current-page="pagination.currentPage"
+        v-model:page-size="pagination.pageSize"
+        :total="pagination.total"
         :page-sizes="[10, 20, 50, 100]"
         background
-        :pager-count="7"
         layout="total, sizes, prev, pager, next, jumper"
-        :prev-text="$t('pagination.prev')"
-        :next-text="$t('pagination.next')"
-        :total-template="`${$t('pagination.total', { total: ipStore.total })}`"
-        :page-size-template="`{size}${$t('pagination.pageSize')}`"
-        :jumper-template="`${$t('pagination.jumper')}${$t('pagination.page')}`"
-        :sizes-text="$t('pagination.pageSize')"
         @size-change="handleSizeChange"
-        @current-change="handleCurrentChange"
+        @current-change="handlePageChange"
         class="pagination"
       />
 
       <!-- Claim IP Dialog -->
       <ClaimIPDialog
+        v-if="!isBatchClaim"
         v-model="claimDialogVisible"
         :ip="claimSelectedIP"
+        @claimSuccess="handleClaimSuccess"
+      />
+      
+      <BatchClaimIPDialog
+        v-if="isBatchClaim"
+        v-model="claimDialogVisible"
+        :ips="selectedIPs"
         @claimSuccess="handleClaimSuccess"
       />
 
@@ -144,7 +165,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed } from 'vue';
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
 import { useIPStore } from '../stores/ip';
@@ -156,6 +177,7 @@ import ClaimIPDialog from './ClaimIPDialog.vue';
 import UPdateIPDialog from './UpdateIPDialog.vue';
 import Login from '../views/Login.vue';
 import { Search } from '@element-plus/icons-vue';
+import BatchClaimIPDialog from './BatchClaimIPDialog.vue';
 
 const { t } = useI18n();
 
@@ -194,21 +216,6 @@ const updateTableHeight = () => {
   tableHeight.value = window.innerHeight - 394;
 };
 
-const debouncedSearch = debounce((query) => {
-  searchQuery.value = query;
-}, 300);
-
-const handleSizeChange = (page: number) => {
-  ipStore.pageSize = page;
-};
-
-const handleCurrentChange = (page: number) => {
-  ipStore.currentPage = page;
-  if (!ipStore.useGlobalFilter) {
-    ipStore.fetchPaginatedIPs(page);
-  }
-};
-
 // 可搜索的列
 const searchableColumns = computed(() => tableColumns.value.filter(col => 
   ['ip_address', 'device_name', 'os_type', 'device_type', 'manufacturer', 'model', 'purpose', 'assigned_user.username'].includes(col.prop)
@@ -220,45 +227,10 @@ const getColumnTranslationKey = (prop: string) => {
   return column ? column.translationKey : '';
 };
 
-// 修改过滤逻辑
-const filteredIPs = computed(() => {
-  let filtered = ipStore.sortedIPs;
-
-  // 搜索过滤
-  if (searchQuery.value) {
-    const query = searchQuery.value.toLowerCase();
-    filtered = filtered.filter((ip) => {
-      if (searchColumn.value === 'all') {
-        // 搜索所有可搜索列
-        return searchableColumns.value.some(column => {
-          const value = column.prop === 'assigned_user.username'
-            ? ip.assigned_user?.username
-            : ip[column.prop];
-          return value?.toString().toLowerCase().includes(query);
-        });
-      } else {
-        // 搜索指定列
-        if (searchColumn.value === 'assigned_user.username') {
-          return ip.assigned_user?.username?.toLowerCase().includes(query);
-        }
-        const value = ip[searchColumn.value];
-        return value?.toString().toLowerCase().includes(query);
-      }
-    });
-  }
-
-  // 状态过滤
-  if (statusFilter.value !== 'all') {
-    filtered = filtered.filter((ip) => ip.status === statusFilter.value);
-  }
-
-  return filtered;
-});
-
 // 组件挂载时检查登录状态
 onMounted(() => {
   if (isAuthenticated.value) {
-    ipStore.fetchAllIPs()
+    loadIPsData();
     window.addEventListener('resize', updateTableHeight);
   } else {
     router.push('/login');
@@ -286,9 +258,9 @@ const openClaimDialog = (ip: IP) => {
 };
 
 // 处理认领成功事件
-const handleClaimSuccess = (ip: IP) => {
+const handleClaimSuccess = async (ip: IP) => {
   ElMessage.success(t('ip.actions.claimSuccess', { ip: ip.ip_address }));
-  ipStore.fetchAllIPs();
+  await loadIPsData(); // 使用 loadIPsData 替代 fetchAllIPs
   claimDialogVisible.value = false;
 };
 
@@ -299,34 +271,136 @@ const openUpdateDialog = (ip: IP) => {
 };
 
 // 处理更新成功事件
-const handleUpdateSuccess = (ip: IP) => {
+const handleUpdateSuccess = async (ip: IP) => {
   ElMessage.success(t('ip.actions.updateSuccess', { ip: ip.ip_address }));
-  ipStore.fetchAllIPs();
+  await loadIPsData(); // 使用 loadIPsData 替代 fetchAllIPs
   updateDialogVisible.value = false;
 };
 
+// 处理排序变化
 const handleSortChange = ({ prop, order }: { prop: string; order: string }) => {
-  if (!prop || !order) return;
+  searchConditions.value.sortBy = prop;
+  searchConditions.value.sortOrder = order === 'ascending' ? 'asc' : 'desc';
+  loadIPsData();
+};
 
-  const sortOrder = order === 'ascending' ? 1 : -1;
-  ipStore.sortedIPs.sort((a, b) => {
-    // 处理嵌套属性的情况
-    if (prop === 'assigned_user.username') {
-      const aUsername = a.assigned_user?.username || '';
-      const bUsername = b.assigned_user?.username || '';
-      return sortOrder * aUsername.localeCompare(bUsername);
-    }
+// 选中的 IP 列表
+const selectedIPs = ref<IP[]>([]);
+
+// 处理表格选择变化
+const handleSelectionChange = (selection: IP[]) => {
+  selectedIPs.value = selection;
+};
+
+// 判断是否可以批量认领
+const canBatchClaim = computed(() => {
+  return selectedIPs.value.every(ip => ip.status === 'unclaimed');
+});
+
+// 判断是否可以批量更新
+const canBatchUpdate = computed(() => {
+  return selectedIPs.value.every(ip => 
+    ip.status !== 'unclaimed' && 
+    (ip.assigned_user?.username === authStore.user.username || authStore.user.is_admin)
+  );
+});
+
+// 添加批量认领标志
+const isBatchClaim = ref(false);
+
+// 修改批量认领处理函数
+const handleBatchClaim = () => {
+  if (!canBatchClaim.value || selectedIPs.value.length === 0) return;
+  
+  isBatchClaim.value = true;
+  claimDialogVisible.value = true;
+};
+
+// 修改对话框关闭处理
+watch(claimDialogVisible, (newVal) => {
+  if (!newVal) {
+    isBatchClaim.value = false;
+  }
+});
+
+// 批量更新处理
+const handleBatchUpdate = () => {
+  if (!canBatchUpdate.value) return;
+  
+  // 打开批量更新对话框
+  updateSelectedIP.value = selectedIPs.value[0]; // 使用第一个 IP 的信息作为默认值
+  updateDialogVisible.value = true;
+};
+
+// 搜索和过滤条件
+const searchConditions = ref({
+  query: '',
+  column: 'all',
+  status: 'all',
+  sortBy: '',
+  sortOrder: ''
+});
+
+// 分页配置
+const pagination = ref({
+  currentPage: 1,
+  pageSize: 10,
+  total: 0,
+  loading: false
+});
+
+// 表格数据
+const tableData = ref<IP[]>([]);
+
+// 加载数据
+const loadIPsData = async () => {
+  pagination.value.loading = true;
+  try {
+    const response = await ipStore.fetchFilteredIPs({
+      page: pagination.value.currentPage,
+      pageSize: pagination.value.pageSize,
+      query: searchQuery.value,
+      column: searchColumn.value,
+      status: statusFilter.value,
+      sortBy: searchConditions.value.sortBy,
+      sortOrder: searchConditions.value.sortOrder
+    });
     
-    // 处理普通属性
-    const aValue = a[prop] || '';
-    const bValue = b[prop] || '';
-    
-    if (typeof aValue === 'string' && typeof bValue === 'string') {
-      return sortOrder * aValue.localeCompare(bValue);
-    }
-    
-    return sortOrder * (aValue < bValue ? -1 : aValue > bValue ? 1 : 0);
-  });
+    tableData.value = response.ips;
+    pagination.value.total = response.total;
+  } catch (error) {
+    ElMessage.error(t('common.fetchError'));
+  } finally {
+    pagination.value.loading = false;
+  }
+};
+
+// 处理搜索
+const handleSearch = debounce(() => {
+  pagination.value.currentPage = 1; // 重置到第一页
+  loadIPsData();
+}, 300);
+
+// 监听搜索条件变化
+watch([
+  () => searchQuery.value,
+  () => searchColumn.value,
+  () => statusFilter.value
+], () => {
+  handleSearch();
+});
+
+// 处理分页变化
+const handlePageChange = async (page: number) => {
+  pagination.value.currentPage = page;
+  await loadIPsData();
+};
+
+// 处理每页条数变化
+const handleSizeChange = async (size: number) => {
+  pagination.value.pageSize = size;
+  pagination.value.currentPage = 1;
+  await loadIPsData();
 };
 </script>
 
@@ -360,6 +434,11 @@ const handleSortChange = ({ prop, order }: { prop: string; order: string }) => {
   display: flex;
   gap: 1rem;
   align-items: center;
+  flex-wrap: wrap;
+}
+
+.el-button-group {
+  margin-right: 1rem;
 }
 
 .column-filter {

@@ -6,7 +6,7 @@ from datetime import datetime
 
 subnet_bp = Blueprint('subnet', __name__)
 
-@subnet_bp.route('', methods=['GET'])
+@subnet_bp.route('/subnets', methods=['GET'])
 @token_required
 def get_subnets(current_user):
     """Get all scan subnets for current user"""
@@ -16,7 +16,7 @@ def get_subnets(current_user):
     ).all()
     return jsonify([subnet.to_dict() for subnet in subnets])
 
-@subnet_bp.route('', methods=['POST'])
+@subnet_bp.route('/subnets', methods=['POST'])
 @token_required
 @validate_scan_request
 def add_subnet(current_user):
@@ -37,7 +37,7 @@ def add_subnet(current_user):
         'subnet': new_subnet.to_dict()
     }), 201
 
-@subnet_bp.route('/<subnet_id>', methods=['PUT'])
+@subnet_bp.route('/subnets/<subnet_id>', methods=['PUT'])
 @token_required
 @validate_scan_request
 def update_subnet(current_user, subnet_id):
@@ -62,7 +62,7 @@ def update_subnet(current_user, subnet_id):
         'subnet': subnet.to_dict()
     })
 
-@subnet_bp.route('/<subnet_id>', methods=['DELETE'])
+@subnet_bp.route('/subnets/<subnet_id>', methods=['DELETE'])
 @token_required
 def delete_subnet(current_user, subnet_id):
     """Soft delete subnet"""

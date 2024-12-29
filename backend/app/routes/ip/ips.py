@@ -1,4 +1,5 @@
 from flask import Blueprint, jsonify, request
+from sqlalchemy import desc, asc
 from backend.app.models import db, IP, User, ActionLog
 from backend.app.utils.auth import token_required, admin_required, generate_token
 from backend.app.utils import utils
@@ -6,7 +7,6 @@ from datetime import datetime
 import re
 
 ips_bp = Blueprint('ips', __name__)
-
 
 @ips_bp.route('/ips', methods=['GET'])
 @token_required
@@ -17,56 +17,72 @@ def get_ips(current_user):
     # 获取分页参数，如果没有传递分页参数，默认为 None（全量模式）
     page = request.args.get('page', type=int)
     page_size = request.args.get('page_size', type=int)
+    query = request.args.get('query')
+    column = request.args.get('column')
+    status = request.args.get('status')
+    sort_by = request.args.get('sort_by')
+    sort_order = request.args.get('sort_order', 'asc')
 
     try:
-        if page and page_size:
-            # 分页模式
-            ips_query = IP.query.filter_by(deleted=False)
-            ips_paginated = ips_query.paginate(page=page, per_page=page_size, error_out=False)
+        # 构建基础查询
+        ips_query = IP.query.filter_by(deleted=False)
 
-            # 如果当前页无数据
-            if not ips_paginated.items:
-                return jsonify({
-                    "error": "No data found for the given page.",
-                    "total": ips_paginated.total,
-                    "pages": ips_paginated.pages,
-                    "current_page": ips_paginated.page,
-                    "page_size": page_size
-                }), 404
+        # 应用搜索条件
+        if query and column:
+            if column == 'ip_address':
+                ips_query = ips_query.filter(IP.ip_address.ilike(f'%{query}%'))
+            elif column == 'assigned_user.username':
+                ips_query = ips_query.join(User).filter(User.username.ilike(f'%{query}%'))
+            elif column == 'device_type':
+                ips_query = ips_query.filter(IP.device_type.ilike(f'%{query}%'))
+            elif column == 'device_name':
+                ips_query = ips_query.filter(IP.device_name.ilike(f'%{query}%'))
+            elif column == 'manufacturer':
+                ips_query = ips_query.filter(IP.manufacturer.ilike(f'%{query}%'))
+            elif column == 'model':
+                ips_query = ips_query.filter(IP.model.ilike(f'%{query}%'))
+            elif column == 'os_type':
+                ips_query = ips_query.filter(IP.os_type.ilike(f'%{query}%'))
+            elif column == 'purpose':
+                ips_query = ips_query.filter(IP.purpose.ilike(f'%{query}%'))
 
-            # 日志记录
-            utils.log_action_to_db(
-                user=current_user,
-                action="Viewed paginated IPs",
-                target="ips",
-                details=f"User fetched page {page} with page_size {page_size}."
-            )
+        # 应用状态过滤
+        if status and status != 'all':
+            ips_query = ips_query.filter(IP.status == status)
 
-            return jsonify({
-                'ips': [ip.to_dict() for ip in ips_paginated.items],
-                'total': ips_paginated.total,
-                'pages': ips_paginated.pages,
-                'current_page': ips_paginated.page,
-                'page_size': page_size
-            })
+        # 应用排序
+        if sort_by:
+            sort_column = getattr(IP, sort_by, None)
+            if sort_column is not None:
+                ips_query = ips_query.order_by(
+                    desc(sort_column) if sort_order == 'desc' else asc(sort_column)
+                )
 
-        else:
-            # 全量模式
-            ips = IP.query.filter_by(deleted=False).all()
+        # 执行分页查询
+        ips_paginated = ips_query.paginate(
+            page=page, 
+            per_page=page_size, 
+            error_out=False
+        )
 
-            # 日志记录
-            utils.log_action_to_db(
-                user=current_user,
-                action="Viewed all IPs",
-                target="ips",
-                details="User fetched all IP records."
-            )
+        # 日志记录
+        utils.log_action_to_db(
+            user=current_user,
+            action="Viewed paginated IPs",
+            target="ips",
+            details=f"User fetched page {page} with page_size {page_size}."
+        )
 
-            return jsonify([ip.to_dict() for ip in ips])
+        return jsonify({
+            'ips': [ip.to_dict() for ip in ips_paginated.items],
+            'total': ips_paginated.total,
+            'pages': ips_paginated.pages,
+            'page_size': page_size,
+            'current_page': ips_paginated.page
+        })
 
     except Exception as e:
-        # 异常捕获并返回错误信息
-        return jsonify({"error": f"Failed to fetch IPs: {str(e)}"}), 500
+        return jsonify({"error": str(e)}), 500
 
 @ips_bp.route('/ips/<ip_id>/claim', methods=['POST'])
 @token_required

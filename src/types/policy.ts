@@ -1,4 +1,5 @@
 export interface Subnet {
+  id: string;
   name: string;
   subnet: string;
 }
@@ -20,8 +21,10 @@ export interface Policy {
   id: string;
   name: string;
   description: string;
-  subnets: Subnet[];
-  schedule: Schedule;
+  strategies: string;
+  start_time: string;
+  threads: number;
   created_at: string;
+  subnets: Subnet[];
   status: 'active' | 'inactive';
 }

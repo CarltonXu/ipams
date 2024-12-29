@@ -61,7 +61,7 @@
 
           <!-- 每几分钟 -->
           <el-form-item 
-            v-if="scheduleType === t('scan.form.types.everyMinute')" 
+            v-if="scheduleType === t('scan.policy.types.everyMinute')" 
             :label="t('scan.form.interval.minutes')" 
             :rules="[{ required: true, message: t('scan.form.interval.selectTime'), trigger: 'blur' }]"
           >
@@ -70,7 +70,7 @@
 
           <!-- 每几小时 -->
           <el-form-item 
-            v-if="scheduleType === t('scan.form.types.everyHour')" 
+            v-if="scheduleType === t('scan.policy.types.everyHour')" 
             :label="t('scan.form.interval.hours')" 
             :rules="[{ required: true, message: t('scan.form.interval.selectTime'), trigger: 'blur' }]"
           >
@@ -79,7 +79,7 @@
 
           <!-- 每几天 -->
           <el-form-item 
-            v-if="scheduleType === t('scan.form.types.everyDay')" 
+            v-if="scheduleType === t('scan.policy.types.everyDay')" 
             :label="t('scan.form.interval.days')" 
             :rules="[{ required: true, message: t('scan.form.interval.selectTime'), trigger: 'blur' }]"
           >
@@ -88,7 +88,7 @@
 
           <!-- 开始执行时间 -->
           <el-form-item 
-            v-if="[t('scan.form.types.everyMinute'), t('scan.form.types.everyHour'), t('scan.form.types.everyDay')].includes(scheduleType)" 
+            v-if="[t('scan.policy.types.everyMinute'), t('scan.policy.types.everyHour'), t('scan.policy.types.everyDay')].includes(scheduleType)" 
             :label="t('scan.form.time.start')" 
             :rules="[{ required: true, message: t('scan.form.time.select'), trigger: 'blur' }]"
           >
@@ -102,7 +102,7 @@
 
           <!-- 每周 -->
           <el-form-item 
-            v-if="scheduleType === t('scan.form.types.everyWeek')" 
+            v-if="scheduleType === t('scan.policy.types.everyWeek')" 
             :label="t('scan.policy.monthDays')"
           >
             <el-checkbox-group v-model="weeklyDays">
@@ -181,6 +181,19 @@
             </el-input>
           </el-form-item>
 
+          <el-form-item 
+            v-if="scheduleType === t('scan.policy.types.custom')" 
+            :label="t('scan.form.time.select')" 
+            :rules="[{ required: true, message: t('scan.form.time.select'), trigger: 'blur' }]"
+          >
+            <el-date-picker
+              v-model="startExecutionTime"
+              :placeholder="t('scan.form.time.select')"
+              type="datetime"
+              format="YYYY-MM-DD HH:mm"
+              style="width: 180px;" />
+          </el-form-item>
+
           <!-- 加载状态 -->
           <div v-if="loading" class="loading-status">
             {{ t('scan.form.status.loading') }}
@@ -200,7 +213,7 @@
           <el-table-column prop="created_at" :label="$t('scan.policy.columns.createdAt')" />
           <el-table-column :label="$t('scan.policy.columns.actions')">
             <template #default="scope">
-              <el-button type="danger" size="mini" @click="removePolicy(scope.row)">{{ $t('scan.policy.delete') }}</el-button>
+              <el-button type="danger" size="mini" @click="removePolicy(scope.row)">{{ $t('scan.form.buttons.delete') }}</el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -230,6 +243,7 @@
 import { ref, computed, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { ElMessage, ElMessageBox } from 'element-plus';
+import { useScanPolicyStore } from '../stores/scanPolicy';
 
 const { t } = useI18n();
 
@@ -276,9 +290,9 @@ const validateInputs = () => {
   }
 
   const scheduleTypes = {
-    [t('scan.form.types.everyMinute')]: true,
-    [t('scan.form.types.everyHour')]: true,
-    [t('scan.form.types.everyDay')]: true
+    [t('scan.policy.types.everyMinute')]: true,
+    [t('scan.policy.types.everyHour')]: true,
+    [t('scan.policy.types.everyDay')]: true
   };
 
   if (scheduleTypes[scheduleType.value] && !startExecutionTime.value) {
@@ -286,34 +300,34 @@ const validateInputs = () => {
     return false;
   }
 
-  if (scheduleType.value === t('scan.form.types.everyMinute') && !intervalMinutes.value) {
+  if (scheduleType.value === t('scan.policy.types.everyMinute') && !intervalMinutes.value) {
     ElMessage.error(t('scan.form.validation.selectInterval'));
     return false;
   }
 
-  if (scheduleType.value === t('scan.form.types.everyHour') && !intervalHours.value) {
+  if (scheduleType.value === t('scan.policy.types.everyHour') && !intervalHours.value) {
     ElMessage.error(t('scan.form.validation.selectInterval'));
     return false;
   }
 
-  if (scheduleType.value === t('scan.form.types.everyDay') && !intervalDays.value) {
+  if (scheduleType.value === t('scan.policy.types.everyDay') && !intervalDays.value) {
     ElMessage.error(t('scan.form.validation.selectInterval'));
     return false;
   }
 
-  if (scheduleType.value === t('scan.form.types.everyWeek') && 
+  if (scheduleType.value === t('scan.policy.types.everyWeek') && 
       (weeklyDays.value.length === 0 || !startExecutionTime.value)) {
     ElMessage.error(t('scan.form.validation.weeklyConfig'));
     return false;
   }
 
-  if (scheduleType.value === t('scan.form.types.everyMonth') && 
+  if (scheduleType.value === t('scan.policy.types.everyMonth') && 
       (monthlyDays.value.length === 0 || !startExecutionTime.value)) {
     ElMessage.error(t('scan.form.validation.monthlyConfig'));
     return false;
   }
 
-  if (scheduleType.value === t('scan.form.types.custom') && 
+  if (scheduleType.value === t('scan.policy.types.custom') && 
       (!customCron.value.trim() || !startExecutionTime.value)) {
     ElMessage.error(t('scan.form.validation.cronRequired'));
     return false;
@@ -334,22 +348,22 @@ const generatePolicyDescription = () => {
   const startTime = formatTime(startExecutionTime.value);
 
   switch (scheduleType.value) {
-    case t('scan.form.types.everyMinute'):
+    case t('scan.policy.types.everyMinute'):
       return t('scan.policy.description.everyMinute', {
         minutes: intervalMinutes.value || 1,
         time: startTime
       });
-    case t('scan.form.types.everyHour'):
+    case t('scan.policy.types.everyHour'):
       return t('scan.policy.description.everyHour', {
         hours: intervalHours.value || 1,
         time: startTime
       });
-    case t('scan.form.types.everyDay'):
+    case t('scan.policy.types.everyDay'):
       return t('scan.policy.description.everyDay', {
         days: intervalDays.value || 1,
         time: startTime
       });
-    case t('scan.form.types.everyWeek'):
+    case t('scan.policy.types.everyWeek'):
       const weekDays = weeklyDays.value
         .map(day => t(`scan.policy.weekDays.${day}`))
         .join('、');
@@ -357,7 +371,7 @@ const generatePolicyDescription = () => {
         weekdays: weekDays,
         time: startTime
       });
-    case t('scan.form.types.everyMonth'):
+    case t('scan.policy.types.everyMonth'):
       const days = monthlyDays.value
         .map(day => day === 'last_day' ? t('scan.policy.lastDay') : day)
         .join('、');
@@ -365,7 +379,7 @@ const generatePolicyDescription = () => {
         days,
         time: startTime
       });
-    case t('scan.form.types.custom'):
+    case t('scan.policy.types.custom'):
       return t('scan.policy.description.custom', {
         cron: customCron.value
       });
@@ -386,20 +400,20 @@ const generateCrontabExpression = () => {
   const hours = time.getHours();
 
   switch (scheduleType.value) {
-    case t('scan.form.types.everyMinute'):
+    case t('scan.policy.types.everyMinute'):
       return `*/${intervalMinutes.value || 1} * * * *`;
-    case t('scan.form.types.everyHour'):
+    case t('scan.policy.types.everyHour'):
       return `${minutes} */${intervalHours.value || 1} * * *`;
-    case t('scan.form.types.everyDay'):
+    case t('scan.policy.types.everyDay'):
       return `${minutes} ${hours} */${intervalDays.value || 1} * *`;
-    case t('scan.form.types.everyWeek'):
+    case t('scan.policy.types.everyWeek'):
       return `${minutes} ${hours} * * ${weeklyDays.value.join(',')}`;
-    case t('scan.form.types.everyMonth'):
+    case t('scan.policy.types.everyMonth'):
       const days = monthlyDays.value.includes('last_day') 
         ? 'L' 
         : monthlyDays.value.join(',');
       return `${minutes} ${hours} ${days} * *`;
-    case t('scan.form.types.custom'):
+    case t('scan.policy.types.custom'):
       return customCron.value;
     default:
       return '';
@@ -420,12 +434,12 @@ const validateSubnet = () => {
 
   const [ip] = newSubnet.value.split('/');
   if (!isValidIP(ip)) {
-    ElMessage.error(t('scan.form.validation.invalidIPFormat'));
+    ElMessage.error(t('scan.validation.invalidIPFormat'));
     return false;
   }
 
   if (!isValidSubnet(newSubnet.value)) {
-    ElMessage.error(t('scan.form.validation.invalidSubnetFormat'));
+    ElMessage.error(t('scan.validation.invalidSubnetFormat'));
     return false;
   }
 
@@ -480,6 +494,18 @@ const handleAddPolicy = () => {
 };
 
 const handleSavePolicy = async () => {
+  // 检查是否有网段配置
+  if (!cachedSubnets.value || cachedSubnets.value.length === 0) {
+    ElMessage.warning(t('scan.validation.noSubnets'));
+    return;
+  }
+
+  // 检查是否有策略配置
+  if (!cachedPolicies.value || cachedPolicies.value.length === 0) {
+    ElMessage.warning(t('scan.validation.noPolicy'));
+    return;
+  }
+
   try {
     await ElMessageBox.confirm(
       t('scan.form.confirm.save'),
@@ -491,11 +517,20 @@ const handleSavePolicy = async () => {
       }
     );
     
-    console.log(cachedPolicies);
-    console.log(cachedSubnets);
+    loading.value = true;
+    const scanPolicyStore = useScanPolicyStore();
+    await scanPolicyStore.savePolicyConfig({
+      subnets: cachedSubnets.value,
+      policies: cachedPolicies.value
+    });
+    
     ElMessage.success(t('scan.messages.success.savePolicy'));
-  } catch (error) {
-    // 用户取消操作
+  } catch (error: any) {
+    if (error.message) {
+      ElMessage.error(error.message);
+    }
+  } finally {
+    loading.value = false;
   }
 };
 
@@ -581,47 +616,6 @@ watch(scheduleType, (newType) => {
     monthlyDays.value = [];
   } else if (newType === t('scan.form.types.custom')) {
     customCron.value = '';
-  }
-});
-
-// 更新模板中的表格空数据提示
-const tableConfig = {
-  emptyText: t('scan.form.table.noData')
-};
-
-// 更新按钮文本
-const buttonLabels = {
-  add: t('scan.form.buttons.add'),
-  save: t('scan.form.buttons.save'),
-  execute: t('scan.form.buttons.execute')
-};
-
-// 添加表单验证提示
-const validateWeeklyConfig = () => {
-  if (weeklyDays.value.length === 0) {
-    ElMessage.warning(t('scan.form.tips.weekDays'));
-    return false;
-  }
-  return true;
-};
-
-const validateMonthlyConfig = () => {
-  if (monthlyDays.value.length === 0) {
-    ElMessage.warning(t('scan.form.tips.monthDays'));
-    return false;
-  }
-  return true;
-};
-
-// 更新模板中的时间选择器标签
-const getTimePickerLabel = computed(() => {
-  switch (scheduleType.value) {
-    case t('scan.form.types.everyWeek'):
-      return t('scan.form.time.weekly');
-    case t('scan.form.types.everyMonth'):
-      return t('scan.form.time.monthly');
-    default:
-      return t('scan.form.time.daily');
   }
 });
 

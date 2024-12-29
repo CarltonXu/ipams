@@ -5,6 +5,16 @@ import i18n from '../i18n'; // 导入 i18n 实例
 const { t } = i18n.global; // 在 store 中使用 global t 函数
 import type { IP } from '../types/ip';
 
+interface FetchParams {
+  page: number;
+  pageSize: number;
+  query?: string;
+  column?: string;
+  status?: string;
+  sortBy?: string;
+  sortOrder?: string;
+}
+
 export const useIPStore = defineStore('ip', {
   state: () => ({
     ips: [] as IP[],          // 所有 IP 数据（用于前端全局筛选）
@@ -110,13 +120,105 @@ export const useIPStore = defineStore('ip', {
     },
 
     // 更新 IP
-    async updateIP(ipId: string, data: { device_name: string; purpose: string }) {
+    async updateIP(ipId: string, data: {
+      os_type: string;
+      device_name: string;
+      device_type: string;
+      manufacturer: string;
+      model: string;
+      purpose: string;
+      assigned_user_id?: string;
+    }) {
       try {
         await axios.post(`/api/ips/${ipId}`, data);
-        await this.fetchAllIPs(); // 更新列表
+        return true;
+      } catch (err: any) {
+        this.error = err.message;
+        throw new Error(t('ip.dialog.update.error', { error: err.message }));
+      }
+    },
+
+    // 批量认领 IP
+    async batchClaimIPs(ipConfigs: Array<{
+      id: string;
+      device_name: string;
+      purpose: string;
+      os_type: string;
+      device_type: string;
+      manufacturer: string;
+      model: string;
+      assigned_user_id?: string | null;
+    }>) {
+      try {
+        await Promise.all(ipConfigs.map(config => 
+          axios.post(`/api/ips/${config.id}/claim`, {
+            device_name: config.device_name,
+            purpose: config.purpose,
+            os_type: config.os_type,
+            device_type: config.device_type,
+            manufacturer: config.manufacturer,
+            model: config.model,
+            assigned_user_id: config.assigned_user_id,
+          })
+        ));
+        await this.fetchAllIPs();
+      } catch (err: any) {
+        this.error = err.message;
+        throw new Error(t('ip.dialog.claim.error', { error: err.message }));
+      }
+    },
+
+    // 批量更新 IP
+    async batchUpdateIPs(ips: string[], data: {
+      os_type: string;
+      device_name: string;
+      device_type: string;
+      manufacturer: string;
+      model: string;
+      purpose: string;
+      assigned_user_id?: string;
+    }) {
+      try {
+        await Promise.all(ips.map(ipId => 
+          axios.post(`/api/ips/${ipId}`, data)
+        ));
+        return true;
+      } catch (err: any) {
+        this.error = err.message;
+        throw new Error(t('ip.dialog.update.error', { error: err.message }));
+      }
+    },
+
+    // 获取过滤后的分页数据
+    async fetchFilteredIPs(params: FetchParams) {
+      this.loading = true;
+      try {
+        const response = await axios.get('/api/ips', {
+          params: {
+            page: params.page,
+            page_size: params.pageSize,
+            query: params.query || undefined,
+            column: params.column === 'all' ? undefined : params.column,
+            status: params.status === 'all' ? undefined : params.status,
+            sort_by: params.sortBy || undefined,
+            sort_order: params.sortOrder || undefined
+          }
+        });
+        
+        // 更新 store 中的状态
+        this.total = response.data.total;
+        this.currentPage = response.data.current_page;
+        
+        return {
+          ips: response.data.ips,
+          total: response.data.total,
+          currentPage: response.data.current_page
+        };
       } catch (err: any) {
         this.error = err.message;
         throw err;
+      } finally {
+        this.loading = false;
       }
     },
   },
