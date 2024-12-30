@@ -133,8 +133,7 @@ export const useIPStore = defineStore('ip', {
         await axios.post(`/api/ips/${ipId}`, data);
         return true;
       } catch (err: any) {
-        this.error = err.message;
-        throw new Error(t('ip.dialog.update.error', { error: err.message }));
+        throw new Error(t('ip.dialog.update.error', { error: err.error }));
       }
     },
 

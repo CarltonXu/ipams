@@ -221,6 +221,11 @@ export default {
         success: 'IP batch claimed successfully',
         error: 'Batch claim IP failed: {error}',
         validation: 'Please fill in all required fields'
+      },
+      update: {
+        title: 'Update IP Address',
+        success: 'IP updated successfully',
+        error: 'Update IP failed: {error}',
       }
     }
   },

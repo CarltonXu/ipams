@@ -221,6 +221,11 @@ export default {
         success: 'IP批量认领成功',
         error: '批量认领IP失败: {error}',
         validation: '请填写所有必填字段'
+      },
+      update: {
+        title: '更新IP地址',
+        success: 'IP更新成功',
+        error: '更新IP失败: {error}',
       }
     }
   },
