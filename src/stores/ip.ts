@@ -19,6 +19,7 @@ export const useIPStore = defineStore('ip', {
   state: () => ({
     ips: [] as IP[],          // 所有 IP 数据（用于前端全局筛选）
     paginatedIPs: [] as IP[], // 当前页的 IP 数据（后端分页时使用）
+    displayedIPs: [] as IP[], // 当前显示的 IP 数据
     loading: false,           // 加载状态
     error: null as string | null, // 错误信息
 
@@ -60,7 +61,7 @@ export const useIPStore = defineStore('ip', {
     },
 
     // 获取分页数据
-    async fetchPaginatedIPs(page = this.currentPage, pageSize = this.pageSize) {
+    async fetchPaginatedIPs(page: number, pageSize: number) {
       this.loading = true;
       this.currentPage = page;
       this.pageSize = pageSize;
@@ -86,7 +87,7 @@ export const useIPStore = defineStore('ip', {
       if (this.useGlobalFilter) {
         await this.fetchAllIPs();
       } else {
-        await this.fetchPaginatedIPs();
+        await this.fetchPaginatedIPs(this.currentPage, this.pageSize);
       }
     },
 
@@ -95,7 +96,7 @@ export const useIPStore = defineStore('ip', {
       if (page > 0 && page <= Math.ceil(this.total / this.pageSize)) {
         this.currentPage = page;
         if (!this.useGlobalFilter) {
-          await this.fetchPaginatedIPs();
+          await this.fetchPaginatedIPs(this.currentPage, this.pageSize);
         }
       }
     },

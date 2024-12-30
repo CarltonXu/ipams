@@ -37,7 +37,7 @@ export const useScanPolicyStore = defineStore('scanPolicy', () => {
   // 保存策略配置
   const savePolicyConfig = async (data: {
     subnets: Subnet[];
-    policies: ScanPolicy[];
+    policies: Policy[];
   }) => {
     loading.value = true;
     try {
