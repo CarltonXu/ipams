@@ -1,9 +1,11 @@
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, current_app
 from sqlalchemy import desc, asc
+from werkzeug.utils import secure_filename
 from backend.app.models import db, User, IP
 from backend.app.utils.auth import token_required, admin_required, generate_token
 from backend.app.utils import utils
-import re
+import os
+import uuid
 
 user_bp = Blueprint('user', __name__)
 
@@ -25,6 +27,7 @@ def add_users(current_user):
     email = data.get('email')
     password = data.get('password')
     is_admin = data.get('is_admin', False)
+    avatar = "/src/assets/avatar.jpeg"
 
     # 校验邮箱格式
     if not utils.is_valid_email(email):
@@ -41,7 +44,8 @@ def add_users(current_user):
     new_user = User(
         username=username,
         email=email,
-        is_admin=is_admin
+        is_admin=is_admin,
+        avatar=avatar
     )
     new_user.set_password(password)
     db.session.add(new_user)
@@ -56,6 +60,67 @@ def add_users(current_user):
     )
 
     return jsonify({'message': 'User added successfully', 'user': new_user.to_dict()}), 201
+
+# 上传头像
+@user_bp.route('/users/upload-avatar', methods=['POST'])
+@token_required
+def upload_avatar(current_user):
+    """上传用户头像"""
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file provided'}), 400
+        
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'error': 'No file selected'}), 400
+        
+    if not utils.allowed_file(file.filename, {'png', 'jpg', 'jpeg', 'gif'}):
+        return jsonify({'error': 'File type not allowed'}), 400
+
+    # 使用 secure_filename 处理原始文件名，但只是为了安全检查
+    secure_name = secure_filename(file.filename)
+    if not secure_name:
+        return jsonify({'error': 'Invalid filename'}), 400
+        
+    try:
+        # 1. 获取文件扩展名
+        original_ext = os.path.splitext(file.filename)[1].lower()
+
+        # 2. 生成新的文件名（使用 UUID + 原始扩展名）
+        unique_filename = f"{uuid.uuid4()}{original_ext}"
+        
+        # 确保上传目录存在
+        upload_folder = os.path.join(current_app.config['UPLOAD_FOLDER'], 'avatars')
+        os.makedirs(upload_folder, exist_ok=True)
+        
+        # 保存文件
+        file_path = os.path.join(upload_folder, unique_filename)
+        file.save(file_path)
+        
+        # 更新用户头像路径
+        avatar_url = f"/uploads/avatars/{unique_filename}"
+
+        User.query.filter_by(id=current_user.id).update({
+            'avatar': avatar_url
+        })
+
+        db.session.commit()
+        
+        # 记录日志
+        utils.log_action_to_db(
+            user=current_user,
+            action="Updated avatar",
+            target=current_user.id,
+            details=f"Avatar updated to: {avatar_url}"
+        )
+        
+        return jsonify({
+            'message': 'Avatar uploaded successfully',
+            'url': avatar_url
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
 
 @user_bp.route('/users/<string:user_id>', methods=['DELETE'])
 @token_required

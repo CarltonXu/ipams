@@ -19,7 +19,6 @@ export const useIPStore = defineStore('ip', {
   state: () => ({
     ips: [] as IP[],          // 所有 IP 数据（用于前端全局筛选）
     paginatedIPs: [] as IP[], // 当前页的 IP 数据（后端分页时使用）
-    displayedIPs: [] as IP[], // 当前显示的 IP 数据
     loading: false,           // 加载状态
     error: null as string | null, // 错误信息
 
@@ -39,9 +38,8 @@ export const useIPStore = defineStore('ip', {
       }
       return state.paginatedIPs;
     },
-
     // 根据 IP 地址排序
-    sortedIPs: (state) => [...state.displayedIPs].sort((a, b) => a.ip_address.localeCompare(b.ip_address)),
+    sortedIPs: (state) => [...state.ips].sort((a, b) => a.ip_address.localeCompare(b.ip_address)),
   },
 
   actions: {

@@ -1,11 +1,11 @@
 import { defineStore } from 'pinia';
 import axios from 'axios';
-import type { AuthState, LoginCredentials, RegisterCredentials } from '../types/user';
+import type { AuthState, LoginCredentials, RegisterCredentials, User } from '../types/user';
 
 export const useAuthStore = defineStore('auth', {
   state: (): AuthState => ({
-    user: localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')!) : null,
-    token: localStorage.getItem('token'),
+    user: null as User | null,
+    token: null as string | null,
   }),
 
   getters: {
@@ -41,12 +41,23 @@ export const useAuthStore = defineStore('auth', {
       }
     },
 
+    async updateUserInfo(userData: Partial<User>) {
+      if (this.user) {
+        this.user = { ...this.user, ...userData };
+      }
+      localStorage.setItem('user', JSON.stringify(this.user));
+    },
+
     async logout() {
       this.token = null;
       this.user = null;
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       delete axios.defaults.headers.common['Authorization'];
+    },
+
+    async getCaptcha() {
+      return await axios.get('/api/auth/captcha');
     },
   },
 });

@@ -1,6 +1,13 @@
 export interface LoginCredentials {
   username: string;
   password: string;
+  captcha: string;      // 用户输入的验证码
+  captchaKey: string;   // 验证码标识
+}
+
+export interface CaptchaResponse {
+  captchaKey: string;    // 验证码唯一标识
+  captchaImage: string;  // Base64 编码的验证码图片
 }
 
 export interface RegisterCredentials {
@@ -37,4 +44,9 @@ export interface UpdateUser {
   email: string;
   avator: string;
   wechat_id: string;
+}
+
+export interface UpdateUserAvatar {
+  id: string;
+  avatar: File;
 }

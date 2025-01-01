@@ -2,12 +2,31 @@ from flask import Blueprint, jsonify, request
 from backend.app.models import db, User
 from backend.app.utils.auth import token_required, admin_required, generate_token
 from backend.app.utils import utils
+from backend.app.utils.redis_manager import RedisManager
 import re
 
 auth_bp = Blueprint('auth', __name__)
 
+@auth_bp.route('/auth/captcha', methods=['GET'])
+def get_captcha():
+    """获取验证码"""
+    # 生成验证码
+    captcha_text = utils.generate_captcha_code()
+    captcha_key = utils.generate_uuid()  # 生成唯一标识
+    
+    # 生成验证码图片
+    captcha_image = utils.create_captcha_image(captcha_text)
+    
+    # 使用RedisManager存储验证码
+    if not RedisManager.set_with_ttl(f"captcha:{captcha_key}", captcha_text, 300):
+        return jsonify({'message': 'Failed to generate captcha'}), 500
+    
+    return jsonify({
+        'captchaKey': captcha_key,
+        'captchaImage': captcha_image
+    })
+
 @auth_bp.route('/auth/register', methods=['POST'])
-@token_required
 def register_user():
     data = request.json
 
@@ -43,9 +62,27 @@ def register_user():
 
 @auth_bp.route('/auth/login', methods=['POST'])
 def login():
+    """用户登录"""
     data = request.json
-    user = User.query.filter_by(username=data.get('username')).first()
 
+    # 验证必填字段
+    if not all(k in data for k in ['username', 'password', 'captcha', 'captchaKey']):
+        return jsonify({'message': 'Missing required fields'}), 400
+
+    # 验证验证码
+    captcha_key = data.get('captchaKey')
+    captcha_text = data.get('captcha').upper() # 转换为大写进行验证
+
+    # 使用RedisManager获取验证码
+    stored_captcha = RedisManager.get(f"captcha:{captcha_key}")
+    if not stored_captcha or stored_captcha != captcha_text:
+        return jsonify({'message': 'Invalid or expired captcha'}), 400
+
+    # 删除已经使用的验证码
+    RedisManager.delete(f"captcha:{captcha_key}")
+
+    # 验证用户名和密码
+    user = User.query.filter_by(username=data.get('username')).first()
     if user and user.check_password(data.get('password')):
         token = generate_token(user.id)
         # 记录日志
@@ -62,6 +99,6 @@ def login():
         user=None,
         action="Failed login attempt",
         target=data.get('username'),
-        details="Invalid credentials provided"
+        details="Invalid credentials or captcha"
     )
-    return jsonify({'message': 'Invalid credentials'}), 401
+    return jsonify({'message': 'Invalid credentials or captcha'}), 401

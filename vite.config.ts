@@ -6,7 +6,12 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'http://127.0.0.1:5001',
+        target: 'http://localhost:5001',
+        changeOrigin: true
+      },
+      // 头像的代理访问
+      '/uploads': {
+        target: 'http://localhost:5001',
         changeOrigin: true
       }
     },

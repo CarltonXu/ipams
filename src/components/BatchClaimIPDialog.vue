@@ -8,12 +8,12 @@
     <div class="batch-claim-container">
       <!-- 公共配置部分 -->
       <div class="common-config">
-        <h3>{{ t('ip.dialog.batchClaim.commonConfig') }}</h3>
+        <h3>{{ $t('ip.dialog.batchClaim.commonConfig') }}</h3>
         <el-form :model="commonForm" label-width="120px">
-          <el-form-item :label="t('ip.dialog.claim.assignUser')" v-if="isAdmin">
+          <el-form-item :label="$t('ip.dialog.claim.assignUser')" v-if="isAdmin">
             <el-select 
               v-model="commonForm.assigned_user_id" 
-              :placeholder="t('ip.dialog.claim.selectUser')"
+              :placeholder="$t('ip.dialog.claim.selectUser')"
               clearable
             >
               <el-option
@@ -24,7 +24,7 @@
               />
             </el-select>
           </el-form-item>
-          <el-form-item :label="t('ip.dialog.claim.osType')">
+          <el-form-item :label="$t('ip.dialog.claim.osType')">
             <el-select v-model="commonForm.os_type" clearable>
               <el-option label="Windows" value="Windows" />
               <el-option label="Linux" value="Linux" />
@@ -32,7 +32,7 @@
               <el-option label="Other" value="Other" />
             </el-select>
           </el-form-item>
-          <el-form-item :label="t('ip.dialog.claim.deviceType')">
+          <el-form-item :label="$t('ip.dialog.claim.deviceType')">
             <el-select v-model="commonForm.device_type" clearable>
               <el-option label="Server" value="Server" />
               <el-option label="Desktop" value="Desktop" />
@@ -40,7 +40,7 @@
               <el-option label="Other" value="Other" />
             </el-select>
           </el-form-item>
-          <el-form-item :label="t('ip.dialog.claim.manufacturer')">
+          <el-form-item :label="$t('ip.dialog.claim.manufacturer')">
             <el-select v-model="commonForm.manufacturer" clearable>
               <el-option label="Dell" value="Dell" />
               <el-option label="HP" value="HP" />
@@ -48,33 +48,33 @@
               <el-option label="Other" value="Other" />
             </el-select>
           </el-form-item>
-          <el-form-item :label="t('ip.dialog.claim.model')">
+          <el-form-item :label="$t('ip.dialog.claim.model')">
             <el-select v-model="commonForm.model" clearable>
               <el-option label="PowerEdge R730" value="PowerEdge R730" />
               <el-option label="DELL R720" value="DELL R720" />
               <el-option label="Other" value="Other" />
             </el-select>
           </el-form-item>
-          <el-form-item :label="t('ip.dialog.claim.purpose')">
+          <el-form-item :label="$t('ip.dialog.claim.purpose')">
             <el-input v-model="commonForm.purpose" />
           </el-form-item>
           <el-button type="primary" @click="applyCommonConfig">
-            {{ t('ip.dialog.batchClaim.applyToAll') }}
+            {{ $t('ip.dialog.batchClaim.applyToAll') }}
           </el-button>
         </el-form>
       </div>
 
       <!-- IP 列表配置 -->
       <div class="ip-configs">
-        <h3>{{ t('ip.dialog.batchClaim.individualConfig') }}</h3>
+        <h3>{{ $t('ip.dialog.batchClaim.individualConfig') }}</h3>
         <el-table :data="ipConfigs" border stripe>
-          <el-table-column prop="ip_address" :label="t('ip.columns.ipAddress')" width="140" />
-          <el-table-column :label="t('ip.dialog.claim.deviceName')" width="200">
+          <el-table-column prop="ip_address" :label="$t('ip.columns.ipAddress')" width="140" />
+          <el-table-column :label="$t('ip.dialog.claim.deviceName')" width="200">
             <template #default="{ row }">
               <el-input v-model="row.device_name" />
             </template>
           </el-table-column>
-          <el-table-column :label="t('ip.dialog.claim.assignUser')" width="200" v-if="isAdmin">
+          <el-table-column :label="$t('ip.dialog.claim.assignUser')" width="200" v-if="isAdmin">
             <template #default="{ row }">
               <el-select v-model="row.assigned_user_id" style="width: 100%" clearable>
                 <el-option
@@ -86,7 +86,7 @@
               </el-select>
             </template>
           </el-table-column>
-          <el-table-column :label="t('ip.dialog.claim.osType')" width="150">
+          <el-table-column :label="$t('ip.dialog.claim.osType')" width="150">
             <template #default="{ row }">
               <el-select v-model="row.os_type" style="width: 100%">
                 <el-option label="Windows" value="Windows" />
@@ -96,7 +96,7 @@
               </el-select>
             </template>
           </el-table-column>
-          <el-table-column :label="t('ip.dialog.claim.deviceType')" width="150">
+          <el-table-column :label="$t('ip.dialog.claim.deviceType')" width="150">
             <template #default="{ row }">
               <el-select v-model="row.device_type" style="width: 100%">
                 <el-option label="Server" value="Server" />
@@ -106,7 +106,7 @@
               </el-select>
             </template>
           </el-table-column>
-          <el-table-column :label="t('ip.dialog.claim.manufacturer')" width="150">
+          <el-table-column :label="$t('ip.dialog.claim.manufacturer')" width="150">
             <template #default="{ row }">
               <el-select v-model="row.manufacturer" style="width: 100%">
                 <el-option label="VMware" value="VMware" />
@@ -116,7 +116,7 @@
               </el-select>
             </template>
           </el-table-column>
-          <el-table-column :label="t('ip.dialog.claim.model')" width="150">
+          <el-table-column :label="$t('ip.dialog.claim.model')" width="150">
             <template #default="{ row }">
               <el-select v-model="row.model" style="width: 100%">
                 <el-option label="PowerEdge R730" value="PowerEdge R730" />
@@ -125,7 +125,7 @@
               </el-select>
             </template>
           </el-table-column>
-          <el-table-column :label="t('ip.dialog.claim.purpose')" width="200">
+          <el-table-column :label="$t('ip.dialog.claim.purpose')" width="200">
             <template #default="{ row }">
               <el-input v-model="row.purpose" />
             </template>
@@ -135,9 +135,9 @@
     </div>
 
     <template #footer>
-      <el-button @click="handleClose">{{ t('common.cancel') }}</el-button>
+      <el-button @click="handleClose">{{ $t('common.cancel') }}</el-button>
       <el-button type="primary" @click="handleBatchClaim" :loading="loading">
-        {{ t('common.confirm') }}
+        {{ $t('common.confirm') }}
       </el-button>
     </template>
   </el-dialog>

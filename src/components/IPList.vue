@@ -59,6 +59,7 @@
             <el-option :label="$t('ip.status.active')" value="active" />
             <el-option :label="$t('ip.status.inactive')" value="inactive" />
             <el-option :label="$t('ip.status.unclaimed')" value="unclaimed" />
+            <el-option :label="$t('ip.status.myResources')" value="mine" />
           </el-select>
         </div>
       </div>
@@ -462,7 +463,6 @@ const handleSizeChange = async (size: number) => {
 }
 
 .table-container {
-  height: 100%;
   position: relative;
 }
 

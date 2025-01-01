@@ -35,6 +35,31 @@ export default {
     loginSuccess: 'Login Successful',
     loginError: 'Login Failed',
     tokenExpired: 'Login expired, please login again',
+    title: 'IPAM System Platform',
+    subtitle: 'Monitor and manage your network with ease',
+    registerSubtitle: 'Create an account to manage your network',
+    noAccount: 'No account yet?',
+    hasAccount: 'Already have an account?',
+    confirmPassword: 'Confirm Password',
+    confirmPasswordPlaceholder: 'Please enter password again',
+    registerSuccess: 'Register Successful',
+    registerError: 'Register Failed',
+    validation: {
+      username: 'Please enter username',
+      usernameLength: 'Username must be at least 3 characters long',
+      email: {
+        required: 'Please enter email',
+        invalid: 'Please enter a valid email address'
+      },
+      password: 'Please enter password',
+      passwordLength: 'Password must be at least 6 characters long',
+      confirmPassword: 'Please confirm password',
+      passwordMismatch: 'Passwords do not match'
+    },
+    captcha: 'Captcha',
+    captchaPlaceholder: 'Please enter captcha',
+    captchaError: 'Failed to get captcha',
+    captchaRefresh: 'Refresh Captcha',
   },
   user: {
     profile: 'Profile',
@@ -143,6 +168,7 @@ export default {
       inactive: 'Inactive',
       unclaimed: 'Unclaimed',
       unassigned: 'Unassigned',
+      myResources: 'My Resources',
       description: {
         active: 'This IP is currently active',
         inactive: 'This IP is not in use',
@@ -232,13 +258,35 @@ export default {
   profile: {
     title: 'Profile',
     changeAvatar: 'Change Avatar',
+    changePassword: 'Change Password',
     editProfile: 'Edit Profile',
     editDialogTitle: 'Edit Profile',
     wechatPlaceholder: 'Not Set',
+    changePasswordTitle: 'Change Password',
+    role: {
+      admin: 'Admin',
+      user: 'User'
+    },
     fields: {
+      id: 'ID',
       username: 'Username',
       email: 'Email',
       wechatId: 'WeChat ID',
+      createdAt: 'Created At',
+      oldPassword: 'Old Password',
+      newPassword: 'New Password',
+      confirmPassword: 'Confirm Password'
+    },
+    validation: {
+      emailRequired: 'Email is required',
+      emailFormat: 'Please enter a valid email address',
+      wechatIdRequired: 'WeChat ID is required',
+      wechatIdLength: 'WeChat ID must be at least 2 characters long',
+      oldPasswordRequired: 'Old password is required',
+      newPasswordRequired: 'New password is required',
+      confirmPasswordRequired: 'Confirm password is required',
+      passwordMismatch: 'New password and confirm password do not match',
+      passwordLength: 'Password must be at least 6 characters long'
     },
     buttons: {
       save: 'Save',
@@ -249,6 +297,11 @@ export default {
       updateFailed: 'Failed to update profile',
       avatarSuccess: 'Avatar updated successfully',
       avatarFailed: 'Failed to update avatar',
+      invalidFileType: 'Only JPG, JPEG, PNG and GIF format images are supported',
+      fileTooLarge: 'File size exceeds the limit of 2MB',
+      passwordSuccess: 'Password updated successfully',
+      passwordFailed: 'Failed to update password',
+      passwordSuccessRedirect: 'Password updated successfully, 5 seconds will return to the login page...',
     }
   },
   scan: {

@@ -28,13 +28,40 @@ export default {
   auth: {
     login: '登录',
     logout: '退出登录',
-    register: '注册',
+    register: '立即注册',
     username: '用户名',
     password: '密码',
     email: '邮箱',
     loginSuccess: '登录成功',
     loginError: '登录失败',
-    tokenExpired: '登录已过期，请重新登录',
+    tokenExpired: '登录过期，请重新登录',
+    title: 'IPAM系统平台',
+    subtitle: '轻松监控和管理您的网络',
+    registerSubtitle: '创建一个账户来管理您的网络',
+    noAccount: '还没有账号？',
+    hasAccount: '已经有账号？',
+    confirmPassword: '确认密码',
+    confirmPasswordPlaceholder: '请再次输入密码',
+    registerSuccess: '注册成功',
+    registerError: '注册失败',
+    validation: {
+      username: '请输入用户名',
+      usernameLength: '用户名长度至少为3个字符',
+      email: {
+        required: '请输入邮箱',
+        invalid: '请输入有效的邮箱地址'
+      },
+      password: '请输入密码',
+      passwordLength: '密码长度至少为6个字符',
+      confirmPassword: '请确认密码',
+      passwordMismatch: '两次输入的密码不一致',
+      captchaRequired: '请输入验证码',
+      captchaInvalid: '验证码错误'
+    },
+    captcha: '验证码',
+    captchaPlaceholder: '请输入验证码',
+    captchaError: '获取验证码失败',
+    captchaRefresh: '刷新验证码',
   },
   user: {
     profile: '个人中心',
@@ -143,6 +170,7 @@ export default {
       inactive: '未使用',
       unclaimed: '未认领',
       unassigned: '未分配',
+      myResources: '我的资源',
       description: {
         active: '此IP当前处于活跃状态',
         inactive: '此IP未在使用',
@@ -232,13 +260,35 @@ export default {
   profile: {
     title: '个人资料',
     changeAvatar: '更换头像',
+    changePassword: '修改密码',
     editProfile: '编辑资料',
     editDialogTitle: '编辑个人资料',
     wechatPlaceholder: '待补充',
+    changePasswordTitle: '修改密码',
+    role: {
+      admin: '管理员',
+      user: '用户'
+    },
     fields: {
+      id: 'ID',
       username: '用户名',
       email: '邮箱',
       wechatId: '微信号',
+      createdAt: '创建时间',
+      oldPassword: '旧密码',
+      newPassword: '新密码',
+      confirmPassword: '确认密码'
+    },
+    validation: {
+      emailRequired: '邮箱不能为空',
+      emailFormat: '请输入有效的邮箱地址',
+      wechatIdRequired: '微信号不能为空',
+      wechatIdLength: '微信号长度至少为2个字符',
+      oldPasswordRequired: '旧密码不能为空',
+      newPasswordRequired: '新密码不能为空',
+      confirmPasswordRequired: '确认密码不能为空',
+      passwordMismatch: '新密码与确认密码不匹配',
+      passwordLength: '密码长度至少为6个字符'
     },
     buttons: {
       save: '保存',
@@ -249,6 +299,11 @@ export default {
       updateFailed: '更新失败',
       avatarSuccess: '头像更新成功',
       avatarFailed: '头像更新失败',
+      invalidFileType: '只支持JPG, JPEG, PNG和GIF格式图片',
+      fileTooLarge: '文件大小超过2MB限制',
+      passwordSuccess: '密码修改成功',
+      passwordFailed: '修改密码失败',
+      passwordSuccessRedirect: '密码修改成功，5秒后将返回登录页面...',
     }
   },
   scan: {

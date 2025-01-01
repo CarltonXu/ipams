@@ -3,8 +3,8 @@
     <el-card class="box-card">
       <div class="toolbar">
         <div class="toolbar-header">
-          <h2 class="title">{{ t('user.management.title') }}</h2>
-          <p class="subtitle">{{ t('user.management.subtitle') }}</p>
+          <h2 class="title">{{ $t('user.management.title') }}</h2>
+          <p class="subtitle">{{ $t('user.management.subtitle') }}</p>
         </div>
         <div class="filters">
           <div class="batch-actions" v-if="selectedUsers.length > 0">
@@ -14,23 +14,23 @@
               :disabled="!canBatchDelete"
             >
               <el-icon><Delete /></el-icon> 
-              {{ t('user.management.buttons.batchDelete', { count: selectedUsers.length }) }}
+              {{ $t('user.management.buttons.batchDelete', { count: selectedUsers.length }) }}
             </el-button>
           </div>
           <el-select
             v-model="searchColumn"
             class="column-filter"
-            :placeholder="t('user.management.search.selectColumn')"
+            :placeholder="$t('user.management.search.selectColumn')"
           >
-            <el-option value="all" :label="t('user.management.search.allColumns')" />
-            <el-option value="uuid" :label="t('user.management.table.columns.uuid')" />
-            <el-option value="username" :label="t('user.management.table.columns.username')" />
-            <el-option value="email" :label="t('user.management.table.columns.email')" />
+            <el-option value="all" :label="$t('user.management.search.allColumns')" />
+            <el-option value="uuid" :label="$t('user.management.table.columns.uuid')" />
+            <el-option value="username" :label="$t('user.management.table.columns.username')" />
+            <el-option value="email" :label="$t('user.management.table.columns.email')" />
           </el-select>
           
           <el-input
             v-model="searchQuery"
-            :placeholder="searchColumn === 'all' ? t('user.management.search.all') : t('user.management.search.specific', { column: t(`user.management.table.columns.${searchColumn}`) })"
+            :placeholder="searchColumn === 'all' ? $t('user.management.search.all') : $t('user.management.search.specific', { column: $t(`user.management.table.columns.${searchColumn}`) })"
             :prefix-icon="Search"
             clearable
             class="search-input"
@@ -39,15 +39,15 @@
           <el-select 
             v-model="adminFilter" 
             class="admin-filter"
-            :placeholder="t('user.management.search.adminStatus')"
+            :placeholder="$t('user.management.search.adminStatus')"
           >
-            <el-option :label="t('user.management.search.allUsers')" value="all" />
-            <el-option :label="t('user.management.search.adminOnly')" value="true" />
-            <el-option :label="t('user.management.search.normalOnly')" value="false" />
+            <el-option :label="$t('user.management.search.allUsers')" value="all" />
+            <el-option :label="$t('user.management.search.adminOnly')" value="true" />
+            <el-option :label="$t('user.management.search.normalOnly')" value="false" />
           </el-select>
 
           <el-button v-if="isAdmin" type="primary" @click="openUserDialog">
-            <el-icon><Edit /></el-icon> {{ t('user.management.button.add') }}
+            <el-icon><Edit /></el-icon> {{ $t('user.management.button.add') }}
           </el-button>
         </div>
       </div>
@@ -61,34 +61,34 @@
         @selection-change="handleSelectionChange"
         v-loading="pagination.loading"
         class="user-table"
-        :empty-text="t('user.management.table.noData')"
+        :empty-text="$t('user.management.table.noData')"
       >
         <el-table-column type="selection" width="55" />
-        <el-table-column prop="id" :label="t('user.management.table.columns.uuid')" />
-        <el-table-column prop="username" :label="t('user.management.table.columns.username')" />
-        <el-table-column prop="email" :label="t('user.management.table.columns.email')" />
-        <el-table-column prop="created_at" :label="t('user.management.table.columns.createdAt')" />
-        <el-table-column prop="is_admin" :label="t('user.management.table.columns.isAdmin')" width="100">
+        <el-table-column prop="id" :label="$t('user.management.table.columns.uuid')" />
+        <el-table-column prop="username" :label="$t('user.management.table.columns.username')" />
+        <el-table-column prop="email" :label="$t('user.management.table.columns.email')" />
+        <el-table-column prop="created_at" :label="$t('user.management.table.columns.createdAt')" />
+        <el-table-column prop="is_admin" :label="$t('user.management.table.columns.isAdmin')" width="100">
           <template v-slot="scope">
             <el-switch v-model="scope.row.is_admin" disabled />
           </template>
         </el-table-column>
-        <el-table-column :label="t('user.management.table.columns.actions')" width="220">
+        <el-table-column :label="$t('user.management.table.columns.actions')" width="220">
           <template v-slot="scope">
             <el-button
               @click="openUserDialog(scope.row)"
-              size="mini"
+              size="small"
               type="primary"
             >
-              <el-icon><Edit /></el-icon> {{ t('user.management.buttons.edit') }}
+              <el-icon><Edit /></el-icon> {{ $t('user.management.buttons.edit') }}
             </el-button>
             <el-button
               @click="deleteUser(scope.row)"
-              size="mini"
+              size="small"
               type="danger"
               :disabled="scope.row.id === authStore.user.id"
             >
-              <el-icon><Delete /></el-icon> {{ t('user.management.buttons.delete') }}
+              <el-icon><Delete /></el-icon> {{ $t('user.management.buttons.delete') }}
             </el-button>
           </template>
         </el-table-column>
@@ -102,12 +102,12 @@
         :page-sizes="[10, 20, 50, 100]"
         background
         layout="total, sizes, prev, pager, next, jumper"
-        :prev-text="t('pagination.prev')"
-        :next-text="t('pagination.next')"
-        :total-template="`${t('pagination.total', { total: pagination.total })}`"
-        :page-size-template="`{size}${t('pagination.pageSize')}`"
-        :jumper-template="`${t('pagination.jumper')}${t('pagination.page')}`"
-        :sizes-text="t('pagination.pageSize')"
+        :prev-text="$t('pagination.prev')"
+        :next-text="$t('pagination.next')"
+        :total-template="`${$t('pagination.total', { total: pagination.total })}`"
+        :page-size-template="`{size}${$t('pagination.pageSize')}`"
+        :jumper-template="`${$t('pagination.jumper')}${$t('pagination.page')}`"
+        :sizes-text="$t('pagination.pageSize')"
         @size-change="handleSizeChange"
         @current-change="handlePageChange"
         class="pagination"
@@ -117,50 +117,50 @@
     <!-- 用户编辑/添加对话框 -->
     <el-dialog 
       v-model="dialogVisible" 
-      :title="t('user.management.dialog.title')" 
+      :title="$t('user.management.dialog.title')" 
       width="500px" 
       :close-on-click-modal="false"
     >
       <el-form :model="currentUser" label-width="100px" ref="userForm" :rules="formRules">
-        <el-form-item :label="t('user.management.dialog.labels.username')" prop="username">
+        <el-form-item :label="$t('user.management.dialog.labels.username')" prop="username">
           <el-input 
             v-model="currentUser.username" 
-            :placeholder="t('user.management.dialog.placeholders.username')" 
+            :placeholder="$t('user.management.dialog.placeholders.username')" 
           />
         </el-form-item>
-        <el-form-item :label="t('user.management.dialog.labels.email')" prop="email">
+        <el-form-item :label="$t('user.management.dialog.labels.email')" prop="email">
           <el-input 
             v-model="currentUser.email" 
-            :placeholder="t('user.management.dialog.placeholders.email')" 
+            :placeholder="$t('user.management.dialog.placeholders.email')" 
           />
         </el-form-item>
         <el-form-item 
           v-if="!currentUser.id" 
-          :label="t('user.management.dialog.labels.password')" 
+          :label="$t('user.management.dialog.labels.password')" 
           prop="password"
         >
           <el-input 
             v-model="currentUser.password" 
             type="password" 
-            :placeholder="t('user.management.dialog.placeholders.password')" 
+            :placeholder="$t('user.management.dialog.placeholders.password')" 
           />
         </el-form-item>
-        <el-form-item :label="t('user.management.dialog.labels.wechatId')" prop="wechat_id">
+        <el-form-item :label="$t('user.management.dialog.labels.wechatId')" prop="wechat_id">
           <el-input 
             v-model="currentUser.wechat_id" 
-            :placeholder="t('user.management.dialog.placeholders.wechatId')" 
+            :placeholder="$t('user.management.dialog.placeholders.wechatId')" 
           />
         </el-form-item>
-        <el-form-item :label="t('user.management.dialog.labels.isAdmin')" prop="is_admin">
+        <el-form-item :label="$t('user.management.dialog.labels.isAdmin')" prop="is_admin">
           <el-switch v-model="currentUser.is_admin" />
         </el-form-item>
       </el-form>
       <div slot="footer" class="dialog-footer">
         <el-button @click="dialogVisible = false">
-          {{ t('user.management.buttons.cancel') }}
+          {{ $t('user.management.buttons.cancel') }}
         </el-button>
         <el-button type="primary" @click="saveUser">
-          {{ t('user.management.buttons.save') }}
+          {{ $t('user.management.buttons.save') }}
         </el-button>
       </div>
     </el-dialog>
@@ -168,14 +168,14 @@
     <!-- 添加批量删除确认对话框 -->
     <el-dialog
       v-model="batchDeleteDialogVisible"
-      :title="t('user.management.dialog.batchDelete.title')"
+      :title="$t('user.management.dialog.batchDelete.title')"
       width="600px"
     >
       <div v-if="usersWithIPs.length > 0">
         <el-alert
-          :title="t('user.management.dialog.batchDelete.warning')"
+          :title="$t('user.management.dialog.batchDelete.warning')"
           type="warning"
-          :description="t('user.management.dialog.batchDelete.description')"
+          :description="$t('user.management.dialog.batchDelete.description')"
           show-icon
           class="mb-4"
         />
@@ -198,7 +198,7 @@
       <div v-else>
         <div class="batch-delete-confirm">
           <p class="confirm-title">
-            {{ t('user.management.dialog.batchDelete.confirm', { count: selectedUsers.length }) }}
+            {{ $t('user.management.dialog.batchDelete.confirm', { count: selectedUsers.length }) }}
           </p>
           <div class="users-list">
             <div v-for="user in selectedUsers" :key="user.id" class="user-item">
@@ -210,10 +210,10 @@
       </div>
       <template #footer>
         <el-button @click="batchDeleteDialogVisible = false">
-          {{ t('common.cancel') }}
+          {{ $t('common.cancel') }}
         </el-button>
         <el-button type="danger" @click="confirmBatchDelete" :loading="batchDeleteLoading">
-          {{ t('common.confirm') }}
+          {{ $t('common.confirm') }}
         </el-button>
       </template>
     </el-dialog>

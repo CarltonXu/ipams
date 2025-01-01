@@ -61,41 +61,41 @@
 
           <!-- 每几分钟 -->
           <el-form-item 
-            v-if="scheduleType === t('scan.policy.types.everyMinute')" 
-            :label="t('scan.form.interval.minutes')" 
-            :rules="[{ required: true, message: t('scan.form.interval.selectTime'), trigger: 'blur' }]"
+            v-if="scheduleType === $t('scan.policy.types.everyMinute')" 
+            :label="$t('scan.form.interval.minutes')" 
+            :rules="[{ required: true, message: $t('scan.form.interval.selectTime'), trigger: 'blur' }]"
           >
             <el-input-number v-model="intervalMinutes" :min="1" style="width: 100px;" default="30"/>
           </el-form-item>
 
           <!-- 每几小时 -->
           <el-form-item 
-            v-if="scheduleType === t('scan.policy.types.everyHour')" 
-            :label="t('scan.form.interval.hours')" 
-            :rules="[{ required: true, message: t('scan.form.interval.selectTime'), trigger: 'blur' }]"
+            v-if="scheduleType === $t('scan.policy.types.everyHour')" 
+            :label="$t('scan.form.interval.hours')" 
+            :rules="[{ required: true, message: $t('scan.form.interval.selectTime'), trigger: 'blur' }]"
           >
             <el-input-number v-model="intervalHours" :min="1" style="width: 100px;" />
           </el-form-item>
 
           <!-- 每几天 -->
           <el-form-item 
-            v-if="scheduleType === t('scan.policy.types.everyDay')" 
-            :label="t('scan.form.interval.days')" 
-            :rules="[{ required: true, message: t('scan.form.interval.selectTime'), trigger: 'blur' }]"
+            v-if="scheduleType === $t('scan.policy.types.everyDay')" 
+            :label="$t('scan.form.interval.days')" 
+            :rules="[{ required: true, message: $t('scan.form.interval.selectTime'), trigger: 'blur' }]"
           >
             <el-input-number v-model="intervalDays" :min="1" style="width: 100px;" />
           </el-form-item>
 
           <!-- 开始执行时间 -->
           <el-form-item 
-            v-if="[t('scan.policy.types.everyMinute'), t('scan.policy.types.everyHour'), t('scan.policy.types.everyDay')].includes(scheduleType)" 
-            :label="t('scan.form.time.start')" 
-            :rules="[{ required: true, message: t('scan.form.time.select'), trigger: 'blur' }]"
+            v-if="[$t('scan.policy.types.everyMinute'), $t('scan.policy.types.everyHour'), $t('scan.policy.types.everyDay')].includes(scheduleType)" 
+            :label="$t('scan.form.time.start')" 
+            :rules="[{ required: true, message: $t('scan.form.time.select'), trigger: 'blur' }]"
           >
             <el-date-picker 
               v-model="startExecutionTime" 
               type="datetime" 
-              :placeholder="t('scan.form.time.execution')" 
+              :placeholder="$t('scan.form.time.execution')" 
               style="width: 200px;" 
             />
           </el-form-item>
@@ -118,13 +118,13 @@
 
           <!-- 每周开始时间 -->
           <el-form-item 
-            v-if="scheduleType === t('scan.form.types.everyWeek')" 
-            :label="t('scan.form.time.execution')" 
-            :rules="[{ required: true, message: t('scan.form.time.select'), trigger: 'blur' }]"
+            v-if="scheduleType === $t('scan.form.types.everyWeek')" 
+            :label="$t('scan.form.time.execution')" 
+            :rules="[{ required: true, message: $t('scan.form.time.select'), trigger: 'blur' }]"
           >
             <el-time-picker 
               v-model="startExecutionTime" 
-              :placeholder="t('scan.form.time.select')" 
+              :placeholder="$t('scan.form.time.select')" 
               format="HH:mm" 
               style="width: 120px;" 
             />
@@ -133,8 +133,8 @@
           <!-- 每月 -->
           <!-- 多选日期 -->
           <el-form-item 
-            v-if="scheduleType === t('scan.form.types.everyMonth')" 
-            :label="t('scan.form.monthDays.select')"
+            v-if="scheduleType === $t('scan.form.types.everyMonth')" 
+            :label="$t('scan.form.monthDays.select')"
           >
             <el-checkbox-group v-model="monthlyDays">
               <el-checkbox 
@@ -145,20 +145,20 @@
                 {{ day }}
               </el-checkbox>
               <el-checkbox label="last_day">
-                {{ t('scan.form.monthDays.last') }}
+                {{ $t('scan.form.monthDays.last') }}
               </el-checkbox>
             </el-checkbox-group>
           </el-form-item>
 
           <!-- 执行时间 -->
           <el-form-item 
-            v-if="scheduleType === t('scan.form.types.everyMonth')" 
-            :label="t('scan.form.time.execution')" 
-            :rules="[{ required: true, message: t('scan.form.time.select'), trigger: 'blur' }]"
+            v-if="scheduleType === $t('scan.form.types.everyMonth')" 
+            :label="$t('scan.form.time.execution')" 
+            :rules="[{ required: true, message: $t('scan.form.time.select'), trigger: 'blur' }]"
           >
             <el-time-picker 
               v-model="startExecutionTime" 
-              :placeholder="t('scan.form.time.select')" 
+              :placeholder="$t('scan.form.time.select')" 
               format="HH:mm" 
               style="width: 120px;"
             />
@@ -166,15 +166,15 @@
 
           <!-- 自定义 -->
           <el-form-item 
-            v-if="scheduleType === t('scan.form.types.custom')" 
-            :label="t('scan.form.cronExpression.label')"
+            v-if="scheduleType === $t('scan.form.types.custom')" 
+            :label="$t('scan.form.cronExpression.label')"
           >
             <el-input 
               v-model="customCron" 
-              :placeholder="t('scan.form.cronExpression.placeholder')"
+              :placeholder="$t('scan.form.cronExpression.placeholder')"
             >
               <template #append>
-                <el-tooltip :content="cronExpressionTip" placement="top">
+                <el-tooltip :content="$t('scan.form.cronExpression.tip')" placement="top">
                   <i class="el-icon-info"></i>
                 </el-tooltip>
               </template>
@@ -182,13 +182,13 @@
           </el-form-item>
 
           <el-form-item 
-            v-if="scheduleType === t('scan.policy.types.custom')" 
-            :label="t('scan.form.time.select')" 
-            :rules="[{ required: true, message: t('scan.form.time.select'), trigger: 'blur' }]"
+            v-if="scheduleType === $t('scan.policy.types.custom')" 
+            :label="$t('scan.form.time.select')" 
+            :rules="[{ required: true, message: $t('scan.form.time.select'), trigger: 'blur' }]"
           >
             <el-date-picker
               v-model="startExecutionTime"
-              :placeholder="t('scan.form.time.select')"
+              :placeholder="$t('scan.form.time.select')"
               type="datetime"
               format="YYYY-MM-DD HH:mm"
               style="width: 180px;" />
@@ -196,7 +196,7 @@
 
           <!-- 加载状态 -->
           <div v-if="loading" class="loading-status">
-            {{ t('scan.form.status.loading') }}
+            {{ $t('scan.form.status.loading') }}
           </div>
 
           <!-- 添加策略 -->

@@ -240,6 +240,6 @@ export const useUserStore = defineStore('user', {
       } finally {
         this.loading = false;
       }
-    }
+    },
   },
 });

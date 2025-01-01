@@ -156,19 +156,19 @@ watch(
       </div>
       <el-form :model="form" label-position="top" class="update-form">
         <el-form-item v-if="isAdmin" :label="$t('ip.dialog.claim.assignUser')">
-        <el-select v-model="form.assigned_user_id" :placeholder="$t('ip.dialog.claim.selectUser')">
-          <el-option
-          :label="'Unassigned'"
-          :value="null" 
-          />
-          <el-option
-            v-for="user in users"
-            :key="user.id"
-            :label="user.username"
-            :value="user.id"
-          />
-        </el-select>
-      </el-form-item>
+          <el-select v-model="form.assigned_user_id" :placeholder="$t('ip.dialog.claim.selectUser')">
+            <el-option 
+              :label="$t('ip.status.unassigned')" 
+              value="" 
+            />
+            <el-option
+              v-for="user in users"
+              :key="user.id"
+              :label="user.username"
+              :value="user.id"
+            />
+          </el-select>
+        </el-form-item>
         <el-form-item :label="$t('ip.dialog.claim.deviceName')" required>
             <el-input v-model="form.device_name" 
             :placeholder="$t('ip.dialog.claim.deviceNamePlaceholder')" />

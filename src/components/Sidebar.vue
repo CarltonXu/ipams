@@ -20,7 +20,7 @@
       </router-link>
       <router-link to="/scans">
         <el-menu-item index="3">
-          <el-icon><Setting /></el-icon>
+          <el-icon><Operation /></el-icon>
           <span>{{ $t('menu.scanConfig') }}</span>
         </el-menu-item>
       </router-link>
@@ -37,10 +37,8 @@
 <script setup lang="ts">
 import { useAuthStore } from "../stores/auth"
 import { ElMenu, ElMenuItem, ElIcon } from 'element-plus';
-import { useI18n } from 'vue-i18n';
-import { Setting, User } from '@element-plus/icons-vue';  // 引入 Element Plus 的图标
+import { Setting, User, Operation } from '@element-plus/icons-vue';  // 引入 Element Plus 的图标
 
-const { t } = useI18n();
 const authStore = useAuthStore();
 </script>
 

@@ -48,7 +48,10 @@ def get_ips(current_user):
 
         # 应用状态过滤
         if status and status != 'all':
-            ips_query = ips_query.filter(IP.status == status)
+            if status == 'mine':
+                ips_query = ips_query.filter(IP.assigned_user_id == current_user.id)
+            else:
+                ips_query = ips_query.filter(IP.status == status)
 
         # 应用排序
         if sort_by:

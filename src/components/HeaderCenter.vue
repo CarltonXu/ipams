@@ -19,7 +19,7 @@
 <script setup lang="ts">
 import { ref, markRaw, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { Setting, User } from '@element-plus/icons-vue';
+import { Setting, User, Operation } from '@element-plus/icons-vue';
 import { useAuthStore } from '../stores/auth'; // 引入认证存储
 
 const { t } = useI18n();
@@ -27,6 +27,7 @@ const { t } = useI18n();
 const navItems = ref([
   { label: computed(() => t('menu.ipManagement')), path: '/ips', icon: markRaw(Setting), clicked: false, is_admin_only: false },
   { label: computed(() => t('menu.userManagement')), path: '/users', icon: markRaw(User), clicked: false, is_admin_only: true },
+  { label: computed(() => t('menu.scanConfig')), path: '/scans', icon: markRaw(Operation), clicked: false, is_admin_only: true },
   { label: computed(() => t('menu.settings')), path: '/settings', icon: markRaw(Setting), clicked: false, is_admin_only: false },
 ]);
 
