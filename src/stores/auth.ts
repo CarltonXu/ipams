@@ -1,6 +1,9 @@
 import { defineStore } from 'pinia';
 import axios from 'axios';
 import type { AuthState, LoginCredentials, RegisterCredentials, User } from '../types/user';
+import i18n from '../i18n';
+
+const { t } = i18n.global;
 
 export const useAuthStore = defineStore('auth', {
   state: (): AuthState => ({
@@ -28,7 +31,11 @@ export const useAuthStore = defineStore('auth', {
 
         return user;
       } catch (error: any) {
-        throw new Error(error.response?.data?.message || 'Login failed');
+        if (error.response?.data?.message == 'Invalid username or password') {
+          throw new Error(t('auth.invalidUsernameOrPassword'));
+        } else {
+          throw new Error(t('auth.invalidCaptcha'));
+        }
       }
     },
 
@@ -37,7 +44,7 @@ export const useAuthStore = defineStore('auth', {
         const response = await axios.post('/api/auth/register', credentials);
         return response.data;
       } catch (error: any) {
-        throw new Error(error.response?.data?.error || 'Registration failed');
+        throw new Error(error.response?.data?.error || t('auth.registerError'));
       }
     },
 

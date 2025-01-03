@@ -13,6 +13,9 @@ pids
 *.seed
 *.pid.lock
 
+# Redis
+dump.rdb
+
 # Dependency directories
 node_modules/
 jspm_packages/

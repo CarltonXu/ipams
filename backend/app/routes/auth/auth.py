@@ -96,9 +96,9 @@ def login():
 
     # 记录日志（登录失败）
     utils.log_action_to_db(
-        user=None,
+        user=user,
         action="Failed login attempt",
         target=data.get('username'),
         details="Invalid credentials or captcha"
     )
-    return jsonify({'message': 'Invalid credentials or captcha'}), 401
+    return jsonify({'message': 'Invalid username or password'}), 401

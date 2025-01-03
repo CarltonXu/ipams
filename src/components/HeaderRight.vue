@@ -31,33 +31,28 @@
 </template>
   
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import UserMenu from './UserMenu.vue';
+import { useSettingsStore } from '../stores/settings';
 import { Moon, Sunny, ArrowDown } from '@element-plus/icons-vue';
 import { ElMessage } from 'element-plus';
 
 const { t, locale } = useI18n();
+const settingsStore = useSettingsStore();
 
 // 主题状态
-const isDarkTheme = ref(localStorage.getItem('theme') === 'dark');
-
-// 初始化主题
-onMounted(() => {
-  const savedTheme = localStorage.getItem('theme') || 'light';
-  document.documentElement.setAttribute('data-theme', savedTheme);
-  isDarkTheme.value = savedTheme === 'dark';
-});
+const isDarkTheme = ref(settingsStore.theme === 'dark');
 
 // 当前语言显示
 const currentLanguageLabel = computed(() => {
-  return locale.value === 'zh' ? '中文' : 'English';
+  return settingsStore.language === 'zh' ? '中文' : 'English';
 });
 
 // 切换语言
 const handleLanguageChange = (lang: string) => {
   locale.value = lang;
-  localStorage.setItem('language', lang);
+  settingsStore.setLanguage(lang);
   ElMessage.success(t('common.success'));
 };
 
@@ -66,7 +61,7 @@ const toggleTheme = () => {
   isDarkTheme.value = !isDarkTheme.value;
   const newTheme = isDarkTheme.value ? 'dark' : 'light';
   document.documentElement.setAttribute('data-theme', newTheme);
-  localStorage.setItem('theme', newTheme);
+  settingsStore.setTheme(newTheme);
 };
 </script>
 
