@@ -130,7 +130,13 @@ export const useUserStore = defineStore('user', {
         return response.data;
       } catch (error: any) {
         console.error('Failed to add user:', error);
-        throw new Error(error.response?.data?.message || t('settings.messages.addUserFailed'));
+        if (error.response?.data?.error == 'Email already exists') {
+          throw new Error(t('settings.messages.addUserFailed', { error: t('settings.messages.emailAlreadyExists') }));
+        }
+        if (error.response?.data?.error == 'Username already exists') {
+          throw new Error(t('settings.messages.addUserFailed', { error: t('settings.messages.usernameAlreadyExists') }));
+        }
+        throw new Error(t('settings.messages.addUserFailed', { error: error.response?.data?.error }));
       } finally {
         this.loading = false;
       }

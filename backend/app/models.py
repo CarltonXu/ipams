@@ -13,8 +13,8 @@ class User(db.Model):
     __tablename__ = 'users'
     
     id = db.Column(db.String(36), primary_key=True, default=generate_uuid)
-    username = db.Column(db.String(255), unique=True, nullable=False)
-    email = db.Column(db.String(255), unique=True, nullable=False)
+    username = db.Column(db.String(255), nullable=False)
+    email = db.Column(db.String(255), nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
     avatar = db.Column(db.String(100))
     wechat_id = db.Column(db.String(255), unique=True)

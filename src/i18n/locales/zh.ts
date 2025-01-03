@@ -407,7 +407,10 @@ export default {
           addSuccess: '策略添加成功',
           saveSuccess: '策略保存成功',
           deleteSuccess: '策略删除成功',
-          updateSuccess: '策略更新成功'
+          updateSuccess: '策略更新成功',
+          fetchFailed: '获取策略列表失败',
+          deleteFailed: '删除策略失败',
+          updateFailed: '更新策略失败'
         }
       },
       description: {
@@ -590,13 +593,16 @@ export default {
       confirmPassword: '请确认新密码'
     },
     messages: {
+      addUserFailed: '添加用户失败: {error}',
       saveSuccess: '设置已保存',
       passwordMismatch: '新密码与确认密码不匹配',
       passwordSuccess: '密码修改成功',
       passwordSuccessRedirect: '密码修改成功，5秒后将返回登录页面...',
       passwordFailed: '修改密码失败',
       updateUserFailed: '更新用户信息失败: {error}',
-      fetchUsersFailed: '获取用户列表失败'
+      fetchUsersFailed: '获取用户列表失败',
+      emailAlreadyExists: '邮箱已存在',
+      usernameAlreadyExists: '用户名已存在'
     },
     buttons: {
       save: '保存设置',

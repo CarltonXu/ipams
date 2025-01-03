@@ -34,10 +34,10 @@ def add_users(current_user):
         return jsonify({'error': 'Invalid email format'}), 400
 
     # 检查用户名和邮箱是否已存在
-    if User.query.filter_by(username=username).first():
+    if User.query.filter_by(username=username, deleted=False).first():
         return jsonify({'error': 'Username already exists'}), 400
 
-    if User.query.filter_by(email=email).first():
+    if User.query.filter_by(email=email, deleted=False).first():
         return jsonify({'error': 'Email already exists'}), 400
 
     # 创建新用户
@@ -99,7 +99,7 @@ def upload_avatar(current_user):
         # 更新用户头像路径
         avatar_url = f"/uploads/avatars/{unique_filename}"
 
-        User.query.filter_by(id=current_user.id).update({
+        User.query.filter_by(id=current_user.id, deleted=False).update({
             'avatar': avatar_url
         })
 
@@ -131,7 +131,7 @@ def delete_users(current_user, user_id):
     
     # 删除用户逻辑
     user = User.query.get(user_id)
-    if not user:
+    if not user or user.deleted:
         return jsonify({'error': 'User not found'}), 404
 
     user.deleted = True

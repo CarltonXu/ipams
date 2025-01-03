@@ -486,7 +486,10 @@ export default {
             addSuccess: 'Policy added successfully',
             saveSuccess: 'Policy saved successfully',
             deleteSuccess: 'Policy deleted successfully',
-            updateSuccess: 'Policy updated successfully'
+            updateSuccess: 'Policy updated successfully',
+            fetchFailed: 'Failed to fetch policy list',
+            deleteFailed: 'Failed to delete policy',
+            updateFailed: 'Failed to update policy'
           }
         }
       },
@@ -571,13 +574,16 @@ export default {
       confirmPassword: 'Please confirm new password'
     },
     messages: {
+      addUserFailed: 'Failed to add user: {error}',
       saveSuccess: 'Settings saved',
       passwordMismatch: 'New password and confirm password do not match',
       passwordSuccess: 'Password changed successfully',
       passwordSuccessRedirect: 'Password changed successfully, 5 seconds will return to the login page...',
       passwordFailed: 'Failed to change password',
       updateUserFailed: 'Failed to update user: {error}',
-      fetchUsersFailed: 'Failed to fetch user list'
+      fetchUsersFailed: 'Failed to fetch user list',
+      emailAlreadyExists: 'Email already exists',
+      usernameAlreadyExists: 'Username already exists'
     },
     buttons: {
       save: 'Save Settings',
