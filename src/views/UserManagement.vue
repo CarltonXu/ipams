@@ -367,27 +367,132 @@ const saveUser = async () => {
   }
 };
 
-// 删除用户
-const deleteUser = async (user: any) => {
+// 抽象删除用户的公共逻辑
+const deleteUsers = async (users: User[], isBatch: boolean = false) => {
+  try {
+    // 检查用户是否有关联的 IP
+    const response = await userStore.checkUsersIPs(users.map(u => u.id));
+    
+    if (response.usersWithIPs && response.usersWithIPs.length > 0) {
+      // 如果有关联的 IP，显示带有 IP 信息的确认对话框
+      usersWithIPs.value = response.usersWithIPs;
+      if (isBatch) {
+        // 批量删除时使用批量删除对话框
+        batchDeleteDialogVisible.value = true;
+      } else {
+        // 单个删除时显示用户的 IP 信息
+        const userWithIPs = response.usersWithIPs[0];
+        ElMessageBox.alert(
+          h('div', { class: 'batch-delete-confirm' }, [
+            h('p', { class: 'confirm-title' }, t('user.management.messages.hasAssociatedIPs')),
+            h('div', { class: 'user-ips-info' }, [
+              h('h4', [
+                h('span', userWithIPs.username),
+                h('span', { class: 'user-id' }, `(${userWithIPs.id})`)
+              ]),
+              h('div', { class: 'ip-tags-container' }, 
+                userWithIPs.ips.map((ip: any) => 
+                  h('el-tag', { 
+                    key: ip.id,
+                    type: 'info',
+                    class: 'mb-1'
+                  }, ip.ip_address)
+                )
+              )
+            ])
+          ]),
+          {
+            title: t('common.warning'),
+            type: 'warning',
+            showClose: false,
+            confirmButtonText: t('common.confirm')
+          }
+        );
+      }
+      return;
+    }
+
+    // 如果没有关联的 IP，显示确认对话框
+    try {
+      await ElMessageBox.confirm(
+        h('div', { class: 'batch-delete-confirm' }, [
+          h('p', { class: 'confirm-title' }, 
+            isBatch 
+              ? t('user.management.messages.batchDeleteConfirm', { count: users.length })
+              : t('user.management.messages.deleteConfirm', { username: users[0].username })
+          ),
+          h('div', { class: 'users-list' }, 
+            users.map(user => 
+              h('div', { class: 'user-item' }, [
+                h('span', { class: 'user-name' }, user.username),
+                h('span', { class: 'user-id' }, `(${user.id})`)
+              ])
+            )
+          )
+        ]),
+        {
+          title: t('common.warning'),
+          confirmButtonText: t('common.confirm'),
+          cancelButtonText: t('common.cancel'),
+          type: 'warning',
+          customClass: 'batch-delete-dialog'
+        }
+      );
+
+      // 执行删除操作
+      batchDeleteLoading.value = true;
+      await userStore.batchDeleteUsers(users.map(u => u.id));
+      ElMessage.success(t('user.management.messages.deleteSuccess'));
+      await loadUsersData();
+      
+      // 只在批量删除时更新选中状态
+      if (isBatch) {
+        selectedUsers.value = [];
+      }
+      
+    } catch (error: any) {
+      if (error === 'cancel') {
+        return;
+      }
+      throw error;
+    } finally {
+      batchDeleteLoading.value = false;
+    }
+  } catch (error: any) {
+    ElMessage.error(error.message || t('user.management.messages.deleteError'));
+  }
+};
+
+// 单个删除用户
+const deleteUser = async (user: User) => {
   if (user.id === authStore.user.id) {
     ElMessage.error(t('user.management.messages.deleteSelfError'));
     return;
   }
-  ElMessageBox.confirm(
-    t('user.management.messages.deleteConfirm', { username: user.username }), 
-    t('common.warning'),
-    {
-      confirmButtonText: t('user.management.buttons.delete'),
-      cancelButtonText: t('user.management.buttons.cancel'),
-      type: 'warning',
-    }
-  )
-    .then(async () => {
-      await userStore.deleteUser(user.id);
-      ElMessage.success(t('user.management.messages.deleteSuccess'));
-      loadUsersData();
-    })
-    .catch(() => {});
+  await deleteUsers([user], false);
+};
+
+// 批量删除用户
+const handleBatchDelete = async () => {
+  if (!canBatchDelete.value) return;
+  await deleteUsers(selectedUsers.value, true);
+};
+
+// 确认批量删除
+const confirmBatchDelete = async () => {
+  batchDeleteLoading.value = true;
+  try {
+    await userStore.batchDeleteUsers(selectedUsers.value.map(u => u.id));
+    ElMessage.success(t('user.management.messages.deleteSuccess'));
+    batchDeleteDialogVisible.value = false;
+    await loadUsersData();
+    // 清理选中状态
+    selectedUsers.value = [];
+  } catch (error: any) {
+    ElMessage.error(error.message || t('user.management.messages.deleteError'));
+  } finally {
+    batchDeleteLoading.value = false;
+  }
 };
 
 // 批量删除相关状态
@@ -406,73 +511,6 @@ const canBatchDelete = computed(() => {
   return selectedUsers.value.length > 0 && 
          !selectedUsers.value.some(user => user.id === authStore.user.id); // 不能删除自己
 });
-
-// 处理批量删除
-const handleBatchDelete = async () => {
-  if (!canBatchDelete.value) return;
-
-  try {
-    // 检查选中的用户是否有认领的 IP
-    const response = await userStore.checkUsersIPs(selectedUsers.value.map(u => u.id));
-    if (response.usersWithIPs && response.usersWithIPs.length > 0) {
-      usersWithIPs.value = response.usersWithIPs;
-      batchDeleteDialogVisible.value = true;
-      return;
-    }
-
-    // 如果没有关联的 IP，显示确认对话框
-    ElMessageBox.confirm(
-      h('div', { class: 'batch-delete-confirm' }, [
-        h('p', { class: 'confirm-title' }, t('user.management.messages.batchDeleteConfirm', { count: selectedUsers.value.length })),
-        h('div', { class: 'users-list' }, 
-          selectedUsers.value.map(user => 
-            h('div', { class: 'user-item' }, [
-              h('span', { class: 'user-name' }, user.username),
-              h('span', { class: 'user-id' }, `(${user.id})`)
-            ])
-          )
-        )
-      ]),
-      {
-        title: t('common.warning'),
-        confirmButtonText: t('common.confirm'),
-        cancelButtonText: t('common.cancel'),
-        type: 'warning',
-        customClass: 'batch-delete-dialog'
-      }
-    ).then(async () => {
-      batchDeleteLoading.value = true;
-      try {
-        await userStore.batchDeleteUsers(selectedUsers.value.map(u => u.id));
-        ElMessage.success(t('user.management.messages.batchDeleteSuccess'));
-        await loadUsersData();
-      } catch (error: any) {
-        ElMessage.error(error.message);
-      } finally {
-        batchDeleteLoading.value = false;
-      }
-    }).catch(() => {
-      // 用户取消删除
-    });
-  } catch (error: any) {
-    ElMessage.error(error.message);
-  }
-};
-
-// 确认批量删除
-const confirmBatchDelete = async () => {
-  batchDeleteLoading.value = true;
-  try {
-    await userStore.batchDeleteUsers(selectedUsers.value.map(u => u.id));
-    ElMessage.success(t('user.management.messages.batchDeleteSuccess'));
-    batchDeleteDialogVisible.value = false;
-    loadUsersData();
-  } catch (error: any) {
-    ElMessage.error(error.message || t('user.management.messages.batchDeleteError'));
-  } finally {
-    batchDeleteLoading.value = false;
-  }
-};
 </script>
 
 <style scoped>
