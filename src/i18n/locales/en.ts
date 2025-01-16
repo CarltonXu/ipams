@@ -327,6 +327,14 @@ export default {
         delete: 'Delete'
     },
     form: {
+      confirm: {
+        title: 'Confirm to save',
+        saveContent: 'You are about to save the following data:',
+        subnets: 'Subnets: {count}',
+        policies: 'Policies: {count}',
+        save: 'Confirm to save current configuration?',
+        execute: 'Confirm to execute scan?'
+      },
       interval: {
         minutes: 'Interval (Minutes)',
         hours: 'Interval (Hours)',
@@ -389,10 +397,6 @@ export default {
         loading: 'Processing...',
         executing: 'Executing scan...'
       },
-      confirm: {
-        save: 'Confirm to save current configuration?',
-        execute: 'Confirm to execute scan?'
-      },
       tips: {
         weekDays: 'Please select at least one weekday',
         monthDays: 'Please select at least one day',
@@ -454,6 +458,15 @@ export default {
           everyMonth: 'Every month on {days}, starting from {time}',
           custom: 'Custom execution: {cron}'
         },
+        execute: {
+          title: 'Execute Scan',
+          policyName: 'Policy Name',
+          selectSubnets: 'Select Subnets',
+          confirm: 'Confirm Execute Scan',
+          noSubnets: 'Please select at least one subnet',
+          success: 'Scan executed successfully',
+          error: 'Failed to execute scan'
+        },
         show: {
           columns: {
             name: 'Policy Name',
@@ -472,7 +485,8 @@ export default {
               enable: 'Enable',
               disable: 'Disable',
               edit: 'Edit',
-              delete: 'Delete'
+              delete: 'Delete',
+              scan: 'Scan'
             }
           },
           noData: 'No policy data',

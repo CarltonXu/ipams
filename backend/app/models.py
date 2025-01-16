@@ -197,12 +197,14 @@ class ScanJob(db.Model):
 
     id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     user_id = db.Column(db.String(36), db.ForeignKey('users.id'), nullable=False)
+    policy_id = db.Column(db.String(36), db.ForeignKey('scan_policies.id'), nullable=False)
     subnet_id = db.Column(db.String(36), db.ForeignKey('scan_subnets.id'), nullable=False)
     status = db.Column(db.Enum('pending', 'running', 'completed', 'failed', name='scan_status'), default='pending', nullable=False)
     progress = db.Column(db.Integer, default=0, nullable=False)  # 扫描进度百分比
+    machines_found = db.Column(db.Integer, default=0, nullable=False)  # 发现的机器数量
     start_time = db.Column(db.DateTime, nullable=True)
     end_time = db.Column(db.DateTime, nullable=True)
-    machines_found = db.Column(db.Integer, default=0, nullable=False)  # 发现的机器数量
+    error_message = db.Column(db.String(255), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     deleted_at = db.Column(db.DateTime, nullable=True)
@@ -210,26 +212,42 @@ class ScanJob(db.Model):
     def __repr__(self):
         return f"<ScanJob {self.id} on Subnet {self.subnet_id}>"
 
-    def __init__(self, user_id, subnet_id, status='pending', start_time=None, end_time=None, machines_found=0):
+    def __init__(self, user_id, subnet_id, policy_id, status='pending', progress=0, start_time=None, end_time=None, machines_found=0, error_message=None):
         self.id = str(uuid.uuid4())
         self.user_id = user_id
         self.subnet_id = subnet_id
+        self.policy_id = policy_id
         self.status = status
+        self.progress = progress
         self.start_time = start_time
         self.end_time = end_time
         self.machines_found = machines_found
-    
+        self.error_message = error_message
+
     def to_dict(self):
         return {
             "id": self.id,
             "user_id": self.user_id,
             "subnet_id": self.subnet_id,
+            "policy_id": self.policy_id,
             "status": self.status,
             "progress": self.progress,
-            "start_time": self.start_time,
-            "end_time": self.end_time,
+            "start_time": self.start_time.isoformat() if self.start_time else None,
+            "end_time": self.end_time.isoformat() if self.end_time else None,
             "machines_found": self.machines_found,
+            "error_message": self.error_message,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
             "deleted_at": self.deleted_at.isoformat() if self.deleted_at else None,
         }
+
+class ScanResult(db.Model):
+    __tablename__ = 'scan_results'
+    
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    job_id = db.Column(db.String(36), db.ForeignKey('scan_jobs.id'), nullable=False)
+    ip_address = db.Column(db.String(15), nullable=False)
+    open_ports = db.Column(db.String(255))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    job = db.relationship('ScanJob', backref='results')

@@ -9,10 +9,13 @@ from .routes.scan import scan_bp
 from .routes.user.user import user_bp
 from .routes.auth.auth import auth_bp
 from .routes.ip.ips import ips_bp
-from .scanner import setup_scanner
+from .tasks.scanner import setup_scanner
+from .celery.celery_app import init_celery
 
 # 创建 db 实例
 migrate = Migrate()
+
+celery = None
 
 def create_redis_client(app):
     """创建Redis客户端连接"""
@@ -72,5 +75,10 @@ def create_app():
     # Create database tables
     with app.app_context():
         db.create_all()
+    
+    # 初始化 Celery
+    global celery
+    celery = init_celery(app)
+    app.extensions['celery'] = celery  # 将 celery 实例添加到 app.extensions
     
     return app

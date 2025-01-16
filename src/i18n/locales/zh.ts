@@ -375,6 +375,15 @@ export default {
         actions: '操作'
       },
       noData: '暂无策略数据',
+      execute: {
+        title: '执行扫描',
+        policyName: '策略名称',
+        selectSubnets: '选择要扫描的网段',
+        confirm: '确认执行扫描',
+        noSubnets: '请选择至少一个网段',
+        success: '扫描执行成功',
+        error: '执行扫描失败'
+      },
       show: {
         columns: {
           name: '策略名称',
@@ -393,7 +402,8 @@ export default {
             enable: '启用',
             disable: '禁用',
             edit: '编辑',
-            delete: '删除'
+            delete: '删除',
+            scan: '执行扫描'
           },
         },
         noData: '暂无策略数据',
@@ -437,6 +447,15 @@ export default {
       execute: '执行扫描'
     },
     form: {
+      confirm: {
+        title: '确认保存',
+        saveContent: '您即将保存以下数据：',
+        subnets: '网段: {count}',
+        policies: '策略: {count}',
+        save: '确认保存当前配置？',
+        execute: '确认执行扫描？',
+        delete: '确认删除？'
+      },
       interval: {
         minutes: '间隔N分钟',
         hours: '间隔N小时',
@@ -491,11 +510,6 @@ export default {
         loading: '加载中...',
         executing: '正在执行扫描...',
         saving: '正在保存...'
-      },
-      confirm: {
-        save: '确认保存当前配置？',
-        execute: '确认执行扫描？',
-        delete: '确认删除？'
       },
       tips: {
         weekDays: '请至少选择一个星期',

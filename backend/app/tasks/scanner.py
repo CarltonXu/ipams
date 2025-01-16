@@ -1,6 +1,6 @@
 import nmap
 from datetime import datetime
-from .models import db, IP
+from backend.app.models import db, IP
 from apscheduler.schedulers.background import BackgroundScheduler
 
 # 使用 nmap.PortScanner()

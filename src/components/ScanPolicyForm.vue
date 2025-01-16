@@ -1,246 +1,226 @@
 <template>
   <div class="scan-config">
     <el-card class="card">
-      <div class="toolbar">
-        <div class="toolbar-header">
-          <h2 class="title">{{ $t('scan.title') }}</h2>
-          <p class="subtitle">{{ $t('scan.subtitle') }}</p>
-        </div>
-      </div>
-      <!-- 添加扫描网段 -->
-      <div class="section">
-        <el-form label-position="top">
-          <h4>{{ $t('scan.subnet.title') }}</h4>
-          <el-form-item :label="$t('scan.subnet.name')" required>
-            <el-input v-model="subnetName" :placeholder="$t('scan.subnet.namePlaceholder')" style="width: 300px;" />
-          </el-form-item>
-
-          <el-form-item :label="$t('scan.subnet.range')" required>
-            <el-input v-model="newSubnet" :placeholder="$t('scan.subnet.rangePlaceholder')" style="width: 300px;" />
-          </el-form-item>
-          <el-button type="primary" @click="handleAddSubnet" :disabled="loading">{{ $t('scan.subnet.add') }}</el-button>
-        </el-form>
-      </div>
-
-      <!-- 显示网段列表 -->
-      <div class="section">
-        <h4>{{ $t('scan.subnet.list') }}</h4>
-        <el-table :data="cachedSubnets" border :empty-text="$t('scan.subnet.noData')">
-          <el-table-column prop="name" :label="$t('scan.subnet.columns.name')" />
-          <el-table-column prop="subnet" :label="$t('scan.subnet.columns.subnet')" />
-          <el-table-column prop="created_at" :label="$t('scan.subnet.columns.createdAt')" />
-          <el-table-column :label="$t('scan.subnet.columns.actions')">
-            <template #default="scope">
-              <el-button type="danger" size="mini" @click="removeSubnet(scope.row)">{{ $t('scan.subnet.delete') }}</el-button>
-            </template>
-          </el-table-column>
-        </el-table>
-      </div>
-
-      <el-divider />
-
-      <!-- 策略配置 -->
-      <div class="section">
-        <h4>{{ $t('scan.policy.title') }}</h4>
-        <el-form label-position="top">
-          <!-- 策略名称 -->
-          <el-form-item :label="$t('scan.policy.name')" required>
-            <el-input v-model="strategyName" :placeholder="$t('scan.policy.namePlaceholder')" style="width: 300px;" />
-          </el-form-item>
-
-          <el-form-item :label="$t('scan.policy.type')" :rules="[{ required: true, message: $t('scan.policy.typeRequired'), trigger: 'change' }]">
-            <el-radio-group v-model="scheduleType">
-              <el-radio :value="$t('scan.policy.types.everyMinute')">{{ $t('scan.policy.types.everyMinute') }}</el-radio>
-              <el-radio :value="$t('scan.policy.types.everyHour')">{{ $t('scan.policy.types.everyHour') }}</el-radio>
-              <el-radio :value="$t('scan.policy.types.everyDay')">{{ $t('scan.policy.types.everyDay') }}</el-radio>
-              <el-radio :value="$t('scan.policy.types.everyWeek')">{{ $t('scan.policy.types.everyWeek') }}</el-radio>
-              <el-radio :value="$t('scan.policy.types.everyMonth')">{{ $t('scan.policy.types.everyMonth') }}</el-radio>
-              <el-radio :value="$t('scan.policy.types.custom')">{{ $t('scan.policy.types.custom') }}</el-radio>
-            </el-radio-group>
-          </el-form-item>
-
-          <!-- 每几分钟 -->
-          <el-form-item 
-            v-if="scheduleType === $t('scan.policy.types.everyMinute')" 
-            :label="$t('scan.form.interval.minutes')" 
-            :rules="[{ required: true, message: $t('scan.form.interval.selectTime'), trigger: 'blur' }]"
-          >
-            <el-input-number v-model="intervalMinutes" :min="1" style="width: 100px;" default="30"/>
-          </el-form-item>
-
-          <!-- 每几小时 -->
-          <el-form-item 
-            v-if="scheduleType === $t('scan.policy.types.everyHour')" 
-            :label="$t('scan.form.interval.hours')" 
-            :rules="[{ required: true, message: $t('scan.form.interval.selectTime'), trigger: 'blur' }]"
-          >
-            <el-input-number v-model="intervalHours" :min="1" style="width: 100px;" />
-          </el-form-item>
-
-          <!-- 每几天 -->
-          <el-form-item 
-            v-if="scheduleType === $t('scan.policy.types.everyDay')" 
-            :label="$t('scan.form.interval.days')" 
-            :rules="[{ required: true, message: $t('scan.form.interval.selectTime'), trigger: 'blur' }]"
-          >
-            <el-input-number v-model="intervalDays" :min="1" style="width: 100px;" />
-          </el-form-item>
-
-          <!-- 开始执行时间 -->
-          <el-form-item 
-            v-if="[$t('scan.policy.types.everyMinute'), $t('scan.policy.types.everyHour'), $t('scan.policy.types.everyDay')].includes(scheduleType)" 
-            :label="$t('scan.form.time.start')" 
-            :rules="[{ required: true, message: $t('scan.form.time.select'), trigger: 'blur' }]"
-          >
-            <el-date-picker 
-              v-model="startExecutionTime" 
-              type="datetime" 
-              :placeholder="$t('scan.form.time.execution')" 
-              style="width: 200px;" 
-            />
-          </el-form-item>
-
-          <!-- 每周 -->
-          <el-form-item 
-            v-if="scheduleType === t('scan.policy.types.everyWeek')" 
-            :label="t('scan.policy.monthDays')"
-          >
-            <el-checkbox-group v-model="weeklyDays">
-              <el-checkbox :label="t('scan.policy.weekDays.1')" value="1"/>
-              <el-checkbox :label="t('scan.policy.weekDays.2')" value="2"/>
-              <el-checkbox :label="t('scan.policy.weekDays.3')" value="3"/>
-              <el-checkbox :label="t('scan.policy.weekDays.4')" value="4"/>
-              <el-checkbox :label="t('scan.policy.weekDays.5')" value="5"/>
-              <el-checkbox :label="t('scan.policy.weekDays.6')" value="6"/>
-              <el-checkbox :label="t('scan.policy.weekDays.0')" value="0"/>
-            </el-checkbox-group>
-          </el-form-item>
-
-          <!-- 每周开始时间 -->
-          <el-form-item 
-            v-if="scheduleType === $t('scan.form.types.everyWeek')" 
-            :label="$t('scan.form.time.execution')" 
-            :rules="[{ required: true, message: $t('scan.form.time.select'), trigger: 'blur' }]"
-          >
-            <el-time-picker 
-              v-model="startExecutionTime" 
-              :placeholder="$t('scan.form.time.select')" 
-              format="HH:mm" 
-              style="width: 120px;" 
-            />
-          </el-form-item>
-
-          <!-- 每月 -->
-          <!-- 多选日期 -->
-          <el-form-item 
-            v-if="scheduleType === $t('scan.form.types.everyMonth')" 
-            :label="$t('scan.form.monthDays.select')"
-          >
-            <el-checkbox-group v-model="monthlyDays">
-              <el-checkbox 
-                v-for="day in 31" 
-                :key="day" 
-                :label="day.toString()"
-              >
-                {{ day }}
-              </el-checkbox>
-              <el-checkbox label="last_day">
-                {{ $t('scan.form.monthDays.last') }}
-              </el-checkbox>
-            </el-checkbox-group>
-          </el-form-item>
-
-          <!-- 执行时间 -->
-          <el-form-item 
-            v-if="scheduleType === $t('scan.form.types.everyMonth')" 
-            :label="$t('scan.form.time.execution')" 
-            :rules="[{ required: true, message: $t('scan.form.time.select'), trigger: 'blur' }]"
-          >
-            <el-time-picker 
-              v-model="startExecutionTime" 
-              :placeholder="$t('scan.form.time.select')" 
-              format="HH:mm" 
-              style="width: 120px;"
-            />
-          </el-form-item>
-
-          <!-- 自定义 -->
-          <el-form-item 
-            v-if="scheduleType === $t('scan.form.types.custom')" 
-            :label="$t('scan.form.cronExpression.label')"
-          >
-            <el-input 
-              v-model="customCron" 
-              :placeholder="$t('scan.form.cronExpression.placeholder')"
-            >
-              <template #append>
-                <el-tooltip :content="$t('scan.form.cronExpression.tip')" placement="top">
-                  <i class="el-icon-info"></i>
-                </el-tooltip>
-              </template>
-            </el-input>
-          </el-form-item>
-
-          <el-form-item 
-            v-if="scheduleType === $t('scan.policy.types.custom')" 
-            :label="$t('scan.form.time.select')" 
-            :rules="[{ required: true, message: $t('scan.form.time.select'), trigger: 'blur' }]"
-          >
-            <el-date-picker
-              v-model="startExecutionTime"
-              :placeholder="$t('scan.form.time.select')"
-              type="datetime"
-              format="YYYY-MM-DD HH:mm"
-              style="width: 180px;" />
-          </el-form-item>
-
-          <!-- 加载状态 -->
-          <div v-if="loading" class="loading-status">
-            {{ $t('scan.form.status.loading') }}
+      <div class="card-content">
+        <div class="toolbar">
+          <div class="toolbar-header">
+            <h2 class="title">{{ $t('scan.title') }}</h2>
+            <p class="subtitle">{{ $t('scan.subtitle') }}</p>
           </div>
+        </div>
 
-          <!-- 添加策略 -->
-          <el-button type="primary" @click="handleAddPolicy" :disabled="loading">{{ $t('scan.form.buttons.add') }}</el-button>
-        </el-form>
-      </div>
+        <div class="scrollable-content">
+          <el-collapse v-model="activeCollapse">
+            <!-- 子网配置面板 -->
+            <el-collapse-item :title="$t('scan.subnet.title')" name="subnet">
+              <div class="section">
+                <el-form label-position="top">
+                  <el-form-item :label="$t('scan.subnet.name')" required>
+                    <el-input v-model="subnetName" :placeholder="$t('scan.subnet.namePlaceholder')" style="width: 300px;" />
+                  </el-form-item>
+                  <el-form-item :label="$t('scan.subnet.range')" required>
+                    <el-input v-model="newSubnet" :placeholder="$t('scan.subnet.rangePlaceholder')" style="width: 300px;" />
+                  </el-form-item>
+                  <el-button type="primary" @click="handleAddSubnet">{{ $t('scan.subnet.add') }}</el-button>
+                </el-form>
 
-      <!-- 显示策略列表 -->
-      <div class="section">
-        <h4>{{ $t('scan.policy.list') }}</h4>
-        <el-table :data="cachedPolicies" border :empty-text="$t('scan.policy.noData')">
-          <el-table-column prop="name" :label="$t('scan.policy.columns.name')" />
-          <el-table-column prop="description" :label="$t('scan.policy.columns.description')" />
-          <el-table-column prop="created_at" :label="$t('scan.policy.columns.createdAt')" />
-          <el-table-column :label="$t('scan.policy.columns.actions')">
-            <template #default="scope">
-              <el-button type="danger" size="mini" @click="removePolicy(scope.row)">{{ $t('scan.form.buttons.delete') }}</el-button>
-            </template>
-          </el-table-column>
-        </el-table>
-      </div>
+                <el-table class="subnet-table" :data="cachedSubnets" border :empty-text="$t('scan.subnet.noData')">
+                  <el-table-column prop="name" :label="$t('scan.subnet.columns.name')" />
+                  <el-table-column prop="subnet" :label="$t('scan.subnet.columns.subnet')" />
+                  <el-table-column prop="created_at" :label="$t('scan.subnet.columns.createdAt')" />
+                  <el-table-column :label="$t('scan.subnet.columns.actions')">
+                    <template #default="scope">
+                      <el-button type="danger" size="small" @click="removeSubnet(scope.row)">
+                        {{ $t('scan.subnet.delete') }}
+                      </el-button>
+                    </template>
+                  </el-table-column>
+                </el-table>
+              </div>
+            </el-collapse-item>
 
-      <el-button type="success" @click="handleSavePolicy" :disabled="loading">{{ $t('scan.form.buttons.save') }}</el-button>
-      <el-divider />
+            <!-- 策略配置面板 -->
+            <el-collapse-item :title="$t('scan.policy.title')" name="policy">
+              <div class="section">
+                <!-- 原有的策略表单内容 -->
+                <el-form label-position="top">
+                  <el-form-item :label="$t('scan.policy.name')" required>
+                    <el-input v-model="strategyName" :placeholder="$t('scan.policy.namePlaceholder')" style="width: 300px;" />
+                  </el-form-item>
 
-      <!-- 执行扫描 -->
-      <div class="section">
-        <h4>{{ $t('scan.execution.title') }}</h4>
-        <el-select v-model="selectedSubnet" :placeholder="$t('scan.execution.selectSubnet')" style="width: 200px;">
-          <el-option
-            v-for="(subnet, index) in cachedSubnets"
-            :key="index"
-            :label="subnet.subnet"
-            :value="subnet.subnet"
-          />
-        </el-select>
-        <el-button type="primary" @click="handleExecuteScan" :disabled="loading">{{ $t('scan.execution.execute') }}</el-button>
+                  <el-form-item :label="$t('scan.policy.type')" :rules="[{ required: true, message: $t('scan.policy.typeRequired'), trigger: 'change' }]">
+                    <el-radio-group v-model="scheduleType">
+                      <el-radio :value="$t('scan.policy.types.everyMinute')">{{ $t('scan.policy.types.everyMinute') }}</el-radio>
+                      <el-radio :value="$t('scan.policy.types.everyHour')">{{ $t('scan.policy.types.everyHour') }}</el-radio>
+                      <el-radio :value="$t('scan.policy.types.everyDay')">{{ $t('scan.policy.types.everyDay') }}</el-radio>
+                      <el-radio :value="$t('scan.policy.types.everyWeek')">{{ $t('scan.policy.types.everyWeek') }}</el-radio>
+                      <el-radio :value="$t('scan.policy.types.everyMonth')">{{ $t('scan.policy.types.everyMonth') }}</el-radio>
+                      <el-radio :value="$t('scan.policy.types.custom')">{{ $t('scan.policy.types.custom') }}</el-radio>
+                    </el-radio-group>
+                  </el-form-item>
+
+                  <el-form-item 
+                    v-if="scheduleType === $t('scan.policy.types.everyMinute')" 
+                    :label="$t('scan.form.interval.minutes')" 
+                    :rules="[{ required: true, message: $t('scan.form.interval.selectTime'), trigger: 'blur' }]"
+                  >
+                    <el-input-number v-model="intervalMinutes" :min="1" style="width: 100px;" default="30"/>
+                  </el-form-item>
+
+                  <el-form-item 
+                    v-if="scheduleType === $t('scan.policy.types.everyHour')" 
+                    :label="$t('scan.form.interval.hours')" 
+                    :rules="[{ required: true, message: $t('scan.form.interval.selectTime'), trigger: 'blur' }]"
+                  >
+                    <el-input-number v-model="intervalHours" :min="1" style="width: 100px;" />
+                  </el-form-item>
+
+                  <el-form-item 
+                    v-if="scheduleType === $t('scan.policy.types.everyDay')" 
+                    :label="$t('scan.form.interval.days')" 
+                    :rules="[{ required: true, message: $t('scan.form.interval.selectTime'), trigger: 'blur' }]"
+                  >
+                    <el-input-number v-model="intervalDays" :min="1" style="width: 100px;" />
+                  </el-form-item>
+
+                  <el-form-item 
+                    v-if="[$t('scan.policy.types.everyMinute'), $t('scan.policy.types.everyHour'), $t('scan.policy.types.everyDay')].includes(scheduleType)" 
+                    :label="$t('scan.form.time.start')" 
+                    :rules="[{ required: true, message: $t('scan.form.time.select'), trigger: 'blur' }]"
+                  >
+                    <el-date-picker 
+                      v-model="startExecutionTime" 
+                      type="datetime" 
+                      :placeholder="$t('scan.form.time.execution')" 
+                      style="width: 200px;" 
+                    />
+                  </el-form-item>
+
+                  <el-form-item 
+                    v-if="scheduleType === t('scan.policy.types.everyWeek')" 
+                    :label="t('scan.policy.monthDays')"
+                  >
+                    <el-checkbox-group v-model="weeklyDays">
+                      <el-checkbox :label="t('scan.policy.weekDays.1')" value="1"/>
+                      <el-checkbox :label="t('scan.policy.weekDays.2')" value="2"/>
+                      <el-checkbox :label="t('scan.policy.weekDays.3')" value="3"/>
+                      <el-checkbox :label="t('scan.policy.weekDays.4')" value="4"/>
+                      <el-checkbox :label="t('scan.policy.weekDays.5')" value="5"/>
+                      <el-checkbox :label="t('scan.policy.weekDays.6')" value="6"/>
+                      <el-checkbox :label="t('scan.policy.weekDays.0')" value="0"/>
+                    </el-checkbox-group>
+                  </el-form-item>
+
+                  <el-form-item 
+                    v-if="scheduleType === $t('scan.form.types.everyWeek')" 
+                    :label="$t('scan.form.time.execution')" 
+                    :rules="[{ required: true, message: $t('scan.form.time.select'), trigger: 'blur' }]"
+                  >
+                    <el-time-picker 
+                      v-model="startExecutionTime" 
+                      :placeholder="$t('scan.form.time.select')" 
+                      format="HH:mm" 
+                      style="width: 120px;" 
+                    />
+                  </el-form-item>
+
+                  <el-form-item 
+                    v-if="scheduleType === $t('scan.form.types.everyMonth')" 
+                    :label="$t('scan.form.monthDays.select')"
+                  >
+                    <el-checkbox-group v-model="monthlyDays">
+                      <el-checkbox 
+                        v-for="day in 31" 
+                        :key="day" 
+                        :label="day.toString()"
+                      >
+                        {{ day }}
+                      </el-checkbox>
+                      <el-checkbox label="last_day">
+                        {{ $t('scan.form.monthDays.last') }}
+                      </el-checkbox>
+                    </el-checkbox-group>
+                  </el-form-item>
+
+                  <el-form-item 
+                    v-if="scheduleType === $t('scan.form.types.everyMonth')" 
+                    :label="$t('scan.form.time.execution')" 
+                    :rules="[{ required: true, message: $t('scan.form.time.select'), trigger: 'blur' }]"
+                  >
+                    <el-time-picker 
+                      v-model="startExecutionTime" 
+                      :placeholder="$t('scan.form.time.select')" 
+                      format="HH:mm" 
+                      style="width: 120px;"
+                    />
+                  </el-form-item>
+
+                  <el-form-item 
+                    v-if="scheduleType === $t('scan.form.types.custom')" 
+                    :label="$t('scan.form.cronExpression.label')"
+                  >
+                    <el-input 
+                      v-model="customCron" 
+                      :placeholder="$t('scan.form.cronExpression.placeholder')"
+                    >
+                      <template #append>
+                        <el-tooltip :content="$t('scan.form.cronExpression.tip')" placement="top">
+                          <i class="el-icon-info"></i>
+                        </el-tooltip>
+                      </template>
+                    </el-input>
+                  </el-form-item>
+
+                  <el-form-item 
+                    v-if="scheduleType === $t('scan.policy.types.custom')" 
+                    :label="$t('scan.form.time.select')" 
+                    :rules="[{ required: true, message: $t('scan.form.time.select'), trigger: 'blur' }]"
+                  >
+                    <el-date-picker
+                      v-model="startExecutionTime"
+                      :placeholder="$t('scan.form.time.select')"
+                      type="datetime"
+                      format="YYYY-MM-DD HH:mm"
+                      style="width: 180px;" />
+                  </el-form-item>
+
+                  <div v-if="loading" class="loading-status">
+                    {{ $t('scan.form.status.loading') }}
+                  </div>
+
+                  <el-button type="primary" @click="handleAddPolicy" :disabled="loading">{{ $t('scan.form.buttons.add') }}</el-button>
+                </el-form>
+
+                <!-- 策略列表 -->
+                <el-table class="policy-table" :data="cachedPolicies" border :empty-text="$t('scan.policy.noData')">
+                  <el-table-column prop="name" :label="$t('scan.policy.columns.name')" />
+                  <el-table-column prop="description" :label="$t('scan.policy.columns.description')" />
+                  <el-table-column prop="created_at" :label="$t('scan.policy.columns.createdAt')" />
+                  <el-table-column :label="$t('scan.policy.columns.actions')">
+                    <template #default="scope">
+                      <el-button type="danger" size="small" @click="removePolicy(scope.row)">
+                        {{ $t('scan.form.buttons.delete') }}
+                      </el-button>
+                    </template>
+                  </el-table-column>
+                </el-table>
+              </div>
+            </el-collapse-item>
+          </el-collapse>
+        </div>
+
+        <div class="footer">
+          <el-button type="success" @click="handleSavePolicy" :disabled="loading">
+            {{ $t('scan.form.buttons.save') }}
+          </el-button>
+        </div>
       </div>
     </el-card>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
+import { ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { useScanPolicyStore } from '../stores/scanPolicy';
@@ -250,9 +230,7 @@ const { t } = useI18n();
 const subnetName = ref('');
 const newSubnet = ref('');
 const loading = ref(false);
-const selectedSubnet = ref(null);
 
-// 输入字段
 const strategyName = ref('');
 const scheduleType = ref(t('scan.form.types.everyDay'));
 const intervalMinutes = ref(null);
@@ -267,17 +245,16 @@ const customCron = ref('');
 const customCronTime = ref(null);
 const startExecutionTime = ref(null);
 
-// 缓存数据
 const cachedSubnets = ref([]);
 const cachedPolicies = ref([]);
 
-// 正则表达式：验证 IP 地址
+const emit = defineEmits(['cancel', 'save'])
+
 const isValidIP = (ip: string) => {
   const ipRegex = /^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
   return ipRegex.test(ip);
 };
 
-// 正则表达式：验证网段（如：192.168.0.0/24）
 const isValidSubnet = (subnet: string) => {
   const subnetRegex = /^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\/([8-9]|[1-2][0-9]|3[0-2])$/;
   return subnetRegex.test(subnet);
@@ -336,13 +313,11 @@ const validateInputs = () => {
   return true;
 };
 
-// 格式化时间函数
 const formatTime = (time: Date | null) => {
   if (!time) return '';
   return `${time.getHours()}:${time.getMinutes().toString().padStart(2, '0')}`;
 };
 
-// 策略描述生成
 const generatePolicyDescription = () => {
   if (!startExecutionTime.value) return '';
   const startTime = formatTime(startExecutionTime.value);
@@ -388,7 +363,6 @@ const generatePolicyDescription = () => {
   }
 };
 
-// 生成 Cron 表达式
 const generateCrontabExpression = () => {
   const time = startExecutionTime.value;
   if (!time) {
@@ -420,7 +394,6 @@ const generateCrontabExpression = () => {
   }
 };
 
-// 添加网段验证
 const validateSubnet = () => {
   if (!subnetName.value.trim()) {
     ElMessage.error(t('scan.validation.subnetName'));
@@ -446,7 +419,6 @@ const validateSubnet = () => {
   return true;
 };
 
-// 处理添加网段
 const handleAddSubnet = () => {
   if (!validateSubnet()) return;
 
@@ -461,7 +433,6 @@ const handleAddSubnet = () => {
   newSubnet.value = '';
 };
 
-// 删除网段
 const removeSubnet = async (subnet: any) => {
   try {
     await ElMessageBox.confirm(
@@ -478,7 +449,6 @@ const removeSubnet = async (subnet: any) => {
   }
 };
 
-// 处理添加策略
 const handleAddPolicy = () => {
   if (!validateInputs()) return;
   const newPolicy = {
@@ -494,64 +464,81 @@ const handleAddPolicy = () => {
 };
 
 const handleSavePolicy = async () => {
-  // 检查是否有网段配置
-  if (!cachedSubnets.value || cachedSubnets.value.length === 0) {
-    ElMessage.warning(t('scan.validation.noSubnets'));
-    return;
-  }
-
-  // 检查是否有策略配置
-  if (!cachedPolicies.value || cachedPolicies.value.length === 0) {
-    ElMessage.warning(t('scan.validation.noPolicy'));
-    return;
-  }
-
   try {
+    // 检查是否有网段配置
+    if (!cachedSubnets.value || cachedSubnets.value.length === 0) {
+      ElMessage.warning(t('scan.validation.noSubnets'))
+      return
+    }
+
+    // 检查是否有策略配置
+    if (!cachedPolicies.value || cachedPolicies.value.length === 0) {
+      ElMessage.warning(t('scan.validation.noPolicy'))
+      return
+    }
+
+    // 添加确认弹框
     await ElMessageBox.confirm(
-      t('scan.form.confirm.save'),
-      t('common.warning'),
+      `${t('scan.form.confirm.saveContent')}\n` + 
+      `${t('scan.form.confirm.subnets')} ${cachedSubnets.value.length}\n` +
+      `${t('scan.form.confirm.policies')} ${cachedPolicies.value.length}`,
+      t('scan.form.confirm.title'),
       {
         confirmButtonText: t('common.confirm'),
         cancelButtonText: t('common.cancel'),
-        type: 'warning'
+        type: 'warning',
+        dangerouslyUseHTMLString: true
       }
-    );
-    
-    loading.value = true;
-    const scanPolicyStore = useScanPolicyStore();
-    await scanPolicyStore.savePolicyConfig({
+    )
+
+    // 触发保存事件，传递数据给父组件
+    await emit('save', {
       subnets: cachedSubnets.value,
       policies: cachedPolicies.value
-    });
+    })
+
+    // 重置所有数据
+    resetAllData()
     
-    ElMessage.success(t('scan.messages.success.savePolicy'));
   } catch (error: any) {
-    if (error.message) {
-      ElMessage.error(error.message);
+    if (error !== 'cancel') {
+      ElMessage.error(error.message || t('common.error.unknown'))
     }
-  } finally {
-    loading.value = false;
   }
-};
+}
 
-// 重置表单
+// 重置所有数据
+const resetAllData = () => {
+  // 重置子网数据
+  cachedSubnets.value = []
+  subnetName.value = ''
+  newSubnet.value = ''
+
+  // 重置策略数据
+  cachedPolicies.value = []
+  resetForm()
+
+  // 重置折叠面板状态
+  activeCollapse.value = ['subnet', 'policy']
+}
+
+// 原有的重置表单方法
 const resetForm = () => {
-  strategyName.value = '';
-  scheduleType.value = t('scan.form.types.everyDay');
-  intervalMinutes.value = null;
-  intervalHours.value = null;
-  intervalDays.value = null;
-  startExecutionTime.value = null;
-  dailyTime.value = null;
-  weeklyDays.value = [];
-  weeklyTime.value = null;
-  monthlyDays.value = [];
-  monthlyTime.value = null;
-  customCron.value = '';
-  customCronTime.value = null;
-};
+  strategyName.value = ''
+  scheduleType.value = t('scan.form.types.everyDay')
+  intervalMinutes.value = null
+  intervalHours.value = null
+  intervalDays.value = null
+  startExecutionTime.value = null
+  dailyTime.value = null
+  weeklyDays.value = []
+  weeklyTime.value = null
+  monthlyDays.value = []
+  monthlyTime.value = null
+  customCron.value = ''
+  customCronTime.value = null
+}
 
-// 删除策略
 const removePolicy = async (policy: any) => {
   try {
     await ElMessageBox.confirm(
@@ -568,38 +555,6 @@ const removePolicy = async (policy: any) => {
   }
 };
 
-// 执行扫描
-const handleExecuteScan = async () => {
-  if (!selectedSubnet.value) {
-    ElMessage.warning(t('scan.form.validation.subnetRequired'));
-    return;
-  }
-
-  try {
-    await ElMessageBox.confirm(
-      t('scan.form.confirm.execute'),
-      t('common.warning'),
-      {
-        confirmButtonText: t('common.confirm'),
-        cancelButtonText: t('common.cancel'),
-        type: 'warning'
-      }
-    );
-    
-    loading.value = true;
-    ElMessage.info(t('scan.form.status.executing'));
-    
-    // 执行扫描逻辑
-    console.log(`执行扫描：${selectedSubnet.value}`);
-    
-  } catch (error) {
-    // 用户取消操作
-  } finally {
-    loading.value = false;
-  }
-};
-
-// 监听策略类型变化
 watch(scheduleType, (newType) => {
   intervalMinutes.value = null;
   intervalHours.value = null;
@@ -619,22 +574,30 @@ watch(scheduleType, (newType) => {
   }
 });
 
-// 自定义Cron表达式提示
-const cronExpressionTip = computed(() => {
-  return scheduleType.value === t('scan.form.types.custom') 
-    ? t('scan.form.tips.customCron') 
-    : '';
-});
+// 添加折叠面板的激活状态控制
+const activeCollapse = ref(['subnet', 'policy'])
 </script>
 
 <style scoped>
-.toolbar {
+:deep(.card) {
+  border-radius: 0px;
+  border: none;
+  box-shadow: 0 0 0 0 rgba(0, 0, 0, 0) !important;
+}
+:deep(.el-card__body) {
+  padding: 0px;
+}
+
+.card-content {
+  height: 600px;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.5rem;
-  flex-wrap: wrap;
-  gap: 1rem;
+  flex-direction: column;
+}
+
+.toolbar {
+  padding: 10px;
+  background-color: #fff;
+  border-bottom: 1px solid #ebeef5;
 }
 
 .toolbar-header h2 {
@@ -645,19 +608,70 @@ const cronExpressionTip = computed(() => {
 
 .toolbar-header .subtitle {
   color: #666;
-  margin: 0;
+  margin: 5px 0 0;
   font-size: 14px;
 }
 
-.add-subnet-form {
-  display: flex;
-} 
-
-.scan-config {
+.scrollable-content {
+  flex: 1;
+  overflow-y: auto;
   padding: 20px;
+  scroll-padding-top: 50px;
+}
+
+.scrollable-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.scrollable-content::-webkit-scrollbar-thumb {
+  background-color: #dcdfe6;
+  border-radius: 3px;
+}
+
+.scrollable-content::-webkit-scrollbar-track {
+  background-color: #f5f7fa;
+}
+
+.footer {
+  padding: 20px;
+  background-color: #fff;
+  border-top: 1px solid #ebeef5;
+  display: flex;
+  justify-content: flex-end;
 }
 
 .section {
   margin-bottom: 20px;
+}
+
+.subnet-table {
+  z-index:0;
+}
+
+.policy-table {
+  z-index:0;
+}
+
+:deep(.el-collapse) {
+  border: none;
+}
+
+:deep(.el-collapse-item__header) {
+  font-size: 16px;
+  font-weight: 500;
+  padding: 12px 0;
+  position: sticky;
+  top: -20px;
+  background-color: white;
+  z-index: 1;
+  border-bottom: 1px solid #ebeef5;
+}
+
+:deep(.el-collapse-item__content) {
+  padding: 20px 0;
+}
+
+:deep(.el-collapse-item:not(:last-child)) {
+  margin-bottom: 1px;
 }
 </style>

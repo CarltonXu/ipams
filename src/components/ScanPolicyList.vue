@@ -53,6 +53,13 @@
                 {{ t('scan.policy.show.columns.actions.edit') }}
               </el-button>
               <el-button 
+                type="success"
+                size="small"
+                @click="showExecuteScanDialog(row)"
+              >
+                {{ t('scan.policy.show.columns.actions.scan') }}
+              </el-button>
+              <el-button 
                 type="danger"
                 size="small"
                 @click="deletePolicy(row)"
@@ -68,7 +75,7 @@
     <el-dialog
       v-model="dialogVisible"
       :title="t(editingPolicy ? 'scan.policy.show.dialog.editTitle' : 'scan.policy.show.dialog.addTitle')"
-      width="80%"
+      width="60%"
       destroy-on-close
     >
       <ScanPolicyForm
@@ -77,6 +84,42 @@
         @cancel="dialogVisible = false"
       />
     </el-dialog>
+    <el-dialog
+      v-model="scanDialogVisible"
+      :title="t('scan.policy.execute.title')"
+      width="500px"
+    >
+      <div class="scan-dialog-content">
+        <p class="policy-info">
+          {{ t('scan.policy.execute.policyName') }}: {{ currentPolicy?.name }}
+        </p>
+        <el-form>
+          <el-form-item :label="t('scan.policy.execute.selectSubnets')">
+            <el-checkbox-group v-model="selectedSubnets">
+              <el-checkbox 
+                v-for="subnet in currentPolicy?.subnets" 
+                :key="subnet.id" 
+                :label="subnet.id"
+              >
+                {{ subnet.name }} ({{ subnet.subnet }})
+              </el-checkbox>
+            </el-checkbox-group>
+          </el-form-item>
+        </el-form>
+      </div>
+      <template #footer>
+        <el-button @click="scanDialogVisible = false">
+          {{ t('common.cancel') }}
+        </el-button>
+        <el-button 
+          type="primary" 
+          :loading="executingScan"
+          @click="executeScan"
+        >
+          {{ t('scan.policy.execute.confirm') }}
+        </el-button>
+      </template>
+    </el-dialog>    
   </div>
 </template>
 
@@ -95,6 +138,11 @@ const editingPolicy = ref<Policy | null>(null)
 const loading = ref(false)
 const policies = ref<Policy[]>([])
 
+const scanDialogVisible = ref(false)
+const currentPolicy = ref<Policy | null>(null)
+const selectedSubnets = ref<string[]>([])
+const executingScan = ref(false)
+
 // 格式化日期时间
 const formatDateTime = (dateStr: string) => {
   return dayjs(dateStr).format('YYYY-MM-DD HH:mm:ss')
@@ -111,6 +159,37 @@ const getPolicies = async () => {
     ElMessage.error(t('scan.policy.show.messages.fetchFailed'))
   } finally {
     loading.value = false
+  }
+}
+
+// 显示执行扫描对话框
+const showExecuteScanDialog = (policy: Policy) => {
+  currentPolicy.value = policy
+  selectedSubnets.value = policy.subnets.map(subnet => subnet.id)
+  scanDialogVisible.value = true
+}
+
+// 执行扫描
+const executeScan = async () => {
+  if (!selectedSubnets.value.length) {
+    ElMessage.warning(t('scan.policy.execute.noSubnets'))
+    return
+  }
+
+  try {
+    executingScan.value = true
+    const policyStore = useScanPolicyStore()
+    await policyStore.executeScan({
+      policy_id: currentPolicy.value!.id,
+      subnet_ids: selectedSubnets.value
+    })
+    
+    ElMessage.success(t('scan.policy.execute.success'))
+    scanDialogVisible.value = false
+  } catch (error: any) {
+    ElMessage.error(error.message || t('scan.policy.execute.error'))
+  } finally {
+    executingScan.value = false
   }
 }
 
@@ -151,21 +230,18 @@ const showAddPolicyDialog = () => {
 }
 
 // 保存策略
-const handleSavePolicy = async (policyData: Policy) => {
+const handleSavePolicy = async (policyData: any) => {
   try {
     const policyStore = useScanPolicyStore()
     if (editingPolicy.value) {
-      // TODO: 实现更新策略的逻辑
+      // 处理编辑逻辑
       ElMessage.success(t('scan.policy.show.messages.editSuccess'))
     } else {
-      await policyStore.savePolicyConfig({
-        subnets: policyData.subnets,
-        policies: [policyData]
-      })
+      await policyStore.savePolicyConfig(policyData)
       ElMessage.success(t('scan.policy.show.messages.addSuccess'))
     }
-    dialogVisible.value = false
-    await getPolicies()
+    dialogVisible.value = false  // 关闭对话框
+    await getPolicies()  // 刷新列表
   } catch (error: any) {
     ElMessage.error(error.message || t('common.error.unknown'))
   }
@@ -203,9 +279,5 @@ onMounted(() => {
 .el-tag {
   margin-right: 8px;
   margin-bottom: 4px;
-}
-
-:deep(.el-dialog__body) {
-  padding: 20px;
 }
 </style>

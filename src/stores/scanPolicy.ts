@@ -50,18 +50,13 @@ export const useScanPolicyStore = defineStore('scanPolicy', () => {
     }
   };
 
-  // 执行扫描
-  const executeScan = async (subnet: string) => {
-    loading.value = true;
+  const executeScan = async (params: { policy_id: string, subnet_ids: string[] }) => {
     try {
-      const response = await axios.post('/api/scan/execute', { subnet });
-      return response.data;
+      await axios.post('/api/scan/execute', params)
     } catch (error: any) {
-      throw new Error(error.response?.data?.message || '执行扫描失败');
-    } finally {
-      loading.value = false;
+      throw new Error(error.response?.data?.error || '执行扫描失败')
     }
-  };
+  }
 
   return {
     policies,
