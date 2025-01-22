@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from backend.app.models import db, ScanPolicy, ScanSubnet
+from backend.app.models import db, ScanPolicy, ScanSubnet, ScanJob
 from backend.app.utils.auth import token_required
 from sqlalchemy.exc import IntegrityError
 from datetime import datetime
@@ -38,6 +38,7 @@ def get_policies(current_user):
                     "strategies": policy.strategies,
                     "start_time": policy.start_time,
                     "threads": policy.threads,
+                    "status": policy.status,
                     "created_at": policy.created_at.isoformat() if policy.created_at else None,
                     "subnets": [
                         {
@@ -203,3 +204,39 @@ def delete_policy(current_user, policy_id):
     db.session.commit()
     
     return jsonify({'message': 'Policy deleted successfully'})
+
+@policy_bp.route('/policies/<policy_id>/jobs', methods=['GET'])
+@token_required
+def get_policy_jobs(current_user, policy_id):
+    try:
+        # 验证策略是否属于当前用户
+        policy = ScanPolicy.query.filter_by(
+            id=policy_id,
+            user_id=current_user.id,
+            deleted=False
+        ).first()
+        
+        if not policy:
+            return jsonify({'error': '策略不存在或无权访问'}), 404
+            
+        # 获取该策略的所有任务
+        jobs = ScanJob.query.filter_by(
+            policy_id=policy_id,
+            user_id=current_user.id
+        ).order_by(ScanJob.created_at.desc()).all()
+
+        return jsonify({
+            'jobs': [{
+                'id': job.id,
+                'status': job.status,
+                'progress': job.progress,
+                'machines_found': job.machines_found,
+                'start_time': job.start_time.isoformat() if job.start_time else None,
+                'end_time': job.end_time.isoformat() if job.end_time else None,
+                'error_message': job.error_message,
+                'subnets': ScanSubnet.query.filter_by(id=job.subnet_id, deleted=False).first().to_dict()
+            } for job in jobs]
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500

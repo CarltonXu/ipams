@@ -52,13 +52,6 @@ def register_user():
     db.session.add(user)
     db.session.commit()
 
-    # 记录日志
-    utils.log_action_to_db(
-        user=None,  # 注册时没有用户登录
-        action="Registered a new user",
-        target=user.id,
-        details=f"New user registered with username: {username} and email: {email}"
-    )
     return jsonify(user.to_dict()), 201
 
 @auth_bp.route('/auth/login', methods=['POST'])

@@ -395,7 +395,9 @@ export default {
           status: {
             title: '状态',
             active: '活跃',
-            inactive: '未使用'
+            running: '运行中',
+            completed: '已完成',
+            failed: '失败',
           },
           actions: {
             title: '操作',
@@ -439,6 +441,26 @@ export default {
         4: '周四',
         5: '周五',
         6: '周六'
+      },
+      jobs: {
+        title: '扫描任务列表',
+        jobId: '任务ID',
+        subnet: '扫描网段',
+        status: '任务状态',
+        machinesFound: '发现主机数',
+        progress: '扫描进度',
+        startTime: '开始时间',
+        endTime: '结束时间',
+        fetchError: '获取任务列表失败',
+        errorMessage: '任务执行结果',
+        refresh: {
+          off: '关闭自动刷新',
+          '1s': '每 1 秒',
+          '5s': '每 5 秒',
+          '10s': '每 10 秒',
+          '30s': '每 30 秒',
+          '60s': '每分钟'
+        }
       }
     },
     execution: {

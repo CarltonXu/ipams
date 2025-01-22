@@ -154,6 +154,7 @@ class ScanPolicy(db.Model):
     user_id = db.Column(db.String(36), db.ForeignKey('users.id'), nullable=False)
     subnet_ids = db.Column(db.String(500), nullable=False)
     strategies = db.Column(db.String(255) , nullable=False)  # 扫描策略
+    status = db.Column(db.Enum('active', 'running', 'completed', 'failed', name='scan_status'), default='active', nullable=False)
     description = db.Column(db.String(255), nullable=False)  # 扫描策略描述
     start_time = db.Column(db.String(255), nullable=False)  # 扫描开始时间
     threads = db.Column(db.Integer, default=1, nullable=False)  # 并发线程数，默认1
@@ -171,6 +172,7 @@ class ScanPolicy(db.Model):
         self.user_id = user_id
         self.subnet_ids = json.dumps(subnet_ids)
         self.strategies = strategies
+        self.status = 'active'
         self.description = description
         self.start_time = start_time
         self.threads = threads
@@ -185,6 +187,7 @@ class ScanPolicy(db.Model):
             "description": self.description,
             "start_time": self.start_time,
             "threads": self.threads,
+            "status": self.status,
             "deleted": self.deleted,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,

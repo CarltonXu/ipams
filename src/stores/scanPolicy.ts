@@ -58,6 +58,15 @@ export const useScanPolicyStore = defineStore('scanPolicy', () => {
     }
   }
 
+  const fetchPolicyJobs = async (policyId: string) => {
+    try {
+      const response = await axios.get(`/api/scan/policies/${policyId}/jobs`)
+      return response.data
+    } catch (error) {
+      throw error
+    }
+  }
+
   return {
     policies,
     subnets,
@@ -65,6 +74,7 @@ export const useScanPolicyStore = defineStore('scanPolicy', () => {
     fetchPolicies,
     savePolicyConfig,
     executeScan,
-    deletePolicyById
+    deletePolicyById,
+    fetchPolicyJobs
   };
 }); 

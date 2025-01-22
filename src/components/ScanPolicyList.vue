@@ -17,7 +17,16 @@
         style="width: 100%" 
         border
       >
-        <el-table-column prop="name" :label="t('scan.policy.show.columns.name')" width="150" />
+        <el-table-column prop="name" :label="t('scan.policy.show.columns.name')" width="150">
+          <template #default="{ row }">
+            <el-button
+              link
+              type="primary"
+              @click="showPolicyJobs(row)">
+              {{ row.name }}
+            </el-button>
+          </template>
+        </el-table-column>
         <el-table-column prop="description" :label="t('scan.policy.show.columns.description')" min-width="200" show-overflow-tooltip />
         <el-table-column prop="strategies" :label="t('scan.policy.show.columns.strategy')" width="150" />
         <el-table-column prop="start_time" :label="t('scan.policy.show.columns.startTime')" width="180">
@@ -40,6 +49,13 @@
         <el-table-column prop="created_at" :label="t('scan.policy.show.columns.createdAt')" width="180">
           <template #default="{ row }">
             {{ formatDateTime(row.created_at) }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="status" :label="t('scan.policy.show.columns.status.title')" width="100">
+          <template #default="{ row }">
+            <el-tag :type="getStatusType(row.status)">
+              {{ t(`scan.policy.show.columns.status.${row.status}`) }}
+            </el-tag>
           </template>
         </el-table-column>
         <el-table-column :label="t('scan.policy.show.columns.actions.title')" width="200" fixed="right">
@@ -120,6 +136,10 @@
         </el-button>
       </template>
     </el-dialog>    
+    <PolicyJobsDrawer
+      v-model="jobsDrawerVisible"
+      :policy-id="selectedPolicyId"
+    />
   </div>
 </template>
 
@@ -130,6 +150,7 @@ import { Plus } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n'
 import dayjs from 'dayjs'
 import ScanPolicyForm from './ScanPolicyForm.vue'
+import PolicyJobsDrawer from './PolicyJobsDrawer.vue'
 import { useScanPolicyStore } from '../stores/scanPolicy'
 
 const { t } = useI18n()
@@ -142,6 +163,9 @@ const scanDialogVisible = ref(false)
 const currentPolicy = ref<Policy | null>(null)
 const selectedSubnets = ref<string[]>([])
 const executingScan = ref(false)
+
+const jobsDrawerVisible = ref(false)
+const selectedPolicyId = ref('')
 
 // 格式化日期时间
 const formatDateTime = (dateStr: string) => {
@@ -167,6 +191,27 @@ const showExecuteScanDialog = (policy: Policy) => {
   currentPolicy.value = policy
   selectedSubnets.value = policy.subnets.map(subnet => subnet.id)
   scanDialogVisible.value = true
+}
+
+// 获取策略的状态展示不同的颜色标签
+const getStatusType = (status: string) => {
+  switch (status) {
+    case 'active':
+      return 'warning'
+    case 'running':
+      return 'primary'
+    case 'completed':
+      return 'success'
+    case 'failed':
+      return 'danger'
+    default:
+      return 'info'
+  }
+}
+
+const showPolicyJobs = (policy: Policy) => {
+  selectedPolicyId.value = policy.id
+  jobsDrawerVisible.value = true
 }
 
 // 执行扫描

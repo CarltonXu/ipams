@@ -25,8 +25,6 @@ class ScanExecutor:
         last_progress = -1
         
         while self.scanning:
-            logger.info(f"Job {self.job_id} execute get_nmap_last_output: {self.nm.get_nmap_last_output()}")
-            logger.info(f"Job {self.job_id} execute _nmap_last_output: {self.nm._nmap_last_output}")
             try:
                 if self.current_phase == "discovery":
                     # 主机发现阶段，使用固定进度增长
@@ -131,15 +129,24 @@ class ScanExecutor:
                 
     def _save_result(self, ip: str, open_ports: list):
         try:
-            result = ScanResult(
-                job_id=self.job_id,
-                ip_address=ip,
-                open_ports=','.join(map(str, open_ports))
-            )
-            db.session.add(result)
-            db.session.commit()
+            with self.app.app_context():
+                # 先检查 job 是否存在
+                job = ScanJob.query.get(self.job_id)
+                if not job:
+                    logger.error(f"Job {self.job_id} not found when saving result")
+                    return
+                    
+                result = ScanResult(
+                    job_id=self.job_id,
+                    ip_address=ip,
+                    open_ports=','.join(map(str, open_ports))
+                )
+                db.session.add(result)
+                db.session.commit()
+                logger.info(f"Saved scan result for job {self.job_id}, IP {ip}")
         except Exception as e:
-            print(f"Error saving result: {str(e)}")
+            logger.error(f"Error saving result for job {self.job_id}: {str(e)}")
+            db.session.rollback()
     
     def _save_discovery_result(self, active_hosts):
         # 处理扫描结果

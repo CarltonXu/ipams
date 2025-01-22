@@ -1,3 +1,5 @@
+import { errorMessages } from "vue/compiler-sfc";
+
 export default {
   common: {
     success: 'Operation Successful',
@@ -478,7 +480,9 @@ export default {
             status: {
                 title: 'Status',
                 active: 'Active',
-                inactive: 'Inactive'
+                running: 'Running',
+                completed: 'Completed',
+                failed: 'Failed'
             },
             actions: {
               title: 'Actions',
@@ -504,6 +508,26 @@ export default {
             fetchFailed: 'Failed to fetch policy list',
             deleteFailed: 'Failed to delete policy',
             updateFailed: 'Failed to update policy'
+          }
+        },
+        jobs: {
+          title: 'Scan Job List',
+          jobId: 'Jobs ID',
+          subnet: 'Scan Subnet',
+          status: 'Status',
+          machinesFound: 'Discovery Hosts Count',
+          progress: 'Scan Progress',
+          startTime: 'Start Time',
+          endTime: 'End Time',
+          fetchError: 'Get Job List Failed',
+          errorMessage: 'Task Results',
+          refresh: {
+            off: 'Auto Refresh Off',
+            '1s': "every 1s",
+            '5s': 'Every 5s',
+            '10s': 'Every 10s',
+            '30s': 'Every 30s',
+            '60s': 'Every 1min'
           }
         }
       },
