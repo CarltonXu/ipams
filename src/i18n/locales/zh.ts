@@ -570,6 +570,18 @@ export default {
       noPolicy: '请至少添加一个扫描策略',
       invalidIPFormat: '请输入有效的IP地址',
       invalidSubnetFormat: '请输入有效的网段格式，正确格式为：IP/掩码（如：192.168.0.0/24）'
+    },
+    results: {
+      title: '扫描结果',
+      ipAddress: 'IP地址',
+      openPorts: '开放端口',
+      createdAt: '创建时间',
+      updatedAt: '更新时间',
+      searchPlaceholder: '搜索IP地址',
+      hostCount: '主机数: {count}',
+      resourceId: '资源ID',
+      jobId: '任务ID',
+      noData: '暂无数据'
     }
   },
   settings: {

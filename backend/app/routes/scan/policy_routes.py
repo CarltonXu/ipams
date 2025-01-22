@@ -2,7 +2,6 @@ from flask import Blueprint, request, jsonify
 from backend.app.models import db, ScanPolicy, ScanSubnet, ScanJob
 from backend.app.utils.auth import token_required
 from sqlalchemy.exc import IntegrityError
-from datetime import datetime
 import dateutil.parser
 import json
 
@@ -63,6 +62,7 @@ def get_policies(current_user):
         return jsonify({'error': str(e)}), 500
 
 
+# 保存扫描策略配置
 @policy_bp.route('/policies', methods=['POST'])
 @token_required
 def save_policy_config(current_user):
@@ -153,6 +153,7 @@ def save_policy_config(current_user):
         print("Error:", str(e))
         return jsonify({'error': str(e)}), 500
 
+# 更新扫描策略
 @policy_bp.route('/policies/<policy_id>', methods=['PUT'])
 @token_required
 def update_policy(current_user, policy_id):
@@ -188,6 +189,7 @@ def update_policy(current_user, policy_id):
         'policy': policy.to_dict()
     })
 
+# 删除扫描策略
 @policy_bp.route('/policies/<policy_id>', methods=['DELETE'])
 @token_required
 def delete_policy(current_user, policy_id):
@@ -205,6 +207,7 @@ def delete_policy(current_user, policy_id):
     
     return jsonify({'message': 'Policy deleted successfully'})
 
+# 获取扫描策略的任务
 @policy_bp.route('/policies/<policy_id>/jobs', methods=['GET'])
 @token_required
 def get_policy_jobs(current_user, policy_id):

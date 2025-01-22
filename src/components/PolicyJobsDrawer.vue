@@ -42,9 +42,17 @@
         <el-table-column
           prop="id"
           :label="t('scan.policy.jobs.jobId')"
-          width="260"
-        />
-        
+          width="300"
+        >
+          <template #default="{ row }">
+            <el-button
+              type="text"
+              @click="$router.push({ name: 'JobResults', params: { jobId: row.id } })"
+            >
+              {{ row.id }}
+            </el-button>
+          </template>
+        </el-table-column>
         <el-table-column
           prop="subnets.name"
           :label="t('scan.policy.jobs.subnet')"

@@ -80,7 +80,7 @@ class ScanExecutor:
             # 主机发现
             discovery_results = self.nm.scan(
                 hosts=self.subnet,
-                arguments='-sn -T4 --stats-every 1s'
+                arguments='-sn -T5 --stats-every 1s'
             )
 
             active_hosts = [
@@ -93,13 +93,16 @@ class ScanExecutor:
             self.total_hosts = len(active_hosts)
             logger.info(f"Job {self.job_id}: Found {self.total_hosts} active hosts")
             self.current_phase = "port_scan"
-            
+
+            scan_ports = self.app.config.get("SCAN_PORTS")
+            print(scan_ports)
+
             # 端口扫描
             for i, host in enumerate(active_hosts, 1):
                 logger.info(f"Job {self.job_id}: Scanning ports for host {i}/{self.total_hosts}: {host}")
                 port_results = self.nm.scan(
                     hosts=host,
-                    arguments='-sS -p- -T4 --stats-every 1s'
+                    arguments=f'-sS -p {scan_ports} -T4 --stats-every 1s'
                 )
                 
                 if host in port_results['scan']:
@@ -114,7 +117,13 @@ class ScanExecutor:
                             self._save_result(host, open_ports)
                             logger.info(f"Job {self.job_id}: Found {len(open_ports)} open ports on {host}")
             
-            self.scanned_hosts += 1  # 更新已扫描主机数
+                # 更新已扫描主机数
+                self.scanned_hosts += 1
+            
+                # 计算并更新进度
+                if self.total_hosts > 0:
+                    progress = 30 + int((self.scanned_hosts / self.total_hosts) * 70)
+                    self._update_progress(progress)
             
             self.scanning = False
             monitor_thread.join()

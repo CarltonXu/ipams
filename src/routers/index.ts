@@ -8,6 +8,7 @@ import Settings from '../views/Settings.vue';
 import Login from '../views/Login.vue';
 import Register from '../views/Register.vue';
 import ScanPolicyList from '../components/ScanPolicyList.vue';
+import JobResults from '../components/JobResults.vue';
 
 const routes = [
     {
@@ -18,8 +19,8 @@ const routes = [
           { path: 'users', name: 'UserManagement', component: UserManagement, meta: { requiresAuth: true } },
           { path: 'scans', name: 'scan', component: ScanPolicyList, meta: { requiresAuth: true } },
           { path: 'settings', name: 'Settings', component: Settings, meta: { requiresAuth: true } },
-          { path: 'profile', name: 'Profile', component: Profile, meta: { requiresAuth: true }, // 如果需要鉴权
-          },
+          { path: 'profile', name: 'Profile', component: Profile, meta: { requiresAuth: true } },
+          { path: 'jobs/:jobId/results', name: 'JobResults', component: JobResults, meta: { requiresAuth: true } },
         ],
     },
     {

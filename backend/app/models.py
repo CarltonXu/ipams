@@ -252,5 +252,23 @@ class ScanResult(db.Model):
     ip_address = db.Column(db.String(15), nullable=False)
     open_ports = db.Column(db.String(255))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    deleted_at = db.Column(db.DateTime, nullable=True)
     
     job = db.relationship('ScanJob', backref='results')
+
+    def __init__(self, job_id, ip_address, open_ports):
+        self.job_id = job_id
+        self.ip_address = ip_address
+        self.open_ports = open_ports
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "job_id": self.job_id,
+            "ip_address": self.ip_address,
+            "open_ports": self.open_ports,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+            "deleted_at": self.deleted_at.isoformat() if self.deleted_at else None
+        }

@@ -554,6 +554,18 @@ export default {
         selectSubnet: 'Select Subnet',
         execute: 'Execute Scan'
     },
+    results: {
+      title: 'Scan Results',
+      ipAddress: 'IP Address',
+      openPorts: 'Open Ports',
+      createdAt: 'Created At',
+      updatedAt: 'Updated At',
+      searchPlaceholder: 'Search IP Address',
+      hostCount: 'Host Count: {count}',
+      resourceId: 'Resource ID',
+      jobId: 'Job ID',
+      noData: 'No data'
+    }
   },
   settings: {
     title: 'System Settings',

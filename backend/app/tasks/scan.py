@@ -19,6 +19,7 @@ def execute_scan_task(self, job_id: str, policy_id: str, subnet_id: str):
             subnet = ScanSubnet.query.get(subnet_id)
             if not subnet:
                 job.status = 'failed'
+                policy.status = 'failed'
                 job.error_message = '网段不存在'
                 db.session.commit()
                 return
@@ -26,11 +27,13 @@ def execute_scan_task(self, job_id: str, policy_id: str, subnet_id: str):
             policy = ScanPolicy.query.get(policy_id)
             if not policy:
                 job.status = 'failed'
+                policy.status = 'failed'
                 job.error_message = '策略不存在'
                 db.session.commit()
                 return
                 
             job.status = 'running'
+            policy.status = 'running'
             job.start_time = datetime.utcnow()
             db.session.commit()
             
@@ -47,6 +50,7 @@ def execute_scan_task(self, job_id: str, policy_id: str, subnet_id: str):
             success = executor.execute()
             
             job.status = 'completed' if success else 'failed'
+            policy.status = 'completed' if success else 'failed'
             job.end_time = datetime.utcnow()
             if not success:
                 job.error_message = '扫描执行失败'
@@ -57,6 +61,7 @@ def execute_scan_task(self, job_id: str, policy_id: str, subnet_id: str):
     except Exception as e:
         if job:
             job.status = 'failed'
+            policy.status = 'failed'
             job.error_message = str(e)
             job.end_time = datetime.utcnow()
             db.session.commit()

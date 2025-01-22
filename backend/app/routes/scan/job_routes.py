@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from backend.app.models import db, ScanJob, ScanPolicy, ScanSubnet
+from backend.app.models import db, ScanJob, ScanSubnet, ScanResult
 from backend.app.utils.auth import token_required
 from datetime import datetime
 
@@ -82,3 +82,18 @@ def cancel_job(current_user, job_id):
     # This depends on your task queue implementation
     
     return jsonify({'message': 'Job cancelled successfully'})
+
+@job_bp.route('/jobs/<job_id>/results', methods=['GET'])
+@token_required
+def get_job_results(current_user, job_id):
+    """Get scan results for a specific job"""
+    job = ScanJob.query.filter_by(
+        id=job_id,
+        user_id=current_user.id
+    ).first()
+    
+    if not job:
+        return jsonify({'error': 'Job not found'}), 404
+        
+    results = ScanResult.query.filter_by(job_id=job_id).all()
+    return jsonify([result.to_dict() for result in results])

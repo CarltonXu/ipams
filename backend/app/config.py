@@ -11,7 +11,8 @@ class Config:
     # Scanner configuration
     NETWORK_RANGE = os.getenv('NETWORK_RANGE', '192.168.0.0/20')
     SCAN_INTERVAL = int(os.getenv('SCAN_INTERVAL', 3600))  # Default: 1 hour
-    
+    SCAN_PORTS = os.getenv('SCAN_PORTS', '1-65535')
+
     # Security
     SECRET_KEY = os.getenv('SECRET_KEY', 'your-secret-key-here')
     
@@ -20,6 +21,7 @@ class Config:
     REDIS_PORT = int(os.getenv('REDIS_PORT', 6379))
     REDIS_PASSWORD = os.getenv('REDIS_PASSWORD', '')
     REDIS_CAPTCHA_EXPIRE = int(os.getenv('REDIS_CAPTCHA_EXPIRE', 300))  # 5 minutes
+
     
     # 文件上传配置
     UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'uploads')

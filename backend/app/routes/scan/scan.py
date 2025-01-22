@@ -83,7 +83,7 @@ def execute_scan(current_user):
                     policy_id=policy.id,
                     subnet_id=job.subnet_id
                 )
-                
+
             return jsonify({
                 'message': '扫描任务创建成功',
                 'job_ids': [job.id for job in jobs]
@@ -95,20 +95,3 @@ def execute_scan(current_user):
             
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-
-# 查询扫描任务进度
-@scan_executor_bp.route('/jobs/<job_id>', methods=['GET'])
-@token_required
-def get_job_progress(job_id):
-    job = ScanJob.query.get(job_id)
-    if not job:
-        return jsonify({'error': 'Job not found'}), 404
-
-    return jsonify({
-        'id': job.id,
-        'status': job.status,
-        'progress': job.progress,
-        'start_time': job.start_time,
-        'end_time': job.end_time,
-        'machines_found': job.machines_found
-    })
