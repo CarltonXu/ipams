@@ -19,7 +19,7 @@
       <el-table
         :data="paginatedResults"
         v-if="paginatedResults.length"
-        style="width: 100%"
+        style="width: 100%;height: 672px"
         stripe
         border
       >

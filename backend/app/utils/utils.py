@@ -7,7 +7,7 @@ import random
 import string
 import io
 import base64
-import time
+import psutil
 
 def is_valid_email(email):
     email_regex = r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$'
@@ -101,3 +101,14 @@ def allowed_file(filename, allowed_extensions):
     """检查文件类型是否允许"""
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in allowed_extensions
+
+def get_system_metrics():
+    cpu_usage = psutil.cpu_percent(interval=1)
+    memory_info = psutil.virtual_memory()
+    disk_info = psutil.disk_usage('/')
+
+    return {
+        'cpu_usage': cpu_usage,
+        'memory_usage': memory_info.percent,
+        'disk_usage': disk_info.percent
+    }

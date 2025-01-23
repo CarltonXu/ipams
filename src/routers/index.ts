@@ -9,6 +9,7 @@ import Login from '../views/Login.vue';
 import Register from '../views/Register.vue';
 import ScanPolicyList from '../components/ScanPolicyList.vue';
 import JobResults from '../components/JobResults.vue';
+import Dashboard from '../components/Dashboard.vue';
 
 const routes = [
     {
@@ -21,6 +22,7 @@ const routes = [
           { path: 'settings', name: 'Settings', component: Settings, meta: { requiresAuth: true } },
           { path: 'profile', name: 'Profile', component: Profile, meta: { requiresAuth: true } },
           { path: 'jobs/:jobId/results', name: 'JobResults', component: JobResults, meta: { requiresAuth: true } },
+          { path: 'dashboard', name: 'Dashboard', component: Dashboard, meta: { requiresAuth: true } },
         ],
     },
     {

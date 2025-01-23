@@ -1,4 +1,48 @@
 export default {
+  dashboard: {
+    title: 'Dashboard',
+    stats: {
+      total_ips: '总IP地址',
+      claimed_ips: '已认领IP地址',
+      unclaimed_ips: '未认领IP地址',
+      user_claimed_ips: '用户已认领IP地址',
+      total_policies: '总策略',
+      running_jobs: '运行中的任务',
+      failed_jobs: '失败的任务',
+      successful_jobs: '成功的任务',
+      cpu_usage: 'CPU使用率',
+      memory_usage: '内存使用率',
+      disk_usage: '磁盘使用率',
+    },
+    resources: {
+      audit: '审计资源',
+      columns: {
+        id: 'ID',
+        action: '操作',
+        details: '详情',
+        created_at: '创建时间',
+        source_ip: '源IP'
+      }
+    },
+    recentJobs: {
+      title: '最近扫描任务',
+      columns: {
+        id: 'ID',
+        status: '状态',
+        result: '结果',
+        created_at: '创建时间',
+        machines_found: '扫描主机数量'
+      }
+    },
+    refresh: {
+      off: '关闭自动刷新',
+      '1s': '每 1 秒',
+      '5s': '每 5 秒',
+      '10s': '每 10 秒',
+      '30s': '每 30 秒',
+      '60s': '每分钟'
+    }
+  },
   common: {
     success: '操作成功',
     error: '操作失败',
@@ -17,6 +61,8 @@ export default {
     yes: '是',
     no: '否',
     actions: '操作',
+    refresh: '刷新',
+    autoRefresh: '自动刷新',
   },
   menu: {
     home: '首页',
@@ -398,6 +444,7 @@ export default {
             running: '运行中',
             completed: '已完成',
             failed: '失败',
+            pending: '等待执行'
           },
           actions: {
             title: '操作',

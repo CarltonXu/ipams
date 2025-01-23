@@ -1,5 +1,12 @@
 <template>
   <div class="header-right">
+    <el-button
+      circle
+      @click="goHome"
+      class="home-button"
+    >
+      <el-icon><HomeFilled /></el-icon>
+    </el-button>
     <!-- 主题切换按钮 -->
     <el-button
       circle
@@ -35,11 +42,13 @@ import { ref, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import UserMenu from './UserMenu.vue';
 import { useSettingsStore } from '../stores/settings';
-import { Moon, Sunny, ArrowDown } from '@element-plus/icons-vue';
+import { Moon, Sunny, ArrowDown, HomeFilled } from '@element-plus/icons-vue';
 import { ElMessage } from 'element-plus';
+import { useRouter } from 'vue-router';
 
 const { t, locale } = useI18n();
 const settingsStore = useSettingsStore();
+const router = useRouter();
 
 // 主题状态
 const isDarkTheme = ref(settingsStore.theme === 'dark');
@@ -48,6 +57,11 @@ const isDarkTheme = ref(settingsStore.theme === 'dark');
 const currentLanguageLabel = computed(() => {
   return settingsStore.language === 'zh' ? '中文' : 'English';
 });
+
+// 返回首页
+const goHome = () => {
+  router.push('/dashboard');
+};
 
 // 切换语言
 const handleLanguageChange = (lang: string) => {
@@ -72,7 +86,7 @@ const toggleTheme = () => {
   gap: 1rem;
 }
 
-.theme-toggle {
+.theme-toggle, .home-button {
   font-size: 18px;
 }
 

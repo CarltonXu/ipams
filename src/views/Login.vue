@@ -160,7 +160,7 @@ const handleSubmit = async () => {
       captchaKey: captchaKey.value
     });
     ElMessage.success(t('auth.loginSuccess'));
-    router.push('/ips');
+    router.push('/dashboard');
   } catch (error: any) {
     ElMessage.error(error.message || t('auth.loginError'));
     // 登录失败刷新验证码

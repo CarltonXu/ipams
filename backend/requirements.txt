@@ -5,6 +5,7 @@ python-dotenv==1.0.1
 cryptography==43.0.3
 pymysql==1.1.0
 Pillow==11.0.0
+psutil==6.1.1
 redis==5.2.1
 PyJWT==2.9.0
 SQLAlchemy==2.0.27

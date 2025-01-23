@@ -41,7 +41,7 @@ onMounted(() => {
 
   // 如果用户已登录，跳转到主页；如果没有登录，跳转到登录页面
   if (authStore.isAuthenticated) {
-    router.push('/');
+    router.push('/dashboard');
   } else {
     router.push('/login');
   }

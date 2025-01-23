@@ -11,7 +11,7 @@ class Config:
     # Scanner configuration
     NETWORK_RANGE = os.getenv('NETWORK_RANGE', '192.168.0.0/20')
     SCAN_INTERVAL = int(os.getenv('SCAN_INTERVAL', 3600))  # Default: 1 hour
-    SCAN_PORTS = os.getenv('SCAN_PORTS', '1-65535')
+    SCAN_PORTS = os.getenv('SCAN_PORTS', '22,3389,443,80')
 
     # Security
     SECRET_KEY = os.getenv('SECRET_KEY', 'your-secret-key-here')

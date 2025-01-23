@@ -9,6 +9,7 @@ from .routes.scan import scan_bp
 from .routes.user.user import user_bp
 from .routes.auth.auth import auth_bp
 from .routes.ip.ips import ips_bp
+from .routes.dashboard.dashboard import dashboard_bp
 from .celery.celery_app import init_celery
 
 # 创建 db 实例
@@ -59,6 +60,7 @@ def create_app():
     CORS(app)
     
     # Register blueprints
+    app.register_blueprint(dashboard_bp, url_prefix="/api")
     app.register_blueprint(user_bp, url_prefix="/api")
     app.register_blueprint(auth_bp, url_prefix="/api")
     app.register_blueprint(scan_bp, url_prefix="/api")

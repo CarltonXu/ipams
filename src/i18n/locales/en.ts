@@ -1,6 +1,48 @@
-import { errorMessages } from "vue/compiler-sfc";
-
 export default {
+  dashboard: {
+    title: 'Dashboard',
+    stats: {
+      total_ips: 'Total IPs',
+      claimed_ips: 'Claimed IPs',
+      unclaimed_ips: 'Unclaimed IPs',
+      user_claimed_ips: 'User Claimed IPs',
+      total_policies: 'Total Policies',
+      running_jobs: 'Running Jobs',
+      failed_jobs: 'Failed Jobs',
+      successful_jobs: 'Successful Jobs',
+      cpu_usage: 'CPU Usage',
+      memory_usage: 'Memory Usage',
+      disk_usage: 'Disk Usage',
+    },
+    resources: {
+      audit: 'Audit Resources',
+      columns: {
+        id: 'ID',
+        action: 'Action',
+        details: 'Details',
+        created_at: 'Created At',
+        source_ip: 'Source IP'
+      }
+    },
+    recentJobs: {
+      title: 'Recent Scan Jobs',
+      columns: {
+        id: 'ID',
+        status: 'Status',
+        result: 'Result',
+        created_at: 'Created At',
+        machines_found: 'Machines Found',
+      }
+    },
+    refresh: {
+      off: 'Auto Refresh Off',
+      '1s': 'Every 1 second',
+      '5s': 'Every 5 seconds',
+      '10s': 'Every 10 seconds',
+      '30s': 'Every 30 seconds',
+      '60s': 'Every minute'
+    }
+  },
   common: {
     success: 'Operation Successful',
     error: 'Operation Failed',
@@ -19,6 +61,8 @@ export default {
     yes: 'Yes',
     no: 'No',
     actions: 'Actions',
+    refresh: 'Refresh',
+    autoRefresh: 'Auto Refresh',
   },
   menu: {
     home: 'Home',
@@ -482,7 +526,8 @@ export default {
                 active: 'Active',
                 running: 'Running',
                 completed: 'Completed',
-                failed: 'Failed'
+                failed: 'Failed',
+                pending: 'Pending'
             },
             actions: {
               title: 'Actions',
