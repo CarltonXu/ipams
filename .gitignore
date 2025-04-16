@@ -13,6 +13,9 @@ pids
 *.seed
 *.pid.lock
 
+# 忽略 uploads 文件夹
+uploads/
+
 # Redis
 dump.rdb
 

@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify
-from backend.app.utils.auth import token_required
-from backend.app.models import IP, ScanPolicy, ScanJob, ActionLog
-from backend.app.utils.utils import get_system_metrics
+from app.utils.auth import token_required
+from app.models import IP, ScanPolicy, ScanJob, ActionLog
+from app.utils.utils import get_system_metrics
 
 dashboard_bp = Blueprint('dashboard', __name__)
 

@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
-from backend.app.models import db, ScanSubnet
-from backend.app.utils.auth import token_required
-from backend.app.routes.scan.validators import validate_scan_request
+from app.models import db, ScanSubnet
+from app.utils.auth import token_required
+from app.routes.scan.validators import validate_scan_request
 
 subnet_bp = Blueprint('subnet', __name__)
 

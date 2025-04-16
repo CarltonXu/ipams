@@ -1,8 +1,8 @@
 from flask import Blueprint, jsonify, request
-from backend.app.models import db, User
-from backend.app.utils.auth import token_required, admin_required, generate_token
-from backend.app.utils import utils
-from backend.app.utils.redis_manager import RedisManager
+from app.models import db, User
+from app.utils.auth import generate_token
+from app.utils import utils
+from app.utils.redis_manager import RedisManager
 
 import re
 

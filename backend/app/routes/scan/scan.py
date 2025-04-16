@@ -1,10 +1,10 @@
 import json
 
 from flask import Blueprint, request, jsonify
-from backend.app.models import db, ScanSubnet, ScanPolicy, ScanJob
-from backend.app.utils.auth import token_required
+from app.models import db, ScanSubnet, ScanPolicy, ScanJob
+from app.utils.auth import token_required
 from datetime import datetime
-from backend.app.tasks.scan import execute_scan_task
+from app.tasks.scan import execute_scan_task
 
 scan_executor_bp = Blueprint('scan', __name__)
 

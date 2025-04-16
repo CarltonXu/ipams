@@ -13,16 +13,55 @@ class Config:
     SCAN_INTERVAL = int(os.getenv('SCAN_INTERVAL', 3600))  # Default: 1 hour
     SCAN_PORTS = os.getenv('SCAN_PORTS', '22,3389,443,80')
 
-    # Security
-    SECRET_KEY = os.getenv('SECRET_KEY', 'your-secret-key-here')
-    
+    # JWT配置
+    JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', 'your-secret-key-here')
+    JWT_ACCESS_TOKEN_EXPIRES = int(os.getenv('JWT_ACCESS_TOKEN_EXPIRES', 3600))  # 1 hour
+
     # Redis配置
     REDIS_HOST = os.getenv('REDIS_HOST', 'localhost')
     REDIS_PORT = int(os.getenv('REDIS_PORT', 6379))
     REDIS_PASSWORD = os.getenv('REDIS_PASSWORD', '')
     REDIS_CAPTCHA_EXPIRE = int(os.getenv('REDIS_CAPTCHA_EXPIRE', 300))  # 5 minutes
 
-    
     # 文件上传配置
     UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'uploads')
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 限制上传文件大小为16MB
+
+    # Celery配置
+    CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', 'redis://localhost:6379/0')
+    CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0')
+    CELERY_TASK_DEFAULT_QUEUE = 'default'
+    CELERY_TASK_DEFAULT_EXCHANGE = 'default'
+    CELERY_TASK_DEFAULT_ROUTING_KEY = 'default'
+
+class DevelopmentConfig(Config):
+    """开发环境配置"""
+    DEBUG = True
+    TESTING = False
+
+class TestingConfig(Config):
+    """测试环境配置"""
+    DEBUG = False
+    TESTING = True
+    SQLALCHEMY_DATABASE_URI = os.getenv('TEST_DATABASE_URL', 'mysql+pymysql://root:password@127.0.0.1/ipams_test')
+
+class ProductionConfig(Config):
+    """生产环境配置"""
+    DEBUG = False
+    TESTING = False
+
+    # 生产环境数据库配置
+    SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL')
+
+# 配置字典
+config = {
+    'development': DevelopmentConfig,
+    'testing': TestingConfig,
+    'production': ProductionConfig,
+    'default': DevelopmentConfig
+}
+
+# 获取当前配置
+def get_config():
+    env = os.getenv('FLASK_ENV', 'default')
+    return config.get(env, config['default'])

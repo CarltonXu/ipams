@@ -4,11 +4,12 @@ import time
 from datetime import datetime
 from celery.utils.log import get_task_logger
 from ..models import db, ScanJob, ScanResult, IP
+from flask import current_app
 
 logger = get_task_logger(__name__)
 
 class ScanExecutor:
-    def __init__(self, job_id: str, subnet: str, threads: int = 10, app=None):
+    def __init__(self, job_id: str, subnet: str, threads: int = 10):
         self.job_id = job_id
         self.subnet = subnet
         self.threads = threads
@@ -17,7 +18,6 @@ class ScanExecutor:
         self.nm = nmap.PortScanner()
         self.scanning = False
         self.current_phase = "discovery"
-        self.app = app
         logger.info(f"Initializing scan executor for job {job_id} on subnet {subnet}")
         
     def monitor_progress(self):
@@ -50,20 +50,15 @@ class ScanExecutor:
     def _update_progress(self, progress: int):
         """更新扫描进度"""
         try:
-            if not self.app:
-                logger.error(f"Job {self.job_id}: No Flask app context available")
-                return
-                
-            with self.app.app_context():
-                with self.lock:
-                    job = ScanJob.query.get(self.job_id)
-                    if job:
-                        job.progress = min(progress, 100)
-                        job.machines_found = self.machines_found
-                        db.session.commit()
-                        logger.info(f"Job {self.job_id}: Updated progress to {progress}%")
-                    else:
-                        logger.error(f"Job {self.job_id}: Job not found in database")
+            with self.lock:
+                job = ScanJob.query.get(self.job_id)
+                if job:
+                    job.progress = min(progress, 100)
+                    job.machines_found = self.machines_found
+                    db.session.commit()
+                    logger.info(f"Job {self.job_id}: Updated progress to {progress}%")
+                else:
+                    logger.error(f"Job {self.job_id}: Job not found in database")
         except Exception as e:
             logger.error(f"Job {self.job_id}: Error updating progress: {str(e)}")
             
@@ -94,8 +89,9 @@ class ScanExecutor:
             logger.info(f"Job {self.job_id}: Found {self.total_hosts} active hosts")
             self.current_phase = "port_scan"
 
-            scan_ports = self.app.config.get("SCAN_PORTS")
-            print(scan_ports)
+            # 获取扫描端口配置
+            scan_ports = current_app.config.get("SCAN_PORTS", "80,443,22,21,23,25,53,110,143,3306,3389,5432,6379,8080,8443")
+            logger.info(f"Job {self.job_id}: Using scan ports: {scan_ports}")
 
             # 端口扫描
             for i, host in enumerate(active_hosts, 1):
@@ -138,7 +134,7 @@ class ScanExecutor:
                 
     def _save_result(self, ip: str, open_ports: list):
         try:
-            with self.app.app_context():
+            with self.lock:
                 # 先检查 job 是否存在
                 job = ScanJob.query.get(self.job_id)
                 if not job:
