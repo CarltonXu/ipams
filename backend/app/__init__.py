@@ -1,8 +1,10 @@
+import atexit
+
 from flask import Flask, send_from_directory
 from flask_cors import CORS
-from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from redis import Redis
+
 from .config import Config
 from .models import db
 from .routes.scan import scan_bp
@@ -10,12 +12,10 @@ from .routes.user.user import user_bp
 from .routes.auth.auth import auth_bp
 from .routes.ip.ips import ips_bp
 from .routes.dashboard.dashboard import dashboard_bp
-from .celery.celery_app import init_celery
+from .tasks.task_manager import task_manager
 
 # 创建 db 实例
 migrate = Migrate()
-
-celery = None
 
 def create_redis_client(app):
     """创建Redis客户端连接"""
@@ -37,9 +37,12 @@ def create_redis_client(app):
         app.logger.error(f"Redis connection failed: {str(e)}")
         raise
 
-def create_app():
+def create_app(config=None):
     app = Flask(__name__)
-    app.config.from_object(Config)
+    if config:
+        app.config.from_object(config)
+    else:
+        app.config.from_object(Config)
 
     # 初始化数据库
     db.init_app(app)
@@ -74,9 +77,9 @@ def create_app():
     with app.app_context():
         db.create_all()
     
-    # 初始化 Celery
-    global celery
-    celery = init_celery(app)
-    app.extensions['celery'] = celery  # 将 celery 实例添加到 app.extensions
-    
+    # 确保任务管理器已初始化 
+    task_manager
+
+    # 在应用退出时关闭任务管理器
+    atexit.register(task_manager.shutdown)
     return app

@@ -5,6 +5,7 @@ IPAMS 是一个基于 Web 的 IP 地址管理系统，旨在解决手动配置 I
 ## 功能特性
 
 ### 核心功能
+
 - **网络扫描**：定期扫描网络，发现新设备和未使用的 IP 地址
 - **IP 地址标注**：用户可以标注 IP 地址的用途及设备信息
 - **所有者管理**：允许用户认领 IP 地址并关联设备用途
@@ -12,6 +13,7 @@ IPAMS 是一个基于 Web 的 IP 地址管理系统，旨在解决手动配置 I
 - **多语言支持**：内置中英文界面，方便不同语言用户使用
 
 ### 技术架构
+
 - **前端**：Vue 3 + TypeScript + Vite + Element Plus
 - **后端**：Python 3 + Flask + SQLAlchemy
 - **数据库**：MySQL
@@ -62,11 +64,14 @@ IPAMS/
 ```
 
 ## 环境要求
+
 - 前端
+
   - Node.js 16+
   - npm 或 yarn
 
 - 后端
+
   - Python 3.8+
   - Flask 2.0+
   - MySQL 8.0+
@@ -173,6 +178,7 @@ python start_celery.py
 
 1. 打开浏览器访问 http://localhost:5173（开发模式）
 2. 登录系统：
+
    - 使用管理员账户登录（通过 create_user.py 创建）
    - 普通用户可通过管理员在系统中创建
 
@@ -181,16 +187,18 @@ python start_celery.py
 ---
 
 ## 开发计划
+
 - [x] IP 地址扫描功能
 - [x] IP 地址认领和标注
 - [x] 用户权限管理
 - [x] 多语言支持
-- [ ] 高级搜索和过滤功能
+- [x] 高级搜索和过滤功能
 - [ ] 支持导入/导出 IP 地址数据
 - [ ] 网络流量监控和可视化
 - [ ] API 文档自动生成
 
 ## 贡献指南
+
 欢迎对 IPAMS 项目提出意见或参与开发：
 
 1. Fork 本项目
@@ -200,6 +208,7 @@ python start_celery.py
 5. 提交 Pull Request
 
 提交 Pull Request 前，请确保：
+
 - 代码通过 Lint 检查
 - 包含充分的单元测试
 - 更新相关文档
@@ -207,6 +216,7 @@ python start_celery.py
 ---
 
 ## 联系我们
+
 如果在使用中遇到问题，欢迎通过以下方式联系我们：
 
 - 提交 Issue：GitHub Issues
@@ -215,4 +225,5 @@ python start_celery.py
 ---
 
 ## 开源协议
+
 IPAMS 遵循 Apache License 2 开源协议。

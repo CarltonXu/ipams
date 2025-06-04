@@ -103,7 +103,7 @@
     <el-dialog
       v-model="scanDialogVisible"
       :title="t('scan.policy.execute.title')"
-      width="500px"
+      width="600px"
     >
       <div class="scan-dialog-content">
         <p class="policy-info">
@@ -122,6 +122,12 @@
             </el-checkbox-group>
           </el-form-item>
         </el-form>
+
+        <!-- 添加任务进度显示 -->
+        <JobProgress 
+          v-if="createdJobIds.length > 0"
+          :job-ids="createdJobIds"
+        />
       </div>
       <template #footer>
         <el-button @click="scanDialogVisible = false">
@@ -151,6 +157,7 @@ import { useI18n } from 'vue-i18n'
 import dayjs from 'dayjs'
 import ScanPolicyForm from './ScanPolicyForm.vue'
 import PolicyJobsDrawer from './PolicyJobsDrawer.vue'
+import JobProgress from './JobProgress.vue'
 import { useScanPolicyStore } from '../stores/scanPolicy'
 
 const { t } = useI18n()
@@ -166,6 +173,8 @@ const executingScan = ref(false)
 
 const jobsDrawerVisible = ref(false)
 const selectedPolicyId = ref('')
+
+const createdJobIds = ref<string[]>([])
 
 // 格式化日期时间
 const formatDateTime = (dateStr: string) => {
@@ -190,6 +199,7 @@ const getPolicies = async () => {
 const showExecuteScanDialog = (policy: Policy) => {
   currentPolicy.value = policy
   selectedSubnets.value = policy.subnets.map(subnet => subnet.id)
+  createdJobIds.value = [] // 重置任务ID
   scanDialogVisible.value = true
 }
 
@@ -216,23 +226,35 @@ const showPolicyJobs = (policy: Policy) => {
 
 // 执行扫描
 const executeScan = async () => {
-  if (!selectedSubnets.value.length) {
-    ElMessage.warning(t('scan.policy.execute.noSubnets'))
+  if (!currentPolicy.value || selectedSubnets.value.length === 0) {
+    ElMessage.warning(t('scan.policy.execute.messages.selectSubnets'))
     return
   }
 
   try {
     executingScan.value = true
     const policyStore = useScanPolicyStore()
-    await policyStore.executeScan({
-      policy_id: currentPolicy.value!.id,
+    const response = await policyStore.executeScan({
+      policy_id: currentPolicy.value.id,
       subnet_ids: selectedSubnets.value
     })
     
-    ElMessage.success(t('scan.policy.execute.success'))
-    scanDialogVisible.value = false
+    // 保存创建的任务ID
+    createdJobIds.value = response.jobs.map((job: any) => job.id)
+    
+    ElMessage.success(t('scan.policy.execute.messages.success'))
+    
+    // 不再自动关闭对话框，让用户可以看到进度
+    // scanDialogVisible.value = false
+    
+    // 刷新策略列表
+    await getPolicies()
+    
+    // 显示任务抽屉
+    selectedPolicyId.value = currentPolicy.value.id
+    jobsDrawerVisible.value = true
   } catch (error: any) {
-    ElMessage.error(error.message || t('scan.policy.execute.error'))
+    ElMessage.error(error.message || t('scan.policy.execute.messages.failed'))
   } finally {
     executingScan.value = false
   }

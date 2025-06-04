@@ -27,13 +27,6 @@ class Config:
     UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'uploads')
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 限制上传文件大小为16MB
 
-    # Celery配置
-    CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', 'redis://localhost:6379/0')
-    CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0')
-    CELERY_TASK_DEFAULT_QUEUE = 'default'
-    CELERY_TASK_DEFAULT_EXCHANGE = 'default'
-    CELERY_TASK_DEFAULT_ROUTING_KEY = 'default'
-
 class DevelopmentConfig(Config):
     """开发环境配置"""
     DEBUG = True

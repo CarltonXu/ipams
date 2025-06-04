@@ -3,88 +3,124 @@ import axios from 'axios';
 import { ref } from 'vue';
 import type { Policy, Subnet } from '../types/policy';
 
-export const useScanPolicyStore = defineStore('scanPolicy', () => {
-  const policies = ref<Policy[]>([]);
-  const subnets = ref<Subnet[]>([]);
-  const loading = ref(false);
+export const useScanPolicyStore = defineStore('scanPolicy', {
+  state: () => ({
+    policies: ref<Policy[]>([]),
+    subnets: ref<Subnet[]>([]),
+    loading: ref(false),
+    error: ref<string | null>(null)
+  }),
 
-  // 获取所有策略
-  const fetchPolicies = async () => {
-    try {
-      loading.value = true;
-      const response = await axios.get('/api/scan/policies');
-      policies.value = response.data.policies;
-      return response.data;
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || '获取扫描策略失败');
-    } finally {
-      loading.value = false;
-    }
-  };
+  actions: {
+    async fetchPolicies() {
+      try {
+        this.loading = true;
+        const response = await axios.get('/api/scan/policies');
+        this.policies = response.data.policies;
+        return response.data;
+      } catch (error: any) {
+        this.error = error.response?.data?.message || '获取扫描策略失败';
+        throw error;
+      } finally {
+        this.loading = false;
+      }
+    },
 
-  const deletePolicyById = async (policyId: string) => {
-    loading.value = true;
-    try {
-      const response = await axios.delete(`/api/scan/policies/${policyId}`);
-      return response.data;
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || '删除扫描策略失败');
-    } finally {
-      loading.value = false;
-    }
-  };
+    async deletePolicyById(policyId: string) {
+      this.loading = true;
+      try {
+        const response = await axios.delete(`/api/scan/policies/${policyId}`);
+        return response.data;
+      } catch (error: any) {
+        this.error = error.response?.data?.message || '删除扫描策略失败';
+        throw error;
+      } finally {
+        this.loading = false;
+      }
+    },
 
-  // 保存策略配置
-  const savePolicyConfig = async (data: {
-    subnets: Subnet[];
-    policies: Policy[];
-  }) => {
-    loading.value = true;
-    try {
-      const response = await axios.post('/api/scan/policies', data);
-      return response.data;
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || '保存扫描策略失败');
-    } finally {
-      loading.value = false;
-    }
-  };
+    async savePolicyConfig(data: {
+      subnets: Subnet[];
+      policies: Policy[];
+    }) {
+      this.loading = true;
+      try {
+        const response = await axios.post('/api/scan/policies', data);
+        return response.data;
+      } catch (error: any) {
+        this.error = error.response?.data?.message || '保存扫描策略失败';
+        throw error;
+      } finally {
+        this.loading = false;
+      }
+    },
 
-  const executeScan = async (params: { policy_id: string, subnet_ids: string[] }) => {
-    try {
-      await axios.post('/api/scan/execute', params)
-    } catch (error: any) {
-      throw new Error(error.response?.data?.error || '执行扫描失败')
+    async executeScan(params: { policy_id: string; subnet_ids: string[] }) {
+      try {
+        const response = await axios.post('/api/scan/jobs', params);
+        return response.data;
+      } catch (error: any) {
+        this.error = error.response?.data?.error || '执行扫描失败';
+        throw error;
+      }
+    },
+
+    async getJobStatus(jobId: string) {
+      try {
+        const response = await axios.get(`/api/scan/jobs/${jobId}`);
+        return response.data;
+      } catch (error: any) {
+        if (error.response?.data?.message) {
+          throw new Error(error.response.data.message);
+        }
+        throw new Error('Failed to get job status');
+      }
+    },
+
+    async getJobProgress(jobId: string) {
+      try {
+        const response = await axios.get(`/api/scan/jobs/${jobId}/progress`);
+        return response.data;
+      } catch (error: any) {
+        if (error.response?.data?.message) {
+          throw new Error(error.response.data.message);
+        }
+        throw new Error('Failed to get job progress');
+      }
+    },
+
+    async cancelJob(jobId: string) {
+      try {
+        const response = await axios.post(`/api/scan/jobs/${jobId}/cancel`);
+        return response.data;
+      } catch (error: any) {
+        if (error.response?.data?.message) {
+          throw new Error(error.response.data.message);
+        }
+        throw new Error('Failed to cancel job');
+      }
+    },
+
+    async getJobResults(jobId: string) {
+      try {
+        const response = await axios.get(`/api/scan/jobs/${jobId}/results`);
+        return response.data;
+      } catch (error: any) {
+        if (error.response?.data?.message) {
+          throw new Error(error.response.data.message);
+        }
+        throw new Error('Failed to get job results');
+      }
+    },
+
+    async fetchPolicyJobs(policyId: string) {
+      try {
+        const response = await axios.get(`/api/scan/policies/${policyId}/jobs`);
+        return response.data;
+      } catch (error: any) {
+        this.error = error.response?.data?.error || '获取策略任务失败';
+        throw error;
+      }
     }
   }
-
-  const fetchPolicyJobs = async (policyId: string) => {
-    try {
-      const response = await axios.get(`/api/scan/policies/${policyId}/jobs`)
-      return response.data
-    } catch (error) {
-      throw error
-    }
-  }
-
-  const fetchJobResults = async (jobId: string) => {
-    try {
-      const response = await axios.get(`/api/scan/jobs/${jobId}/results`)
-      return response.data
-    } catch (error) {
-      throw error
-    }
-  }
-
-  return {
-    policies,
-    subnets,
-    loading,
-    fetchPolicies,
-    savePolicyConfig,
-    executeScan,
-    deletePolicyById,
-    fetchPolicyJobs,
-    fetchJobResults
-  };
 }); 

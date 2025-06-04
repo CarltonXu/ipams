@@ -208,6 +208,7 @@ class ScanJob(db.Model):
     start_time = db.Column(db.DateTime, nullable=True)
     end_time = db.Column(db.DateTime, nullable=True)
     error_message = db.Column(db.String(255), nullable=True)
+    deleted = db.Column(db.Boolean, default=False, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     deleted_at = db.Column(db.DateTime, nullable=True)
@@ -226,6 +227,7 @@ class ScanJob(db.Model):
         self.end_time = end_time
         self.machines_found = machines_found
         self.error_message = error_message
+        self.deleted = False
 
     def to_dict(self):
         return {
@@ -239,6 +241,7 @@ class ScanJob(db.Model):
             "end_time": self.end_time.isoformat() if self.end_time else None,
             "machines_found": self.machines_found,
             "error_message": self.error_message,
+            "deleted": self.deleted,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
             "deleted_at": self.deleted_at.isoformat() if self.deleted_at else None,

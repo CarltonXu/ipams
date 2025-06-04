@@ -19,9 +19,10 @@
       <el-table
         :data="paginatedResults"
         v-if="paginatedResults.length"
-        style="width: 100%;height: 672px"
+        style="width: 100%"
         stripe
         border
+        :max-height="tableHeight"
       >
         <el-table-column prop="id" :label="t('scan.results.resourceId')" width="360"></el-table-column>
         <el-table-column prop="ip_address" :label="t('scan.results.ipAddress')" width="180"></el-table-column>
@@ -65,7 +66,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useScanPolicyStore } from '../stores/scanPolicy'
 import { useI18n } from 'vue-i18n'
@@ -78,19 +79,45 @@ const results = ref([])
 const searchQuery = ref('')
 const scanPolicyStore = useScanPolicyStore()
 const loading = ref(false)
+const updateInterval = ref<number>()
 
 const pagination = ref({
   currentPage: 1,
   pageSize: 10
 })
 
+// 计算表格高度
+const tableHeight = computed(() => {
+  return window.innerHeight - 300 // 减去其他元素的高度
+})
+
+// 更新结果
+const updateResults = async () => {
+  try {
+    const jobId = route.params.jobId as string
+    const newResults = await scanPolicyStore.fetchJobResults(jobId)
+    if (JSON.stringify(newResults) !== JSON.stringify(results.value)) {
+      results.value = newResults
+    }
+  } catch (error) {
+    console.error('Failed to update results:', error)
+  }
+}
+
 onMounted(async () => {
   loading.value = true
   try {
-    const jobId = route.params.jobId as string
-    results.value = await scanPolicyStore.fetchJobResults(jobId)
+    await updateResults()
+    // 每5秒更新一次结果
+    updateInterval.value = window.setInterval(updateResults, 5000)
   } finally {
     loading.value = false
+  }
+})
+
+onUnmounted(() => {
+  if (updateInterval.value) {
+    clearInterval(updateInterval.value)
   }
 })
 
@@ -126,6 +153,9 @@ const formatDateTime = (dateStr: string) => {
 <style scoped>
 .job-results {
   padding: 20px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .header-controls {
@@ -141,18 +171,13 @@ const formatDateTime = (dateStr: string) => {
 }
 
 .search-input {
-  width: 300px; /* 缩短搜索框的宽度 */
+  width: 300px;
 }
 
 .table-container {
-  overflow-y: auto; /* 允许垂直滚动 */
-}
-
-.el-table th {
-  position: sticky;
-  top: 0;
-  background-color: #fff;
-  z-index: 1;
+  flex: 1;
+  overflow: hidden;
+  position: relative;
 }
 
 .el-table {
@@ -166,5 +191,11 @@ const formatDateTime = (dateStr: string) => {
 .pagination {
   margin-top: 20px;
   text-align: right;
+}
+
+.no-data {
+  text-align: center;
+  padding: 40px;
+  color: var(--el-text-color-secondary);
 }
 </style> 
