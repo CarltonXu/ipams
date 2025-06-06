@@ -382,8 +382,18 @@ export default {
       subtitle: '管理您的扫描策略及其配置',
       name: '策略名称',
       namePlaceholder: '请输入策略名称',
+      subnetsPlaceholder: '请选择要扫描的网段',
+      description: '策略描述',
+      descriptionPlaceholder: '请输入策略描述',
+      threads: '线程数',
+      threadsPlaceholder: '请输入线程数',
+      schedules: '扫描计划',
+      addSchedule: '添加扫描计划',
+      removeSchedule: '移除扫描计划',
       type: '策略类型',
       typeRequired: '请选择策略类型',
+      subnets: '网段',
+      startTimePlaceholder: '请输入计划开始时间',
       types: {
         everyMinute: '每分钟',
         everyHour: '每小时',
@@ -440,6 +450,7 @@ export default {
           strategy: '策略执行Cron',
           startTime: '开始时间',
           createdAt: '创建时间',
+          threads: '扫描线程数',
           subnets: '扫描网段',
           status: {
             title: '状态',
@@ -476,7 +487,7 @@ export default {
           updateFailed: '更新策略失败'
         }
       },
-      description: {
+      policyDescription: {
         everyMinute: '每隔 {minutes} 分钟，从 {time} 开始执行',
         everyHour: '每隔 {hours} 小时，从 {time} 开始执行',
         everyDay: '每隔 {days} 天，从 {time} 开始执行',
@@ -517,6 +528,28 @@ export default {
           '30s': '每 30 秒',
           '60s': '每分钟'
         }
+      },
+      cron: {
+        "everyMinute": "每分钟执行一次, ",
+        "everyXMinutes": "每隔 {interval} 分钟执行一次, ",
+        "atMinutes": "在 {minutes} 执行, ",
+        "betweenMinutes": "从 {start} 分到 {end} 分每分钟执行一次, ",
+        "everyHour": "每小时执行一次, ",
+        "everyXHours": "每隔 {interval} 小时执行一次, ",
+        "atHours": "在 {hours} 执行, ",
+        "betweenHours": "从 {start} 点到 {end} 点每小时执行一次, ",
+        "everyDay": "每天执行一次, ",
+        "everyXDays": "每隔 {interval} 天执行一次, ",
+        "atDays": "在每月 {days} 执行, ",
+        "betweenDays": "从每月 {start} 日到 {end} 日每天执行一次, ",
+        "everyMonth": "每月执行一次, ",
+        "everyXMonths": "每隔 {interval} 个月执行一次, ",
+        "atMonths": "在 {months} 执行, ",
+        "betweenMonths": "从 {start} 月到 {end} 月每月执行一次, ",
+        "everyWeekday": "每周每天执行一次, ",
+        "everyXWeeks": "每隔 {interval} 周执行一次, ",
+        "atWeekdays": "在 {weekdays} 执行, ",
+        "betweenWeekdays": "从 {start} 到 {end} 每天执行一次, "
       }
     },
     execution: {

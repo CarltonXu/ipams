@@ -1,0 +1,76 @@
+{
+  "scan": {
+    "policy": {
+      "title": "Scan Policies",
+      "subtitle": "Manage your scan policies and schedules",
+      "schedules": "Schedule",
+      "cronExpression": "Cron Expression",
+      "show": {
+        "columns": {
+          "name": "Name",
+          "description": "Description",
+          "strategy": "Strategy",
+          "startTime": "Start Time",
+          "subnets": "Target Subnets",
+          "threads": "Threads",
+          "createdAt": "Created At",
+          "status": {
+            "title": "Status",
+            "active": "Active",
+            "running": "Running",
+            "completed": "Completed",
+            "failed": "Failed"
+          },
+          "actions": {
+            "title": "Actions",
+            "edit": "Edit",
+            "scan": "Scan",
+            "delete": "Delete"
+          }
+        },
+        "dialog": {
+          "addTitle": "Add Policy",
+          "editTitle": "Edit Policy",
+          "deleteTitle": "Delete Policy",
+          "deleteConfirm": "Are you sure to delete policy {name}?"
+        },
+        "messages": {
+          "fetchFailed": "Failed to fetch policies",
+          "deleteSuccess": "Policy deleted successfully",
+          "deleteFailed": "Failed to delete policy",
+          "editFailed": "Failed to edit policy"
+        }
+      },
+      "execute": {
+        "title": "Execute Scan",
+        "policyName": "Policy Name",
+        "selectSubnets": "Select Subnets",
+        "confirm": "Start Scan",
+        "success": "Scan started successfully",
+        "failed": "Failed to start scan"
+      },
+      "cron": {
+        "everyMinute": "Execute every minute",
+        "everyXMinutes": "Execute every {interval} minutes",
+        "atMinutes": "Execute at {minutes}",
+        "betweenMinutes": "Execute every minute from {start} to {end}",
+        "everyHour": "Execute every hour",
+        "everyXHours": "Execute every {interval} hours",
+        "atHours": "Execute at {hours}",
+        "betweenHours": "Execute every hour from {start} to {end}",
+        "everyDay": "Execute every day",
+        "everyXDays": "Execute every {interval} days",
+        "atDays": "Execute on {days}",
+        "betweenDays": "Execute every day from {start} to {end}",
+        "everyMonth": "Execute every month",
+        "everyXMonths": "Execute every {interval} months",
+        "atMonths": "Execute in {months}",
+        "betweenMonths": "Execute every month from {start} to {end}",
+        "everyWeekday": "Execute every weekday",
+        "everyXWeeks": "Execute every {interval} weeks",
+        "atWeekdays": "Execute on {weekdays}",
+        "betweenWeekdays": "Execute every day from {start} to {end}"
+      }
+    }
+  }
+} 

@@ -40,7 +40,7 @@ export const useScanPolicyStore = defineStore('scanPolicy', {
       }
     },
 
-    async savePolicyConfig(data: {
+    async createPolicy(data: {
       subnets: Subnet[];
       policies: Policy[];
     }) {

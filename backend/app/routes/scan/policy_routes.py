@@ -20,13 +20,17 @@ def get_policies(current_user):
         result = []
         for policy in policies:
             try:
-                subnet_ids = policy.subnet_ids if policy.subnet_ids else []
+                # 从 strategies 中获取所有 subnet_ids
+                strategies = json.loads(policy.strategies)
+                subnet_ids = set()
+                for strategy in strategies:
+                    subnet_ids.update(strategy.get('subnet_ids', []))
                 
+                # 获取所有相关的子网
                 subnets = []
                 if subnet_ids:
-                    subnet_id_list = json.loads(subnet_ids)
                     subnets = ScanSubnet.query.filter(
-                        ScanSubnet.id.in_(subnet_id_list),
+                        ScanSubnet.id.in_(subnet_ids),
                         ScanSubnet.deleted == False
                     ).all()
                 
@@ -34,8 +38,7 @@ def get_policies(current_user):
                     "id": policy.id,
                     "name": policy.name,
                     "description": policy.description,
-                    "strategies": policy.strategies,
-                    "start_time": policy.start_time,
+                    "strategies": strategies,
                     "threads": policy.threads,
                     "status": policy.status,
                     "created_at": policy.created_at.isoformat() if policy.created_at else None,
@@ -48,9 +51,6 @@ def get_policies(current_user):
                     ]
                 }
                 result.append(policy_data)
-            except json.JSONDecodeError:
-                print(f"Error decoding subnet_ids for policy {policy.id}: {policy.subnet_ids}")
-                continue
             except Exception as e:
                 print(f"Error processing policy {policy.id}: {str(e)}")
                 continue
@@ -105,41 +105,72 @@ def save_policy_config(current_user):
             db.session.flush()
             subnet_map[subnet_data['name']] = subnet.id
         
-        print("Subnet map:", subnet_map) 
+        print("Subnet map:", subnet_map)
         
+        saved_policies = []
         for policy_data in data.get('policies', []):
             policy_name = policy_data['name']
-            subnet_names = []
-            for subnet in data.get('subnets', []):
-                subnet_names.append(subnet['name'])
             
-            print(f"Processing policy {policy_name} with subnets: {subnet_names}")  # 调试日志
+            # 获取所有子网名称
+            subnet_names = [subnet['name'] for subnet in data.get('subnets', [])]
+            print(f"Processing policy {policy_name} with subnets: {subnet_names}")
             
+            # 生成子网ID列表
             subnet_id_list = [str(subnet_map[name]) for name in subnet_names if name in subnet_map]
+            
+            # 处理策略数据
+            strategies = []
+            for strategy in policy_data.get('strategies', []):
+                if strategy.get('cron') and strategy.get('start_time'):
+                    strategies.append({
+                        'cron': strategy['cron'],
+                        'start_time': strategy['start_time'],
+                        'subnet_ids': subnet_id_list
+                    })
+            
+            if not strategies:  # 如果没有有效的策略配置，跳过这个策略
+                print(f"No valid strategies for policy {policy_name}")
+                continue
             
             if policy_name in existing_policies:
                 policy = existing_policies[policy_name]
                 policy.description = policy_data['description']
-                policy.strategies = policy_data['cron']
-                policy.start_time = dateutil.parser.parse(policy_data['startTime'])
-                policy.subnet_ids = subnet_id_list
+                policy.strategies = json.dumps(strategies)
+                policy.threads = policy_data.get('threads', 5)
             else:
                 policy = ScanPolicy(
                     name=policy_name,
                     description=policy_data['description'],
-                    strategies=policy_data['cron'],
+                    threads=policy_data.get('threads', 5),
                     user_id=current_user.id,
-                    subnet_ids=subnet_id_list,
-                    start_time=dateutil.parser.parse(policy_data['startTime']),
+                    strategies=strategies
                 )
                 db.session.add(policy)
+            
+            saved_policies.append(policy)
         
         db.session.commit()
         
+        # 返回保存的策略信息
         return jsonify({
             'message': 'Configuration saved successfully',
-            'subnet_map': subnet_map,
-            'subnet_names': subnet_names
+            'policies': [{
+                'id': policy.id,
+                'name': policy.name,
+                'description': policy.description,
+                'strategies': json.loads(policy.strategies),
+                'threads': policy.threads,
+                'status': policy.status,
+                'created_at': policy.created_at.isoformat() if policy.created_at else None,
+                'subnets': [{
+                    'id': subnet.id,
+                    'name': subnet.name,
+                    'subnet': subnet.subnet
+                } for subnet in ScanSubnet.query.filter(
+                    ScanSubnet.id.in_(subnet_id_list),
+                    ScanSubnet.deleted == False
+                ).all()]
+            } for policy in saved_policies]
         })
         
     except ValueError as ve:

@@ -166,12 +166,10 @@ class ScanPolicy(db.Model):
     id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     name = db.Column(db.String(255), nullable=False)
     user_id = db.Column(db.String(36), db.ForeignKey('users.id'), nullable=False)
-    subnet_ids = db.Column(db.String(500), nullable=False)
-    strategies = db.Column(db.String(255) , nullable=False)  # 扫描策略
-    status = db.Column(db.Enum('active', 'running', 'completed', 'failed', name='scan_status'), default='active', nullable=False)
     description = db.Column(db.String(255), nullable=False)  # 扫描策略描述
-    start_time = db.Column(db.String(255), nullable=False)  # 扫描开始时间
     threads = db.Column(db.Integer, default=1, nullable=False)  # 并发线程数，默认1
+    strategies = db.Column(db.Text, nullable=False)  # 存储 JSON 数组，每个元素包含 cron、start_time 和 subnet_ids
+    status = db.Column(db.Enum('active', 'running', 'completed', 'failed', name='scan_status'), default='active', nullable=False)
     deleted = db.Column(db.Boolean, default=False, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
@@ -182,29 +180,25 @@ class ScanPolicy(db.Model):
     jobs = relationship('ScanJob', back_populates='policy', cascade='all, delete-orphan')
 
     def __repr__(self):
-        return f"<ScanPolicy {self.strategies} on Subnet {self.subnet_ids}>"
+        return f"<ScanPolicy {self.name}>"
 
-    def __init__(self, name, user_id, subnet_ids, strategies, description, start_time, threads=1):
+    def __init__(self, name, user_id, description, threads, strategies):
         self.id = str(uuid.uuid4())
         self.name = name
         self.user_id = user_id
-        self.subnet_ids = json.dumps(subnet_ids)
-        self.strategies = strategies
-        self.status = 'active'
         self.description = description
-        self.start_time = start_time
         self.threads = threads
+        self.strategies = json.dumps(strategies)  # 存储为 JSON 字符串
+        self.status = 'active'
     
     def to_dict(self):
         return {
             "id": self.id,
             "name": self.name,
             "user_id": self.user_id,
-            "subnet_ids": json.loads(self.subnet_ids),
-            "strategies": self.strategies,
             "description": self.description,
-            "start_time": self.start_time,
             "threads": self.threads,
+            "strategies": json.loads(self.strategies),  # 解析 JSON 字符串
             "status": self.status,
             "deleted": self.deleted,
             "created_at": self.created_at.isoformat() if self.created_at else None,

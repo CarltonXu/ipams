@@ -14,6 +14,7 @@
       <el-table 
         v-loading="loading"
         :data="policies" 
+        :empty-text="$t('scan.policy.noData')"
         style="width: 100%" 
         border
       >
@@ -28,10 +29,48 @@
           </template>
         </el-table-column>
         <el-table-column prop="description" :label="t('scan.policy.show.columns.description')" min-width="200" show-overflow-tooltip />
-        <el-table-column prop="strategies" :label="t('scan.policy.show.columns.strategy')" width="150" />
-        <el-table-column prop="start_time" :label="t('scan.policy.show.columns.startTime')" width="180">
+        <el-table-column :label="t('scan.policy.show.columns.strategy')" min-width="300">
           <template #default="{ row }">
-            {{ formatDateTime(row.start_time) }}
+            <div v-for="(strategy, index) in row.strategies" :key="index" class="strategy-item">
+              <div class="strategy-header">
+                <span class="strategy-label">{{ t('scan.policy.schedules') }} {{ index + 1 }}</span>
+              </div>
+              <div class="strategy-content">
+                <div class="strategy-row">
+                  <span class="strategy-field">{{ t('scan.policy.cronExpression') }}:</span>
+                  <div class="cron-info">
+                    <el-tag size="small" type="info" class="mr-2">
+                      {{ strategy.cron }}
+                    </el-tag>
+                    <el-tooltip
+                      :content="parseCronExpression(strategy.cron)"
+                      placement="top"
+                      effect="light"
+                    >
+                      <el-icon class="cron-help"><QuestionFilled /></el-icon>
+                    </el-tooltip>
+                  </div>
+                </div>
+                <div class="strategy-row">
+                  <span class="strategy-field">{{ t('scan.policy.show.columns.startTime') }}:</span>
+                  <el-tag size="small" type="warning">{{ formatDateTime(strategy.start_time) }}</el-tag>
+                </div>
+                <div class="strategy-row">
+                  <span class="strategy-field">{{ t('scan.policy.show.columns.subnets') }}:</span>
+                  <div class="subnet-tags">
+                    <el-tag 
+                      v-for="subnetId in strategy.subnet_ids" 
+                      :key="subnetId"
+                      size="small"
+                      type="success"
+                      class="subnet-tag"
+                    >
+                      {{ getSubnetName(row.subnets, subnetId) }}
+                    </el-tag>
+                  </div>
+                </div>
+              </div>
+            </div>
           </template>
         </el-table-column>
         <el-table-column :label="t('scan.policy.show.columns.subnets')" min-width="250">
@@ -41,8 +80,16 @@
               :key="subnet.id"
               class="mx-1 mb-1"
               size="small"
+              type="success"
             >
               {{ subnet.name }} ({{ subnet.subnet }})
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="threads" :label="t('scan.policy.show.columns.threads')" width="150">
+          <template #default="{ row }">
+            <el-tag size="small" type="info">
+              {{ row.threads }}
             </el-tag>
           </template>
         </el-table-column>
@@ -146,7 +193,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus } from '@element-plus/icons-vue'
+import { Plus, QuestionFilled } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n'
 import dayjs from 'dayjs'
 import ScanPolicyForm from './ScanPolicyForm.vue'
@@ -170,6 +217,105 @@ const selectedPolicyId = ref('')
 // 格式化日期时间
 const formatDateTime = (dateStr: string) => {
   return dayjs(dateStr).format('YYYY-MM-DD HH:mm:ss')
+}
+
+// 解析 Cron 表达式
+const parseCronExpression = (cron: string): string => {
+  const parts = cron.split(' ')
+  if (parts.length !== 5) return 'Invalid cron expression'
+
+  const [minute, hour, dayOfMonth, month, dayOfWeek] = parts
+  
+  let description = ''
+
+  // 解析分钟
+  if (minute === '*') {
+    description += t('scan.policy.cron.everyMinute')
+  } else if (minute.includes('/')) {
+    const [, interval] = minute.split('/')
+    description += t('scan.policy.cron.everyXMinutes', { interval })
+  } else if (minute.includes(',')) {
+    const minutes = minute.split(',').map(m => `${m}分`).join('、')
+    description += t('scan.policy.cron.atMinutes', { minutes })
+  } else if (minute.includes('-')) {
+    const [start, end] = minute.split('-')
+    description += t('scan.policy.cron.betweenMinutes', { start, end })
+  } else {
+    description += t('scan.policy.cron.atMinutes', { minutes: `${minute}分` })
+  }
+
+  // 解析小时
+  if (hour === '*') {
+    description += t('scan.policy.cron.everyHour')
+  } else if (hour.includes('/')) {
+    const [, interval] = hour.split('/')
+    description += t('scan.policy.cron.everyXHours', { interval })
+  } else if (hour.includes(',')) {
+    const hours = hour.split(',').map(h => `${h}点`).join('、')
+    description += t('scan.policy.cron.atHours', { hours })
+  } else if (hour.includes('-')) {
+    const [start, end] = hour.split('-')
+    description += t('scan.policy.cron.betweenHours', { start, end })
+  } else {
+    description += t('scan.policy.cron.atHours', { hours: `${hour}点` })
+  }
+
+  // 解析日期
+  if (dayOfMonth === '*') {
+    description += t('scan.policy.cron.everyDay')
+  } else if (dayOfMonth.includes('/')) {
+    const [, interval] = dayOfMonth.split('/')
+    description += t('scan.policy.cron.everyXDays', { interval })
+  } else if (dayOfMonth.includes(',')) {
+    const days = dayOfMonth.split(',').map(d => `${d}日`).join('、')
+    description += t('scan.policy.cron.atDays', { days })
+  } else if (dayOfMonth.includes('-')) {
+    const [start, end] = dayOfMonth.split('-')
+    description += t('scan.policy.cron.betweenDays', { start, end })
+  } else {
+    description += t('scan.policy.cron.atDays', { days: `${dayOfMonth}日` })
+  }
+
+  // 解析月份
+  if (month === '*') {
+    description += t('scan.policy.cron.everyMonth')
+  } else if (month.includes('/')) {
+    const [, interval] = month.split('/')
+    description += t('scan.policy.cron.everyXMonths', { interval })
+  } else if (month.includes(',')) {
+    const months = month.split(',').map(m => `${m}月`).join('、')
+    description += t('scan.policy.cron.atMonths', { months })
+  } else if (month.includes('-')) {
+    const [start, end] = month.split('-')
+    description += t('scan.policy.cron.betweenMonths', { start, end })
+  } else {
+    description += t('scan.policy.cron.atMonths', { months: `${month}月` })
+  }
+
+  // 解析星期
+  if (dayOfWeek === '*') {
+    description += t('scan.policy.cron.everyWeekday')
+  } else if (dayOfWeek.includes('/')) {
+    const [, interval] = dayOfWeek.split('/')
+    description += t('scan.policy.cron.everyXWeeks', { interval })
+  } else if (dayOfWeek.includes(',')) {
+    const weekDays = dayOfWeek.split(',').map(day => {
+      const dayNum = parseInt(day)
+      return ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][dayNum]
+    })
+    description += t('scan.policy.cron.atWeekdays', { weekdays: weekDays.join('、') })
+  } else if (dayOfWeek.includes('-')) {
+    const [start, end] = dayOfWeek.split('-')
+    const startDay = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][parseInt(start)]
+    const endDay = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][parseInt(end)]
+    description += t('scan.policy.cron.betweenWeekdays', { start: startDay, end: endDay })
+  } else {
+    const dayNum = parseInt(dayOfWeek)
+    const dayName = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][dayNum]
+    description += t('scan.policy.cron.atWeekdays', { weekdays: dayName })
+  }
+
+  return description
 }
 
 // 获取策略列表
@@ -289,10 +435,8 @@ const editPolicy = (policy: Policy) => {
       subnets: policySubnets
     };
     
-    console.log('Editing policy data:', editingPolicy.value); // 调试日志
     dialogVisible.value = true;
   } catch (error) {
-    console.error('Error editing policy:', error);
     ElMessage.error(t('scan.policy.show.messages.editFailed'));
   }
 }
@@ -304,9 +448,45 @@ const showAddPolicyDialog = () => {
 }
 
 // 处理保存策略
-const handleSavePolicy = async () => {
-  await getPolicies()
-  dialogVisible.value = false
+const handleSavePolicy = async (data) => {
+  try {
+    const policyStore = useScanPolicyStore()
+    
+    // 处理子网数据
+    const processedSubnets = data.subnets.map(subnet => ({
+      name: subnet.name,
+      subnet: subnet.subnet
+    }))
+
+    // 处理策略数据
+    const processedPolicies = data.policies.map(policy => ({
+      name: policy.name,
+      description: policy.description,
+      threads: policy.threads || 5,
+      strategies: policy.strategies
+    }))
+
+    // 调用 createPolicy，传入处理后的数据
+    await policyStore.createPolicy({
+      subnets: processedSubnets,
+      policies: processedPolicies
+    })
+
+    ElMessage.success(t('scan.messages.success.savePolicy'))
+    
+    // 刷新列表并关闭对话框
+    await getPolicies()
+    dialogVisible.value = false
+  } catch (error) {
+    console.error('Save error:', error)
+    ElMessage.error(error.message || t('common.error.unknown'))
+  }
+}
+
+// 获取子网名称
+const getSubnetName = (subnets: any[], subnetId: string) => {
+  const subnet = subnets.find(s => s.id === subnetId)
+  return subnet ? `${subnet.name} (${subnet.subnet})` : subnetId
 }
 
 onMounted(() => {
@@ -357,11 +537,90 @@ onMounted(() => {
   color: #333;
 }
 
+.strategy-item {
+  background-color: var(--el-fill-color-light);
+  border-radius: 4px;
+  padding: 8px;
+  margin-bottom: 8px;
+}
+
+.strategy-item:last-child {
+  margin-bottom: 0;
+}
+
+.strategy-header {
+  margin-bottom: 8px;
+}
+
+.strategy-label {
+  font-weight: bold;
+  color: var(--el-text-color-primary);
+}
+
+.strategy-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.strategy-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.strategy-field {
+  min-width: 100px;
+  color: var(--el-text-color-secondary);
+  font-size: 13px;
+}
+
+.subnet-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.subnet-tag {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 :deep(.el-table) {
   --el-table-border-color: var(--el-border-color-lighter);
 }
 
 :deep(.el-tag) {
   margin: 2px;
+}
+
+.mr-2 {
+  margin-right: 8px;
+}
+
+.mx-1 {
+  margin-left: 4px;
+  margin-right: 4px;
+}
+
+.mb-1 {
+  margin-bottom: 4px;
+}
+
+.cron-info {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.cron-help {
+  color: var(--el-text-color-secondary);
+  cursor: help;
+  font-size: 14px;
+}
+
+.cron-help:hover {
+  color: var(--el-color-primary);
 }
 </style>

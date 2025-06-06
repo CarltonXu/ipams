@@ -453,138 +453,171 @@ export default {
       }
     },
     policy: {
-        title: 'Scan Policy Configuration',
-        subtitle: 'Manage your scan policies and their configurations',
+      title: 'Scan Policy Configuration',
+      subtitle: 'Manage your scan policies and their configurations',
+      name: 'Policy Name',
+      namePlaceholder: 'Please enter policy name',
+      subnetsPlaceholder: 'Please select subnets to scan',
+      description: 'Policy Description',
+      descriptionPlaceholder: 'Please enter policy description',
+      threads: 'Threads',
+      threadsPlaceholder: 'Please enter number of threads',
+      schedules: 'Scan Schedules',
+      addSchedule: 'Add Scan Schedule',
+      removeSchedule: 'Remove Scan Schedule',
+      type: 'Policy Type',
+      typeRequired: 'Please select policy type',
+      subnets: 'Subnets',
+      startTimePlaceholder: 'Please select the start time for schedule task',
+      types: {
+        everyMinute: 'Every Minute',
+        everyHour: 'Every Hour', 
+        everyDay: 'Every Day',
+        everyWeek: 'Every Week',
+        everyMonth: 'Every Month',
+        custom: 'Custom'
+      },
+      interval: {
+        minute: 'Interval Minutes',
+        hour: 'Interval Hours',
+        day: 'Interval Days'
+      },
+      startTime: 'Start Time',
+      startTimeRequired: 'Please select start time',
+      weekDays: {
+        0: 'Sunday',
+        1: 'Monday', 
+        2: 'Tuesday',
+        3: 'Wednesday',
+        4: 'Thursday',
+        5: 'Friday',
+        6: 'Saturday'
+      },
+      monthDays: 'Days',
+      monthDaysRequired: 'Please select days',
+      lastDay: 'Last Day',
+      time: 'Time',
+      cronExpression: 'Cron Expression',
+      cronPlaceholder: 'Enter Cron expression',
+      add: 'Add Policy',
+      list: 'Added Policies',
+      save: 'Save Policy',
+      columns: {
         name: 'Policy Name',
-        namePlaceholder: 'Please enter policy name',
-        type: 'Policy Type',
-        typeRequired: 'Please select policy type',
-        types: {
-          everyMinute: 'Every Minute',
-          everyHour: 'Every Hour', 
-          everyDay: 'Every Day',
-          everyWeek: 'Every Week',
-          everyMonth: 'Every Month',
-          custom: 'Custom'
-        },
-        interval: {
-          minute: 'Interval Minutes',
-          hour: 'Interval Hours',
-          day: 'Interval Days'
-        },
-        startTime: 'Start Time',
-        startTimeRequired: 'Please select start time',
-        weekDays: {
-            0: 'Sunday',
-            1: 'Monday', 
-            2: 'Tuesday',
-            3: 'Wednesday',
-            4: 'Thursday',
-            5: 'Friday',
-            6: 'Saturday'
-        },
-        monthDays: 'Days',
-        monthDaysRequired: 'Please select days',
-        lastDay: 'Last Day',
-        time: 'Time',
-        cronExpression: 'Cron Expression',
-        cronPlaceholder: 'Enter Cron expression',
-        add: 'Add Policy',
-        list: 'Added Policies',
-        save: 'Save Policy',
+        description: 'Policy Description',
+        createdAt: 'Created At',
+        actions: 'Actions'
+      },
+      noData: 'No policy data',
+      policyDescription: {
+        everyMinute: 'Every {minutes} minutes, starting from {time}',
+        everyHour: 'Every {hours} hours, starting from {time}',
+        everyDay: 'Every {days} days, starting from {time}',
+        everyWeek: 'Every {weekdays}, starting from {time}',
+        everyMonth: 'Every month on {days}, starting from {time}',
+        custom: 'Custom execution: {cron}'
+      },
+      execute: {
+        title: 'Execute Scan',
+        policyName: 'Policy Name',
+        selectSubnets: 'Select Subnets',
+        confirm: 'Confirm Execute Scan',
+        noSubnets: 'Please select at least one subnet',
+        success: 'Scan executed successfully',
+        failed: 'Failed to execute scan'
+      },
+      show: {
         columns: {
           name: 'Policy Name',
           description: 'Policy Description',
+          strategy: 'Policy Execution Cron',
+          startTime: 'Start Time',
+          threads: 'Threads Count',
           createdAt: 'Created At',
-          actions: 'Actions'
+          subnets: 'Scan Subnets',
+          status: {
+            title: 'Status',
+            active: 'Active',
+            running: 'Running',
+            completed: 'Completed',
+            failed: 'Failed',
+            pending: 'Pending',
+            cancelled: 'Cancelled',
+          },
+          actions: {
+            title: 'Actions',
+            enable: 'Enable',
+            disable: 'Disable',
+            edit: 'Edit',
+            delete: 'Delete',
+            scan: 'Scan'
+          }
         },
         noData: 'No policy data',
-        description: {
-          everyMinute: 'Every {minutes} minutes, starting from {time}',
-          everyHour: 'Every {hours} hours, starting from {time}',
-          everyDay: 'Every {days} days, starting from {time}',
-          everyWeek: 'Every {weekdays}, starting from {time}',
-          everyMonth: 'Every month on {days}, starting from {time}',
-          custom: 'Custom execution: {cron}'
+        dialog: {
+          addTitle: 'Add Policy',
+          editTitle: 'Edit Policy',
+          deleteConfirm: 'Are you sure you want to delete this policy?',
+          deleteTitle: 'Delete Policy'
         },
-        execute: {
-          title: 'Execute Scan',
-          policyName: 'Policy Name',
-          selectSubnets: 'Select Subnets',
-          confirm: 'Confirm Execute Scan',
-          noSubnets: 'Please select at least one subnet',
-          success: 'Scan executed successfully',
-          failed: 'Failed to execute scan'
-        },
-        show: {
-          columns: {
-            name: 'Policy Name',
-            description: 'Policy Description',
-            strategy: 'Policy Execution Cron',
-            startTime: 'Start Time',
-            createdAt: 'Created At',
-            subnets: 'Scan Subnets',
-            status: {
-                title: 'Status',
-                active: 'Active',
-                running: 'Running',
-                completed: 'Completed',
-                failed: 'Failed',
-                pending: 'Pening',
-                cancelled: 'cancelled',
-            },
-            actions: {
-              title: 'Actions',
-              enable: 'Enable',
-              disable: 'Disable',
-              edit: 'Edit',
-              delete: 'Delete',
-              scan: 'Scan'
-            }
-          },
-          noData: 'No policy data',
-          dialog: {
-            addTitle: 'Add Policy',
-            editTitle: 'Edit Policy',
-            deleteConfirm: 'Are you sure you want to delete this policy?',
-            deleteTitle: 'Delete Policy'
-          },
-          messages: {
-            addSuccess: 'Policy added successfully',
-            saveSuccess: 'Policy saved successfully',
-            deleteSuccess: 'Policy deleted successfully',
-            updateSuccess: 'Policy updated successfully',
-            fetchFailed: 'Failed to fetch policy list',
-            deleteFailed: 'Failed to delete policy',
-            updateFailed: 'Failed to update policy'
-          }
-        },
-        jobs: {
-          title: 'Scan Jobs',
-          jobId: 'Jobs ID',
-          subnet: 'Subnet',
-          status: 'Status',
-          machinesFound: 'Discovery Hosts Count',
-          progress: 'Progress',
-          startTime: 'Start Time',
-          endTime: 'End Time',
-          errorMessage: 'Task Results',
-          actions: 'Actions',
-          cancel: 'Cancel',
-          viewResults: 'View Results',
-          cancelSuccess: 'Job cancelled successfully',
-          cancelFailed: 'Failed to cancel job',
-          fetchError: 'Failed to fetch jobs',
-          refresh: {
-            off: 'Auto-refresh Off',
-            '1s': "Refresh every 1s",
-            '5s': 'Refresh every 5s',
-            '10s': 'Refresh every 10s',
-            '30s': 'Refresh every 30s',
-            '60s': 'Refresh every 60s'
-          }
+        messages: {
+          addSuccess: 'Policy added successfully',
+          saveSuccess: 'Policy saved successfully',
+          deleteSuccess: 'Policy deleted successfully',
+          updateSuccess: 'Policy updated successfully',
+          fetchFailed: 'Failed to fetch policy list',
+          deleteFailed: 'Failed to delete policy',
+          updateFailed: 'Failed to update policy'
         }
       },
+      jobs: {
+        title: 'Scan Jobs',
+        jobId: 'Jobs ID',
+        subnet: 'Subnet',
+        status: 'Status',
+        machinesFound: 'Discovery Hosts Count',
+        progress: 'Progress',
+        startTime: 'Start Time',
+        endTime: 'End Time',
+        errorMessage: 'Task Results',
+        actions: 'Actions',
+        cancel: 'Cancel',
+        viewResults: 'View Results',
+        cancelSuccess: 'Job cancelled successfully',
+        cancelFailed: 'Failed to cancel job',
+        fetchError: 'Failed to fetch jobs',
+        refresh: {
+          off: 'Auto-refresh Off',
+          '1s': "Refresh every 1s",
+          '5s': 'Refresh every 5s',
+          '10s': 'Refresh every 10s',
+          '30s': 'Refresh every 30s',
+          '60s': 'Refresh every 60s'
+        }
+      },
+      cron: {
+        "everyMinute": "Execute every minute, ",
+        "everyXMinutes": "Execute every {interval} minutes, ",
+        "atMinutes": "Execute at {minutes}, ",
+        "betweenMinutes": "Execute every minute from {start} to {end}, ",
+        "everyHour": "Execute every hour, ",
+        "everyXHours": "Execute every {interval} hours, ",
+        "atHours": "Execute at {hours}, ",
+        "betweenHours": "Execute every hour from {start} to {end}, ",
+        "everyDay": "Execute every day, ",
+        "everyXDays": "Execute every {interval} days, ",
+        "atDays": "Execute on {days}, ",
+        "betweenDays": "Execute every day from {start} to {end}, ",
+        "everyMonth": "Execute every month, ",
+        "everyXMonths": "Execute every {interval} months, ",
+        "atMonths": "Execute in {months}, ",
+        "betweenMonths": "Execute every month from {start} to {end}, ",
+        "everyWeekday": "Execute every weekday, ",
+        "everyXWeeks": "Execute every {interval} weeks, ",
+        "atWeekdays": "Execute on {weekdays}, ",
+        "betweenWeekdays": "Execute every day from {start} to {end}, "
+      }
+    },
     messages: {
       success: {
         addPolicy: 'Policy added successfully',
