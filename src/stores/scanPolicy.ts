@@ -17,7 +17,7 @@ export const useScanPolicyStore = defineStore('scanPolicy', {
       try {
         this.loading = true;
         const response = await axios.get('/api/scan/policies');
-        this.policies = response.data.policies;
+        this.policies = response.data;
         return response.data;
       } catch (error: any) {
         this.error = error.response?.data?.message || '获取扫描策略失败';
@@ -27,29 +27,61 @@ export const useScanPolicyStore = defineStore('scanPolicy', {
       }
     },
 
-    async deletePolicyById(policyId: string) {
-      this.loading = true;
+    async createPolicy(data: {
+      subnets: Array<{ name: string; subnet: string }>;
+      policies: Array<{
+        name: string;
+        description: string;
+        threads: number;
+        strategies: Array<{
+          cron: string;
+          start_time: string;
+          subnet_ids: string[];
+        }>;
+      }>;
+    }) {
       try {
-        const response = await axios.delete(`/api/scan/policies/${policyId}`);
+        this.loading = true;
+        const response = await axios.post('/api/scan/policies', data);
         return response.data;
       } catch (error: any) {
-        this.error = error.response?.data?.message || '删除扫描策略失败';
+        this.error = error.response?.data?.message || '保存扫描策略失败';
         throw error;
       } finally {
         this.loading = false;
       }
     },
 
-    async createPolicy(data: {
-      subnets: Subnet[];
-      policies: Policy[];
+    async updatePolicy(policyId: string, data: {
+      name: string;
+      description: string;
+      threads: number;
+      subnets: Array<{ name: string; subnet: string }>;
+      strategies: Array<{
+        cron: string;
+        start_time: string;
+        subnet_ids: string[];
+      }>;
     }) {
-      this.loading = true;
       try {
-        const response = await axios.post('/api/scan/policies', data);
+        this.loading = true;
+        const response = await axios.put(`/api/scan/policies/${policyId}`, data);
         return response.data;
       } catch (error: any) {
-        this.error = error.response?.data?.message || '保存扫描策略失败';
+        this.error = error.response?.data?.message || '更新扫描策略失败';
+        throw error;
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    async deletePolicy(policyId: string) {
+      try {
+        this.loading = true;
+        const response = await axios.delete(`/api/scan/policies/${policyId}`);
+        return response.data;
+      } catch (error: any) {
+        this.error = error.response?.data?.message || '删除扫描策略失败';
         throw error;
       } finally {
         this.loading = false;

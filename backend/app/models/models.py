@@ -164,20 +164,23 @@ class ScanPolicy(db.Model):
     __tablename__ = 'scan_policies'
 
     id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    name = db.Column(db.String(255), nullable=False)
+    name = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.Text)
+    strategies = db.Column(db.Text)  # JSON string of strategies
+    threads = db.Column(db.Integer, default=5)
+    status = db.Column(db.String(20), default='active')  # active, running, completed, failed
     user_id = db.Column(db.String(36), db.ForeignKey('users.id'), nullable=False)
-    description = db.Column(db.String(255), nullable=False)  # 扫描策略描述
-    threads = db.Column(db.Integer, default=1, nullable=False)  # 并发线程数，默认1
-    strategies = db.Column(db.Text, nullable=False)  # 存储 JSON 数组，每个元素包含 cron、start_time 和 subnet_ids
-    status = db.Column(db.Enum('active', 'running', 'completed', 'failed', name='scan_status'), default='active', nullable=False)
-    deleted = db.Column(db.Boolean, default=False, nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
-    deleted_at = db.Column(db.DateTime, nullable=True)
-
-    # 添加关系
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    deleted = db.Column(db.Boolean, default=False)
+    
+    # 添加关联关系
     user = relationship('User', back_populates='scan_policies')
     jobs = relationship('ScanJob', back_populates='policy', cascade='all, delete-orphan')
+    subnets = relationship('ScanSubnet', 
+                           secondary='policy_subnet_association',
+                           backref=db.backref('policies', lazy='dynamic'),
+                           lazy='dynamic')
 
     def __repr__(self):
         return f"<ScanPolicy {self.name}>"
@@ -203,7 +206,6 @@ class ScanPolicy(db.Model):
             "deleted": self.deleted,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
-            "deleted_at": self.deleted_at.isoformat() if self.deleted_at else None
         }
 
 
@@ -293,3 +295,10 @@ class ScanResult(db.Model):
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
             "deleted_at": self.deleted_at.isoformat() if self.deleted_at else None
         }
+
+# 添加策略和子网的关联表
+policy_subnet_association = db.Table('policy_subnet_association',
+    db.Column('policy_id', db.String(36), db.ForeignKey('scan_policies.id'), primary_key=True),
+    db.Column('subnet_id', db.String(36), db.ForeignKey('scan_subnets.id'), primary_key=True),
+    db.Column('created_at', db.DateTime, default=datetime.utcnow)
+)

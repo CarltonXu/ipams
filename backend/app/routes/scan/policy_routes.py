@@ -12,6 +12,7 @@ policy_bp = Blueprint('policy', __name__)
 def get_policies(current_user):
     """Get all scan policies with their associated subnets"""
     try:
+        # 获取所有未删除的策略
         policies = ScanPolicy.query.filter_by(
             user_id=current_user.id,
             deleted=False
@@ -20,20 +21,10 @@ def get_policies(current_user):
         result = []
         for policy in policies:
             try:
-                # 从 strategies 中获取所有 subnet_ids
-                strategies = json.loads(policy.strategies)
-                subnet_ids = set()
-                for strategy in strategies:
-                    subnet_ids.update(strategy.get('subnet_ids', []))
+                # 解析策略配置
+                strategies = json.loads(policy.strategies) if policy.strategies else []
                 
-                # 获取所有相关的子网
-                subnets = []
-                if subnet_ids:
-                    subnets = ScanSubnet.query.filter(
-                        ScanSubnet.id.in_(subnet_ids),
-                        ScanSubnet.deleted == False
-                    ).all()
-                
+                # 构建策略数据
                 policy_data = {
                     "id": policy.id,
                     "name": policy.name,
@@ -47,7 +38,7 @@ def get_policies(current_user):
                             "id": subnet.id,
                             "name": subnet.name,
                             "subnet": subnet.subnet
-                        } for subnet in subnets
+                        } for subnet in policy.subnets
                     ]
                 }
                 result.append(policy_data)
@@ -189,36 +180,108 @@ def save_policy_config(current_user):
 @token_required
 def update_policy(current_user, policy_id):
     """Update existing policy"""
-    policy = ScanPolicy.query.filter_by(
-        id=policy_id,
-        user_id=current_user.id
-    ).first()
-    
-    if not policy:
-        return jsonify({'error': 'Policy not found'}), 404
-        
-    data = request.json
-    
-    if 'subnet_id' in data:
-        subnet = ScanSubnet.query.filter_by(
-            id=data['subnet_id'],
+    try:
+        policy = ScanPolicy.query.filter_by(
+            id=policy_id,
             user_id=current_user.id,
             deleted=False
         ).first()
-        if not subnet:
-            return jsonify({'error': 'Invalid subnet'}), 400
-        policy.subnet_id = data['subnet_id']
-    
-    policy.name = data.get('name', policy.name)
-    policy.strategies = data.get('strategies', policy.strategies)
-    policy.threads = data.get('threads', policy.threads)
-    
-    db.session.commit()
-    
-    return jsonify({
-        'message': 'Policy updated successfully',
-        'policy': policy.to_dict()
-    })
+        
+        if not policy:
+            return jsonify({'error': 'Policy not found'}), 404
+            
+        data = request.json
+        
+        # 处理子网更新
+        if 'subnets' in data:
+            # 清空现有的子网关联
+            policy.subnets = []
+            
+            # 处理每个子网
+            for subnet_data in data['subnets']:
+                # 查找或创建子网
+                subnet = ScanSubnet.query.filter_by(
+                    subnet=subnet_data['subnet'],
+                    user_id=current_user.id,
+                    deleted=False
+                ).first()
+                
+                if not subnet:
+                    # 创建新子网
+                    subnet = ScanSubnet(
+                        name=subnet_data['name'],
+                        subnet=subnet_data['subnet'],
+                        user_id=current_user.id
+                    )
+                    db.session.add(subnet)
+                    db.session.flush()  # 获取新子网的ID
+                
+                # 更新子网名称
+                subnet.name = subnet_data['name']
+                
+                # 添加到策略的子网关联中
+                policy.subnets.append(subnet)
+        
+        # 更新基本信息
+        policy.name = data.get('name', policy.name)
+        policy.description = data.get('description', policy.description)
+        policy.threads = data.get('threads', policy.threads)
+        
+        # 更新策略配置
+        if 'strategies' in data:
+            strategies = data['strategies']
+            # 验证策略数据
+            for strategy in strategies:
+                if not all(key in strategy for key in ['cron', 'start_time']):
+                    return jsonify({'error': 'Invalid strategy format'}), 400
+                
+                # 处理子网ID列表
+                subnet_ids = strategy.get('subnet_ids', [])
+                if not isinstance(subnet_ids, list):
+                    return jsonify({'error': 'subnet_ids must be a list'}), 400
+                
+                # 过滤掉空值
+                subnet_ids = [id for id in subnet_ids if id is not None]
+                
+                # 如果子网ID列表为空，使用策略关联的所有子网ID
+                if not subnet_ids:
+                    subnet_ids = [subnet.id for subnet in policy.subnets]
+                
+                # 验证所有子网ID是否属于当前策略
+                valid_subnet_ids = [subnet.id for subnet in policy.subnets]
+                for subnet_id in subnet_ids:
+                    if subnet_id not in valid_subnet_ids:
+                        return jsonify({'error': f'Subnet {subnet_id} not associated with this policy'}), 400
+                
+                # 更新策略的子网ID
+                strategy['subnet_ids'] = subnet_ids
+            
+            # 更新策略
+            policy.strategies = json.dumps(strategies)
+        
+        db.session.commit()
+        
+        # 获取更新后的策略信息
+        updated_policy = policy.to_dict()
+        
+        # 添加子网信息
+        updated_policy['subnets'] = [
+            {
+                'id': subnet.id,
+                'name': subnet.name,
+                'subnet': subnet.subnet
+            } for subnet in policy.subnets
+        ]
+        
+        return jsonify({
+            'message': 'Policy updated successfully',
+            'policy': updated_policy
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error updating policy: {str(e)}")
+        return jsonify({'error': str(e)}), 500
 
 # 删除扫描策略
 @policy_bp.route('/policies/<policy_id>', methods=['DELETE'])

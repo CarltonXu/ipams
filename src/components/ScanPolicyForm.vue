@@ -180,76 +180,24 @@ watch(() => props.initialData, (newData) => {
   if (newData) {
     console.log('Initial data received:', newData); // 调试日志
     
-    // 更新策略名称
-    strategyName.value = newData.name;
+    // 更新策略基本信息
+    policyName.value = newData.name;
+    policyDescription.value = newData.description;
+    policyThreads.value = newData.threads || 5;
     
     // 更新子网数据
     if (newData.subnets && newData.subnets.length > 0) {
-      cachedSubnets.value = newData.subnets.map(subnet => ({
-        id: subnet.id,
-        name: subnet.name,
-        subnet: subnet.subnet,
-        created_at: new Date().toLocaleString()
+      cachedSubnets.value = newData.subnets;
+    }
+    
+    // 更新调度数据
+    if (newData.strategies && newData.strategies.length > 0) {
+      schedules.value = newData.strategies.map(strategy => ({
+        cron: strategy.cron,
+        start_time: new Date(strategy.start_time),
+        subnet_ids: strategy.subnet_ids || []
       }));
     }
-    
-    // 解析策略描述来设置调度类型和时间
-    const description = newData.description;
-    if (description.includes('every minute')) {
-      scheduleType.value = t('scan.policy.types.everyMinute');
-      const match = description.match(/(\d+) minutes/);
-      if (match) {
-        intervalMinutes.value = parseInt(match[1]);
-      }
-    } else if (description.includes('every hour')) {
-      scheduleType.value = t('scan.policy.types.everyHour');
-      const match = description.match(/(\d+) hours/);
-      if (match) {
-        intervalHours.value = parseInt(match[1]);
-      }
-    } else if (description.includes('every day')) {
-      scheduleType.value = t('scan.policy.types.everyDay');
-      const match = description.match(/(\d+) days/);
-      if (match) {
-        intervalDays.value = parseInt(match[1]);
-      }
-    } else if (description.includes('every week')) {
-      scheduleType.value = t('scan.policy.types.everyWeek');
-      // 解析星期几
-      const weekDays = description.match(/on (.*?) at/);
-      if (weekDays) {
-        weeklyDays.value = weekDays[1].split('、').map(day => 
-          Object.entries(t('scan.policy.weekDays')).find(([_, value]) => value === day)?.[0]
-        ).filter(Boolean);
-      }
-    } else if (description.includes('every month')) {
-      scheduleType.value = t('scan.policy.types.everyMonth');
-      // 解析每月几号
-      const monthDays = description.match(/on (.*?) at/);
-      if (monthDays) {
-        monthlyDays.value = monthDays[1].split('、').map(day => 
-          day === t('scan.policy.lastDay') ? 'last_day' : day
-        );
-      }
-    } else {
-      scheduleType.value = t('scan.policy.types.custom');
-      customCron.value = newData.strategies;
-    }
-    
-    // 设置开始时间
-    if (newData.start_time) {
-      startExecutionTime.value = new Date(newData.start_time);
-    }
-    
-    // 更新策略列表
-    cachedPolicies.value = [{
-      name: newData.name,
-      description: newData.description,
-      cron: newData.strategies,
-      created_at: new Date().toLocaleString(),
-      startTime: new Date(newData.start_time),
-      threads: newData.threads
-    }];
   }
 }, { immediate: true });
 
@@ -319,82 +267,6 @@ const validateInputs = () => {
 const formatTime = (time: Date | null) => {
   if (!time) return '';
   return `${time.getHours()}:${time.getMinutes().toString().padStart(2, '0')}`;
-};
-
-const generatePolicyDescription = () => {
-  if (!startExecutionTime.value) return '';
-  const startTime = formatTime(startExecutionTime.value);
-
-  switch (scheduleType.value) {
-    case t('scan.policy.types.everyMinute'):
-      return t('scan.policy.description.everyMinute', {
-        minutes: intervalMinutes.value || 1,
-        time: startTime
-      });
-    case t('scan.policy.types.everyHour'):
-      return t('scan.policy.description.everyHour', {
-        hours: intervalHours.value || 1,
-        time: startTime
-      });
-    case t('scan.policy.types.everyDay'):
-      return t('scan.policy.description.everyDay', {
-        days: intervalDays.value || 1,
-        time: startTime
-      });
-    case t('scan.policy.types.everyWeek'):
-      const weekDays = weeklyDays.value
-        .map(day => t(`scan.policy.weekDays.${day}`))
-        .join('、');
-      return t('scan.policy.description.everyWeek', {
-        weekdays: weekDays,
-        time: startTime
-      });
-    case t('scan.policy.types.everyMonth'):
-      const days = monthlyDays.value
-        .map(day => day === 'last_day' ? t('scan.policy.lastDay') : day)
-        .join('、');
-      return t('scan.policy.description.everyMonth', {
-        days,
-        time: startTime
-      });
-    case t('scan.policy.types.custom'):
-      return t('scan.policy.description.custom', {
-        cron: customCron.value
-      });
-    default:
-      return '';
-  }
-};
-
-const generateCrontabExpression = () => {
-  const time = startExecutionTime.value;
-  if (!time) {
-    ElMessage.error(t('scan.validation.selectExecutionTime'));
-    return '';
-  }
-
-  const minutes = time.getMinutes();
-  const hours = time.getHours();
-
-  switch (scheduleType.value) {
-    case t('scan.policy.types.everyMinute'):
-      return `*/${intervalMinutes.value || 1} * * * *`;
-    case t('scan.policy.types.everyHour'):
-      return `${minutes} */${intervalHours.value || 1} * * *`;
-    case t('scan.policy.types.everyDay'):
-      return `${minutes} ${hours} */${intervalDays.value || 1} * *`;
-    case t('scan.policy.types.everyWeek'):
-      return `${minutes} ${hours} * * ${weeklyDays.value.join(',')}`;
-    case t('scan.policy.types.everyMonth'):
-      const days = monthlyDays.value.includes('last_day') 
-        ? 'L' 
-        : monthlyDays.value.join(',');
-      return `${minutes} ${hours} ${days} * *`;
-    case t('scan.policy.types.custom'):
-      return customCron.value;
-    default:
-      return '';
-  }
 };
 
 const validateSubnet = () => {
@@ -492,7 +364,7 @@ const handleSavePolicy = async () => {
     await ElMessageBox.confirm(
       `${t('scan.form.confirm.saveContent')}\n` + 
       `${t('scan.form.confirm.subnets')} ${cachedSubnets.value.length}\n` +
-      `${t('scan.form.confirm.schedules')} ${schedules.value.length}`,
+      `${t('scan.form.confirm.policies')} ${schedules.value.length}`,
       t('scan.form.confirm.title'),
       {
         confirmButtonText: t('common.confirm'),
@@ -502,20 +374,28 @@ const handleSavePolicy = async () => {
       }
     )
 
-    // 处理策略数据，过滤掉 null 值
-    const processedSchedules = schedules.value.map(schedule => ({
-      ...schedule
+    // 处理子网数据
+    const subnets = cachedSubnets.value.map(subnet => ({
+      name: subnet.name,
+      subnet: subnet.subnet
     }))
+
+    // 处理策略数据
+    const policies = [{
+      name: policyName.value,
+      description: policyDescription.value,
+      threads: policyThreads.value,
+      strategies: schedules.value.map(schedule => ({
+        cron: schedule.cron,
+        start_time: schedule.start_time.toISOString(),
+        subnet_ids: schedule.subnet_ids
+      }))
+    }]
 
     // 触发保存事件，传递数据给父组件
     await emit('save', {
-      subnets: cachedSubnets.value,
-      policies: [{
-        name: policyName.value,
-        description: policyDescription.value,
-        threads: policyThreads.value,
-        strategies: processedSchedules
-      }]
+      subnets,
+      policies
     })
 
     // 重置所有数据

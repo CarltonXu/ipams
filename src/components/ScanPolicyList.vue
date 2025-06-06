@@ -418,21 +418,23 @@ const deletePolicy = async (policy: Policy) => {
 // 编辑策略
 const editPolicy = (policy: Policy) => {
   try {
-    // 获取策略关联的子网信息
-    const policySubnets = (policy.subnet_ids || []).map(subnetId => {
-      const subnet = policies.value.find(p => p.subnets?.some(s => s.id === subnetId))?.subnets.find(s => s.id === subnetId);
-      return subnet;
-    }).filter(Boolean);
-
     // 构建编辑数据
     editingPolicy.value = {
+      id: policy.id,
       name: policy.name,
       description: policy.description,
       subnet_ids: policy.subnet_ids || [],
-      strategies: policy.strategies,
-      start_time: policy.start_time,
       threads: policy.threads,
-      subnets: policySubnets
+      strategies: policy.strategies.map(strategy => ({
+        cron: strategy.cron,
+        start_time: strategy.start_time,
+        subnet_ids: strategy.subnet_ids || []
+      })),
+      subnets: policy.subnets.map(subnet => ({
+        id: subnet.id,
+        name: subnet.name,
+        subnet: subnet.subnet
+      }))
     };
     
     dialogVisible.value = true;
@@ -452,27 +454,39 @@ const handleSavePolicy = async (data) => {
   try {
     const policyStore = useScanPolicyStore()
     
-    // 处理子网数据
-    const processedSubnets = data.subnets.map(subnet => ({
-      name: subnet.name,
-      subnet: subnet.subnet
-    }))
-
-    // 处理策略数据
-    const processedPolicies = data.policies.map(policy => ({
-      name: policy.name,
-      description: policy.description,
-      threads: policy.threads || 5,
-      strategies: policy.strategies
-    }))
-
-    // 调用 createPolicy，传入处理后的数据
-    await policyStore.createPolicy({
-      subnets: processedSubnets,
-      policies: processedPolicies
-    })
-
-    ElMessage.success(t('scan.messages.success.savePolicy'))
+    if (editingPolicy.value?.id) {
+      // 更新现有策略
+      const updateData = {
+        name: data.policies[0].name,
+        description: data.policies[0].description,
+        threads: data.policies[0].threads,
+        subnets: data.subnets,
+        strategies: data.policies[0].strategies.map(strategy => ({
+          cron: strategy.cron,
+          start_time: strategy.start_time,
+          subnet_ids: strategy.subnet_ids
+        }))
+      }
+      console.log('Update policy data:', updateData) // 添加日志
+      await policyStore.updatePolicy(editingPolicy.value.id, updateData)
+      ElMessage.success(t('scan.messages.success.updatePolicy'))
+    } else {
+      // 创建新策略
+      await policyStore.createPolicy({
+        subnets: data.subnets,
+        policies: data.policies.map(policy => ({
+          name: policy.name,
+          description: policy.description,
+          threads: policy.threads,
+          strategies: policy.strategies.map(strategy => ({
+            cron: strategy.cron,
+            start_time: strategy.start_time,
+            subnet_ids: strategy.subnet_ids
+          }))
+        }))
+      })
+      ElMessage.success(t('scan.messages.success.savePolicy'))
+    }
     
     // 刷新列表并关闭对话框
     await getPolicies()
