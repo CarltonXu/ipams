@@ -1,4 +1,5 @@
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.orm import relationship
 from datetime import datetime
 import uuid
 import json
@@ -21,6 +22,12 @@ class User(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     is_admin = db.Column(db.Boolean, default=False)
     deleted = db.Column(db.Boolean, default=False)
+
+    # 添加关系
+    scan_subnets = relationship('ScanSubnet', back_populates='user', cascade='all, delete-orphan')
+    scan_policies = relationship('ScanPolicy', back_populates='user', cascade='all, delete-orphan')
+    scan_jobs = relationship('ScanJob', back_populates='user', cascade='all, delete-orphan')
+    action_logs = relationship('ActionLog', back_populates='user', cascade='all, delete-orphan')
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -89,6 +96,9 @@ class ActionLog(db.Model):
     source_ip = db.Column(db.String(45), nullable=True)  # 来源 IP，支持 IPv6 地址
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
+    # 添加关系
+    user = relationship('User', back_populates='action_logs')
+
     def __repr__(self):
         return f"<ActionLog {self.action} by User {self.user_id}>"
     
@@ -123,6 +133,10 @@ class ScanSubnet(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     deleted_at = db.Column(db.DateTime, nullable=True)
+
+    # 添加关系
+    user = relationship('User', back_populates='scan_subnets')
+    jobs = relationship('ScanJob', back_populates='subnet', cascade='all, delete-orphan')
 
     def __repr__(self):
         return f"<ScanSubnet {self.subnet} by User {self.user_id}>"
@@ -163,6 +177,10 @@ class ScanPolicy(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     deleted_at = db.Column(db.DateTime, nullable=True)
 
+    # 添加关系
+    user = relationship('User', back_populates='scan_policies')
+    jobs = relationship('ScanJob', back_populates='policy', cascade='all, delete-orphan')
+
     def __repr__(self):
         return f"<ScanPolicy {self.strategies} on Subnet {self.subnet_ids}>"
 
@@ -202,7 +220,7 @@ class ScanJob(db.Model):
     user_id = db.Column(db.String(36), db.ForeignKey('users.id'), nullable=False)
     policy_id = db.Column(db.String(36), db.ForeignKey('scan_policies.id'), nullable=False)
     subnet_id = db.Column(db.String(36), db.ForeignKey('scan_subnets.id'), nullable=False)
-    status = db.Column(db.Enum('pending', 'running', 'completed', 'failed', name='scan_status'), default='pending', nullable=False)
+    status = db.Column(db.String(36), default='pending', nullable=False)
     progress = db.Column(db.Integer, default=0, nullable=False)  # 扫描进度百分比
     machines_found = db.Column(db.Integer, default=0, nullable=False)  # 发现的机器数量
     start_time = db.Column(db.DateTime, nullable=True)
@@ -212,6 +230,12 @@ class ScanJob(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     deleted_at = db.Column(db.DateTime, nullable=True)
+
+    # 关系
+    user = relationship('User', back_populates='scan_jobs')
+    policy = relationship('ScanPolicy', back_populates='jobs')
+    subnet = relationship('ScanSubnet', back_populates='jobs')
+    results = relationship('ScanResult', back_populates='job', cascade='all, delete-orphan')
 
     def __repr__(self):
         return f"<ScanJob {self.id} on Subnet {self.subnet_id}>"
@@ -258,7 +282,7 @@ class ScanResult(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     deleted_at = db.Column(db.DateTime, nullable=True)
     
-    job = db.relationship('ScanJob', backref='results')
+    job = relationship('ScanJob', back_populates='results')
 
     def __init__(self, job_id, ip_address, open_ports):
         self.job_id = job_id

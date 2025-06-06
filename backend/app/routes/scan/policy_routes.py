@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from app.models import db, ScanPolicy, ScanSubnet, ScanJob
+from app.models.models import db, ScanPolicy, ScanSubnet, ScanJob
 from app.utils.auth import token_required
 from sqlalchemy.exc import IntegrityError
 import dateutil.parser

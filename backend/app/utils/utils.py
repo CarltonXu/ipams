@@ -1,6 +1,6 @@
 from flask import request
 from PIL import Image, ImageDraw, ImageFont
-from app.models import db, ActionLog
+from app.models.models import db, ActionLog
 import re
 import uuid
 import random

@@ -12,7 +12,7 @@
           <el-select
             v-model="refreshInterval"
             size="small"
-            style="width: 120px; margin-right: 12px;"
+            style="width: 145px; margin-right: 12px;"
           >
             <el-option
               v-for="item in refreshOptions"
@@ -133,6 +133,32 @@
             </el-tag>
           </template>
         </el-table-column>
+
+        <el-table-column
+          :label="t('scan.policy.jobs.actions')"
+          width="120"
+          fixed="right"
+        >
+          <template #default="{ row }">
+            <el-button
+              v-if="['pending', 'running'].includes(row.status)"
+              type="danger"
+              size="small"
+              :loading="cancellingJobs[row.id]"
+              @click="handleCancelJob(row)"
+            >
+              {{ t('scan.policy.jobs.cancel') }}
+            </el-button>
+            <el-button
+              v-else
+              type="primary"
+              size="small"
+              @click="$router.push({ name: 'JobResults', params: { jobId: row.id } })"
+            >
+              {{ t('scan.policy.jobs.viewResults') }}
+            </el-button>
+          </template>
+        </el-table-column>
       </el-table>
     </div>
   </el-drawer>
@@ -145,6 +171,7 @@ import { ElMessage } from 'element-plus'
 import { Refresh } from '@element-plus/icons-vue'
 import dayjs from 'dayjs'
 import { useScanPolicyStore } from '../stores/scanPolicy'
+import axios from 'axios'
 
 const props = defineProps<{
   modelValue: boolean
@@ -156,6 +183,7 @@ const { t } = useI18n()
 const policyStore = useScanPolicyStore()
 const jobs = ref([])
 const loading = ref(false)
+const cancellingJobs = ref<Record<string, boolean>>({})
 
 // 计算抽屉宽度为屏幕宽度的 70%
 const drawerWidth = computed(() => {
@@ -202,6 +230,20 @@ const formatDateTime = (dateStr: string) => {
   return dateStr ? dayjs(dateStr).format('YYYY-MM-DD HH:mm:ss') : '-'
 }
 
+// 取消任务
+const handleCancelJob = async (job: any) => {
+  try {
+    cancellingJobs.value[job.id] = true
+    await policyStore.cancelJob(job.id)
+    ElMessage.success(t('scan.policy.jobs.cancelSuccess'))
+    await fetchJobs()
+  } catch (error: any) {
+    ElMessage.error(error.message || t('scan.policy.jobs.cancelFailed'))
+  } finally {
+    cancellingJobs.value[job.id] = false
+  }
+}
+
 // 添加刷新间隔选项
 const refreshOptions = [
   { label: 'off', value: 0 },
@@ -229,7 +271,7 @@ const setupAutoRefresh = () => {
   if (refreshInterval.value > 0) {
     refreshTimer = setInterval(() => {
       fetchJobs()
-    }, refreshInterval.value * 1000)
+    }, refreshInterval.value * 3000)
   }
 }
 
@@ -238,19 +280,89 @@ watch(refreshInterval, () => {
   setupAutoRefresh()
 })
 
+// 添加后台刷新逻辑
+const backgroundRefreshTimer = ref<number | null>(null)
+const hasRunningJobs = computed(() => {
+  return jobs.value.some(job => ['pending', 'running'].includes(job.status))
+})
+
+// 后台刷新运行中的任务
+const refreshRunningJobs = async () => {
+  try {
+    const response = await policyStore.fetchRunningJobs()
+    const runningJobs = response.jobs || []
+    
+    // 更新现有任务的状态
+    jobs.value = jobs.value.map(job => {
+      const updatedJob = runningJobs.find(rj => rj.id === job.id)
+      if (updatedJob) {
+        // 如果找到更新的任务，使用新的状态
+        return {
+          ...job,
+          status: updatedJob.status,
+          progress: updatedJob.progress,
+          machines_found: updatedJob.machines_found,
+          updated_at: updatedJob.updated_at,
+          end_time: updatedJob.end_time,
+          error_message: updatedJob.error_message
+        }
+      }
+      return job
+    })
+    
+    // 如果没有任何运行中的任务，停止后台刷新
+    if (!hasRunningJobs.value) {
+      clearBackgroundRefresh()
+    }
+  } catch (error) {
+    console.error('Failed to refresh running jobs:', error)
+  }
+}
+
+// 清除后台刷新定时器
+const clearBackgroundRefresh = () => {
+  if (backgroundRefreshTimer.value) {
+    clearInterval(backgroundRefreshTimer.value)
+    backgroundRefreshTimer.value = null
+  }
+}
+
+// 启动后台刷新
+const startBackgroundRefresh = () => {
+  clearBackgroundRefresh()
+  if (hasRunningJobs.value) {
+    backgroundRefreshTimer.value = setInterval(refreshRunningJobs, 3000)
+  }
+}
+
 // 监听抽屉可见性
 watch(visible, (newVal) => {
   if (newVal) {
     fetchJobs()
     setupAutoRefresh()
+    // 检查是否有运行中的任务，如果有则启动后台刷新
+    if (hasRunningJobs.value) {
+      startBackgroundRefresh()
+    }
   } else {
     clearRefreshTimer()
+    clearBackgroundRefresh()
   }
 })
 
-// 组件卸载时清理定时器
+// 监听任务列表变化
+watch(jobs, (newJobs) => {
+  if (visible.value && hasRunningJobs.value) {
+    startBackgroundRefresh()
+  } else {
+    clearBackgroundRefresh()
+  }
+}, { deep: true })
+
+// 组件卸载时清理所有定时器
 onUnmounted(() => {
   clearRefreshTimer()
+  clearBackgroundRefresh()
 })
 </script>
 

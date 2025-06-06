@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from app.models import db, ScanSubnet
+from app.models.models import db, ScanSubnet
 from app.utils.auth import token_required
 from app.routes.scan.validators import validate_scan_request
 

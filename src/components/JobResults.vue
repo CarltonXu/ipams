@@ -95,7 +95,7 @@ const tableHeight = computed(() => {
 const updateResults = async () => {
   try {
     const jobId = route.params.jobId as string
-    const newResults = await scanPolicyStore.fetchJobResults(jobId)
+    const newResults = await scanPolicyStore.getJobResults(jobId)
     if (JSON.stringify(newResults) !== JSON.stringify(results.value)) {
       results.value = newResults
     }

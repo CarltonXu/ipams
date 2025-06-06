@@ -110,6 +110,9 @@ export default {
     captchaPlaceholder: '请输入验证码',
     captchaError: '获取验证码失败',
     captchaRefresh: '刷新验证码',
+    message: {
+      noPermisstions: '权限不足',
+    }
   },
   user: {
     profile: '个人中心',
@@ -428,7 +431,7 @@ export default {
         confirm: '确认执行扫描',
         noSubnets: '请选择至少一个网段',
         success: '扫描执行成功',
-        error: '执行扫描失败'
+        failed: '执行扫描失败'
       },
       show: {
         columns: {
@@ -444,7 +447,8 @@ export default {
             running: '运行中',
             completed: '已完成',
             failed: '失败',
-            pending: '等待执行'
+            pending: '等待执行',
+            cancelled: '已取消',
           },
           actions: {
             title: '操作',
@@ -490,16 +494,21 @@ export default {
         6: '周六'
       },
       jobs: {
-        title: '扫描任务列表',
+        title: '扫描任务',
         jobId: '任务ID',
-        subnet: '扫描网段',
-        status: '任务状态',
+        subnet: '网段',
+        status: '状态',
         machinesFound: '发现主机数',
-        progress: '扫描进度',
+        progress: '进度',
         startTime: '开始时间',
         endTime: '结束时间',
-        fetchError: '获取任务列表失败',
         errorMessage: '任务执行结果',
+        actions: '操作',
+        cancel: '取消',
+        viewResults: '查看结果',
+        cancelSuccess: "任务已取消",
+        cancelFailed: '取消任务失败',
+        fetchError: '获取任务列表失败',
         refresh: {
           off: '关闭自动刷新',
           '1s': '每 1 秒',

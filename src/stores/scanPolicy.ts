@@ -8,7 +8,8 @@ export const useScanPolicyStore = defineStore('scanPolicy', {
     policies: ref<Policy[]>([]),
     subnets: ref<Subnet[]>([]),
     loading: ref(false),
-    error: ref<string | null>(null)
+    error: ref<string | null>(null),
+    currentPolicy: null
   }),
 
   actions: {
@@ -119,6 +120,18 @@ export const useScanPolicyStore = defineStore('scanPolicy', {
         return response.data;
       } catch (error: any) {
         this.error = error.response?.data?.error || '获取策略任务失败';
+        throw error;
+      }
+    },
+
+    async fetchRunningJobs() {
+      try {
+        const response = await axios.get('/api/scan/jobs', {
+          params: { status: "running"}
+        });
+        return response.data;
+      } catch (error) {
+        console.error('Failed to fetch running jobs:', error);
         throw error;
       }
     }

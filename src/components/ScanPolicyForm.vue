@@ -227,6 +227,22 @@ import { useScanPolicyStore } from '../stores/scanPolicy';
 
 const { t } = useI18n();
 
+const props = defineProps<{
+  initialData?: {
+    name: string;
+    description: string;
+    subnet_ids: string[];
+    strategies: string;
+    start_time: string;
+    threads: number;
+    subnets?: Array<{
+      id: string;
+      name: string;
+      subnet: string;
+    }>;
+  } | null;
+}>();
+
 const subnetName = ref('');
 const newSubnet = ref('');
 const loading = ref(false);
@@ -249,6 +265,84 @@ const cachedSubnets = ref([]);
 const cachedPolicies = ref([]);
 
 const emit = defineEmits(['cancel', 'save'])
+
+// 监听 initialData 变化，更新表单数据
+watch(() => props.initialData, (newData) => {
+  if (newData) {
+    console.log('Initial data received:', newData); // 调试日志
+    
+    // 更新策略名称
+    strategyName.value = newData.name;
+    
+    // 更新子网数据
+    if (newData.subnets && newData.subnets.length > 0) {
+      cachedSubnets.value = newData.subnets.map(subnet => ({
+        id: subnet.id,
+        name: subnet.name,
+        subnet: subnet.subnet,
+        created_at: new Date().toLocaleString()
+      }));
+    }
+    
+    // 解析策略描述来设置调度类型和时间
+    const description = newData.description;
+    if (description.includes('every minute')) {
+      scheduleType.value = t('scan.policy.types.everyMinute');
+      const match = description.match(/(\d+) minutes/);
+      if (match) {
+        intervalMinutes.value = parseInt(match[1]);
+      }
+    } else if (description.includes('every hour')) {
+      scheduleType.value = t('scan.policy.types.everyHour');
+      const match = description.match(/(\d+) hours/);
+      if (match) {
+        intervalHours.value = parseInt(match[1]);
+      }
+    } else if (description.includes('every day')) {
+      scheduleType.value = t('scan.policy.types.everyDay');
+      const match = description.match(/(\d+) days/);
+      if (match) {
+        intervalDays.value = parseInt(match[1]);
+      }
+    } else if (description.includes('every week')) {
+      scheduleType.value = t('scan.policy.types.everyWeek');
+      // 解析星期几
+      const weekDays = description.match(/on (.*?) at/);
+      if (weekDays) {
+        weeklyDays.value = weekDays[1].split('、').map(day => 
+          Object.entries(t('scan.policy.weekDays')).find(([_, value]) => value === day)?.[0]
+        ).filter(Boolean);
+      }
+    } else if (description.includes('every month')) {
+      scheduleType.value = t('scan.policy.types.everyMonth');
+      // 解析每月几号
+      const monthDays = description.match(/on (.*?) at/);
+      if (monthDays) {
+        monthlyDays.value = monthDays[1].split('、').map(day => 
+          day === t('scan.policy.lastDay') ? 'last_day' : day
+        );
+      }
+    } else {
+      scheduleType.value = t('scan.policy.types.custom');
+      customCron.value = newData.strategies;
+    }
+    
+    // 设置开始时间
+    if (newData.start_time) {
+      startExecutionTime.value = new Date(newData.start_time);
+    }
+    
+    // 更新策略列表
+    cachedPolicies.value = [{
+      name: newData.name,
+      description: newData.description,
+      cron: newData.strategies,
+      created_at: new Date().toLocaleString(),
+      startTime: new Date(newData.start_time),
+      threads: newData.threads
+    }];
+  }
+}, { immediate: true });
 
 const isValidIP = (ip: string) => {
   const ipRegex = /^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;

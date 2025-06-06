@@ -1,5 +1,5 @@
 from flask import Blueprint, jsonify, request
-from app.models import db, User
+from app.models.models import db, User
 from app.utils.auth import generate_token
 from app.utils import utils
 from app.utils.redis_manager import RedisManager

@@ -5,14 +5,14 @@ from flask_cors import CORS
 from flask_migrate import Migrate
 from redis import Redis
 
-from .config import Config
-from .models import db
-from .routes.scan import scan_bp
-from .routes.user.user import user_bp
-from .routes.auth.auth import auth_bp
-from .routes.ip.ips import ips_bp
-from .routes.dashboard.dashboard import dashboard_bp
-from .tasks.task_manager import task_manager
+from app.config import Config
+from app.models.models import db
+from app.routes.scan import scan_bp
+from app.routes.user.user import user_bp
+from app.routes.auth.auth import auth_bp
+from app.routes.ip.ips import ips_bp
+from app.routes.dashboard.dashboard import dashboard_bp
+from app.tasks.task_manager import task_manager
 
 # 创建 db 实例
 migrate = Migrate()

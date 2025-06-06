@@ -1,8 +1,9 @@
 from flask import Blueprint, jsonify
 from app.utils.auth import token_required
-from app.models import IP, ScanPolicy, ScanJob, ActionLog
+from app.models.models import IP, ScanPolicy, ScanJob, ActionLog
 from app.utils.utils import get_system_metrics
 from app.tasks.task_manager import task_manager
+import asyncio
 
 dashboard_bp = Blueprint('dashboard', __name__)
 
@@ -19,15 +20,8 @@ def get_dashboard_data(current_user):
     failed_jobs = ScanJob.query.filter_by(status='failed').count()
     successful_jobs = ScanJob.query.filter_by(status='completed').count()
 
-    # 获取最近的扫描任务
     recent_jobs = ScanJob.query.order_by(ScanJob.created_at.desc()).limit(10).all()
-    recent_jobs_data = []
-    for job in recent_jobs:
-        job_data = job.to_dict()
-        # 获取任务管理器中的状态
-        task_status = task_manager.get_task_status(job.id)
-        job_data['task_status'] = task_status
-        recent_jobs_data.append(job_data)
+    recent_jobs_data = [job.to_dict() for job in recent_jobs]
 
     audit_resources = ActionLog.query.all()
 

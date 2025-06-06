@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request
 from sqlalchemy import desc, asc
-from app.models import db, IP, User
+from app.models.models import db, IP, User
 from app.utils.auth import token_required
 from app.utils import utils
 

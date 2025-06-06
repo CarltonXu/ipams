@@ -182,15 +182,35 @@ onMounted(() => {
   display: flex;
   justify-content: center;
   align-items: center;
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  background-image: url('/src/assets/login-bg.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
 }
 
 .login-box {
-  background: var(--el-bg-color);
+  background: #ffffffe0;
   padding: 2.5rem;
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
   width: 405px;
   transition: all 0.3s ease;
+  border-radius: 8px;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.header h2 {
+  font-size: 1.8rem;
+  color: var(--el-text-color-primary);
+  margin-bottom: 0.5rem;
+}
+
+.subtitle {
+  color: var(--el-text-color-secondary);
+  font-size: 0.9rem;
 }
 
 .captcha-container {
@@ -204,119 +224,54 @@ onMounted(() => {
 }
 
 .captcha-image {
-  height: 42px;
+  height: 40px;
   border-radius: 4px;
   cursor: pointer;
-  transition: opacity 0.3s;
 }
 
-.captcha-image:hover {
-  opacity: 0.8;
+.submit-btn {
+  width: 100%;
+  margin-top: 1rem;
 }
 
-/* 新增样式 */
 .additional-links {
-  text-align: right;
+  margin-top: 1rem;
+  text-align: center;
   color: var(--el-text-color-secondary);
-  font-size: 0.9rem;
 }
 
 .register-link {
   color: var(--el-color-primary);
-  font-weight: bold;
   text-decoration: none;
+  margin-left: 0.5rem;
 }
 
 .register-link:hover {
   text-decoration: underline;
 }
 
-.header {
+.language-switch {
+  margin-top: 1.5rem;
   text-align: center;
-  margin-bottom: 2rem;
+  color: var(--el-text-color-secondary);
 }
 
-.header h2 {
-  font-size: 2rem;
-  font-weight: 600;
-  color: #333;
+.language-switch span {
+  cursor: pointer;
+  padding: 0 0.5rem;
 }
 
-.subtitle {
-  font-size: 1rem;
-  color: #666;
-  margin-top: 0.5rem;
+.language-switch span.active {
+  color: var(--el-color-primary);
+  font-weight: 500;
 }
 
-.login-form {
-  .el-form-item {
-    margin-bottom: 1.5rem;
-  }
+.language-switch .divider {
+  cursor: default;
+  color: var(--el-border-color);
 }
 
 .input-field {
-  --el-input-height: 42px;
-  
-  :deep(.el-input__wrapper) {
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
-    transition: all 0.3s ease;
-    
-    &:hover {
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    }
-    
-    &.is-focus {
-      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
-    }
-  }
-
-  :deep(.el-input__prefix) {
-    color: var(--el-text-color-secondary);
-  }
-}
-
-.submit-btn {
   width: 100%;
-  height: 42px;
-  font-size: 1rem;
-  font-weight: 500;
-  margin: 1rem 0;
-  letter-spacing: 1px;
-}
-
-.language-switch {
-  text-align: center;
-  margin-top: 1.5rem;
-  color: var(--el-text-color-secondary);
-  font-size: 0.9rem;
-
-  span {
-    cursor: pointer;
-    padding: 0.3rem 0.5rem;
-    transition: all 0.3s ease;
-
-    &:hover {
-      color: var(--el-color-primary);
-    }
-
-    &.active {
-      color: var(--el-color-primary);
-      font-weight: 500;
-    }
-  }
-
-  .divider {
-    margin: 0 0.5rem;
-    cursor: default;
-    
-    &:hover {
-      color: var(--el-text-color-secondary);
-    }
-  }
-}
-
-/* 暗色模式适配 */
-:root[data-theme='dark'] .login-container {
-  background: linear-gradient(135deg, #1a1c1e 0%, #2d3436 100%);
 }
 </style>

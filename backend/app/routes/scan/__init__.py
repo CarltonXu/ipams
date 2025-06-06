@@ -1,7 +1,7 @@
 from flask import Blueprint
-from .subnet_routes import subnet_bp
-from .policy_routes import policy_bp
-from .job_routes import job_bp
+from app.routes.scan.subnet_routes import subnet_bp
+from app.routes.scan.policy_routes import policy_bp
+from app.routes.scan.job_routes import job_bp
 
 scan_bp = Blueprint('scan', __name__)
 

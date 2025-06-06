@@ -37,7 +37,7 @@
                   <template #default="{ row }">
                     <el-button
                       type="text"
-                      @click="$router.push({ name: 'JobResults', params: { jobId: row.id } })"
+                      @click="handleJobClick(row)"
                     >
                       {{ row.id }}
                     </el-button>
@@ -129,13 +129,17 @@
 import { ref, onMounted, watch, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useDashboardStore } from '../stores/dashboard'
-import { ElLoading } from 'element-plus'
+import { useUserStore } from '../stores/user'
+import { ElLoading, ElMessage } from 'element-plus'
+import { useRouter } from 'vue-router'
 
 const dashboardStore = useDashboardStore()
+const userStore = useUserStore()
 const { t } = useI18n()
 const stats = ref({})
 const resources = ref({})
 const recentJobs = ref([])
+const router = useRouter()
 
 const refreshOptions = [
   { label: 'off', value: 0 },
@@ -198,9 +202,17 @@ const setupAutoRefresh = () => {
 
 watch(refreshInterval, setupAutoRefresh)
 
-onMounted(() => {
-  fetchData()
-  setupAutoRefresh()
+onMounted(async () => {
+  try {
+    // 获取当前用户信息
+    await userStore.fetchCurrentUser()
+    // 获取仪表盘数据
+    await fetchData()
+    setupAutoRefresh()
+  } catch (error) {
+    console.error('Failed to initialize dashboard:', error)
+    ElMessage.error(t('common.initFailed'))
+  }
 })
 
 onUnmounted(() => {
@@ -208,6 +220,26 @@ onUnmounted(() => {
     clearInterval(refreshTimer)
   }
 })
+
+const handleJobClick = (row) => {
+  // 检查用户权限
+  const isAdmin = userStore.isAdmin
+  const isOwner = row.user_id === userStore.currentUser?.id
+
+  console.log('User store state:', {
+    currentUser: userStore.currentUser,
+    isAdmin: userStore.isAdmin,
+    rowUserId: row.user_id
+  })
+
+  if (!isAdmin && !isOwner) {
+    ElMessage.error(t('auth.message.noPermisstions'))
+    return
+  }
+
+  // 有权限，跳转到结果页面
+  router.push({ name: 'JobResults', params: { jobId: row.id } })
+}
 </script>
 
 <style scoped>

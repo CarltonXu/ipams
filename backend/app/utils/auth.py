@@ -2,7 +2,7 @@ from functools import wraps
 from flask import request, jsonify, current_app
 import jwt
 from datetime import datetime, timedelta
-from app.models import User
+from app.models.models import User
 
 def generate_token(user_id):
     payload = {

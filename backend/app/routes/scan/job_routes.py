@@ -1,8 +1,8 @@
 from flask import Blueprint, request, jsonify
-from app.models import db, ScanJob, ScanSubnet, ScanResult
+from app.models.models import db, ScanJob, ScanSubnet, ScanResult
+from app.tasks.task_manager import task_manager
 from app.utils.auth import token_required
 from datetime import datetime
-from app.tasks.task_manager import task_manager
 
 job_bp = Blueprint('job', __name__)
 
@@ -10,8 +10,31 @@ job_bp = Blueprint('job', __name__)
 @token_required
 def get_jobs(current_user):
     """Get all scan jobs for current user"""
-    jobs = ScanJob.query.filter_by(user_id=current_user.id).all()
-    return jsonify([job.to_dict() for job in jobs])
+    try:
+        # 获取查询参数
+        status = request.args.get('status')
+        
+        # 构建基础查询
+        query = ScanJob.query.filter_by(
+            user_id=current_user.id,
+            deleted=False
+        )
+        
+        # 如果指定了状态，添加状态过滤
+        if status:
+            if status == 'running':
+                query = query.filter(ScanJob.status.in_(['pending', 'running']))
+            else:
+                query = query.filter(ScanJob.status == status)
+        
+        # 获取任务列表
+        jobs = query.all()
+        
+        return jsonify({
+            'jobs': [job.to_dict() for job in jobs]
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @job_bp.route('/jobs', methods=['POST'])
 @token_required
@@ -124,7 +147,7 @@ def cancel_job(current_user, job_id):
         return jsonify({'error': 'Job not found'}), 404
         
     if job.status not in ['pending', 'running']:
-        return jsonify({'error': 'Job cannot be cancelled'}), 400
+        return jsonify({'error': 'Only pending or running jobs can be cancelled'}), 400
     
     try:
         # Update job status
@@ -132,10 +155,8 @@ def cancel_job(current_user, job_id):
         job.end_time = datetime.utcnow()
         db.session.commit()
         
-        # Update task status in task manager
-        task_state = task_manager.get_task_status(job_id)
-        if task_state['status'] != 'not_found':
-            task_manager.update_task_status(job_id, 'cancelled')
+        # cancel task job.
+        task_manager.cancel_task(job_id)
         
         return jsonify({'message': 'Job cancelled successfully'})
         
@@ -147,13 +168,14 @@ def cancel_job(current_user, job_id):
 @token_required
 def get_job_results(current_user, job_id):
     """Get scan results for a specific job"""
-    job = ScanJob.query.filter_by(
-        id=job_id,
-        user_id=current_user.id
-    ).first()
+    job = ScanJob.query.filter_by(id=job_id).first()
     
     if not job:
         return jsonify({'error': 'Job not found'}), 404
+        
+    # 检查权限：只有管理员或任务所有者可以访问
+    if not current_user.is_admin and job.user_id != current_user.id:
+        return jsonify({'error': 'Permission denied: Only administrators or job owners can access these results'}), 403
         
     results = ScanResult.query.filter_by(job_id=job_id).all()
     return jsonify([result.to_dict() for result in results])

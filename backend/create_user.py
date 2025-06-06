@@ -1,7 +1,7 @@
 import argparse
 from flask import Flask
 from app.config import Config
-from app.models import db, User
+from app.models.models import db, User
 
 def create_app():
     app = Flask(__name__)

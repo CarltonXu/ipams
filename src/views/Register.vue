@@ -188,15 +188,19 @@ const handleSubmit = async () => {
   display: flex;
   justify-content: center;
   align-items: center;
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  background-image: url('/src/assets/login-bg.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
 }
 
 .register-box {
-  background: var(--el-bg-color);
+  background: #ffffffe0;;
   padding: 2.5rem;
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
-  width: 450px;
+  width: 405px;
   transition: all 0.3s ease;
+  border-radius: 8px;
 }
 
 .header {
@@ -205,97 +209,75 @@ const handleSubmit = async () => {
 }
 
 .header h2 {
-  font-size: 2rem;
-  font-weight: 600;
-  color: #333;
+  font-size: 1.8rem;
+  color: var(--el-text-color-primary);
+  margin-bottom: 0.5rem;
 }
 
 .subtitle {
-  font-size: 1rem;
-  color: #666;
-  margin-top: 0.5rem;
-}
-
-
-.additional-links {
-  text-align: right;
   color: var(--el-text-color-secondary);
   font-size: 0.9rem;
 }
 
+.captcha-container {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.captcha-input {
+  flex: 1;
+}
+
+.captcha-image {
+  height: 40px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.submit-btn {
+  width: 100%;
+  margin-top: 1rem;
+}
+
+.additional-links {
+  margin-top: 1rem;
+  text-align: center;
+  color: var(--el-text-color-secondary);
+}
+
 .login-link {
   color: var(--el-color-primary);
-  font-weight: bold;
   text-decoration: none;
+  margin-left: 0.5rem;
 }
 
 .login-link:hover {
   text-decoration: underline;
 }
 
-.input-field {
-  --el-input-height: 42px;
-  
-  :deep(.el-input__wrapper) {
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
-    transition: all 0.3s ease;
-    
-    &:hover {
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    }
-    
-    &.is-focus {
-      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
-    }
-  }
-
-  :deep(.el-input__prefix) {
-    color: var(--el-text-color-secondary);
-  }
-}
-
-.submit-btn {
-  width: 100%;
-  height: 42px;
-  font-size: 1rem;
-  font-weight: 500;
-  margin: 1rem 0;
-  letter-spacing: 1px;
-}
-
 .language-switch {
-  text-align: center;
   margin-top: 1.5rem;
+  text-align: center;
   color: var(--el-text-color-secondary);
-  font-size: 0.9rem;
-
-  span {
-    cursor: pointer;
-    padding: 0.3rem 0.5rem;
-    transition: all 0.3s ease;
-
-    &:hover {
-      color: var(--el-color-primary);
-    }
-
-    &.active {
-      color: var(--el-color-primary);
-      font-weight: 500;
-    }
-  }
-
-  .divider {
-    margin: 0 0.5rem;
-    cursor: default;
-    
-    &:hover {
-      color: var(--el-text-color-secondary);
-    }
-  }
 }
 
-/* 暗色模式适配 */
-:root[data-theme='dark'] .register-container {
-  background: linear-gradient(135deg, #1a1c1e 0%, #2d3436 100%);
+.language-switch span {
+  cursor: pointer;
+  padding: 0 0.5rem;
+}
+
+.language-switch span.active {
+  color: var(--el-color-primary);
+  font-weight: 500;
+}
+
+.language-switch .divider {
+  cursor: default;
+  color: var(--el-border-color);
+}
+
+.input-field {
+  width: 100%;
 }
 </style>

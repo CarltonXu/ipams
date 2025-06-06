@@ -1,58 +1,65 @@
 from typing import Dict, Any, Optional
-import threading
 from datetime import datetime
+import logging
+import threading
+
+logger = logging.getLogger(__name__)
 
 class TaskState:
-    _instance = None
-    _lock = threading.Lock()
-    
-    def __new__(cls):
-        with cls._lock:
-            if cls._instance is None:
-                cls._instance = super(TaskState, cls).__new__(cls)
-                cls._instance._initialize()
-            return cls._instance
-    
-    def _initialize(self):
-        self.tasks: Dict[str, Any] = {}
-        self._task_lock = threading.Lock()
-    
-    def create_task(self, job_id: str, policy_id: str, subnet_id: str) -> None:
-        """添加新任务"""
-        with self._task_lock:
-            self.tasks[job_id] = {
+    def __init__(self):
+        self._tasks = {}
+        self._lock = threading.Lock()
+
+    def create_task(self, job_id: str, policy_id: str, subnet_id: str, future=None, executor=None):
+        """创建任务记录"""
+        with self._lock:
+            self._tasks[job_id] = {
+                'status': 'pending',
+                'progress': 0,
+                'machines_found': 0,
                 'policy_id': policy_id,
                 'subnet_id': subnet_id,
-                'status': 'pending',
-                'start_time': datetime.utcnow(),
-                'progress': 0,
-                'error_message': None
+                'future': future,
+                'executor': executor,
+                'error': None
             }
-    
-    def update_task_status(self, job_id: str, status: str, error_message: Optional[str] = None) -> None:
-        """更新任务状态"""
-        with self._task_lock:
-            if job_id in self.tasks:
-                self.tasks[job_id]['status'] = status
-                if error_message is not None:
-                    self.tasks[job_id]['error_message'] = error_message
-    
-    def update_task_progress(self, job_id: str, progress: float, machines_found: int = 0) -> None:
-        """更新任务进度"""
-        with self._task_lock:
-            if job_id in self.tasks:
-                self.tasks[job_id]['progress'] = progress
-                self.tasks[job_id]['machines_found'] = machines_found
-    
-    def get_task(self, job_id: str) -> Dict[str, Any]:
-        """获取任务信息"""
-        with self._task_lock:
-            return self.tasks.get(job_id, {'status': 'not_found'})
-    
-    def remove_task(self, job_id: str) -> None:
-        """移除任务"""
-        with self._task_lock:
-            self.tasks.pop(job_id, None)
+            logger.info(f"Created task {job_id}")
 
-# 创建全局任务状态实例
-task_state = TaskState() 
+    def update_task_status(self, job_id: str, status: str, error: str = None):
+        """更新任务状态"""
+        with self._lock:
+            if job_id in self._tasks:
+                self._tasks[job_id]['status'] = status
+                if error:
+                    self._tasks[job_id]['error'] = error
+                if status in ['completed', 'failed', 'cancelled']:
+                    self._tasks[job_id]['end_time'] = datetime.utcnow()
+                logger.info(f"Updated task {job_id} status to {status}")
+
+    def update_task_progress(self, job_id: str, progress: float, machines_found: int = 0):
+        """更新任务进度"""
+        with self._lock:
+            if job_id in self._tasks:
+                self._tasks[job_id]['progress'] = progress
+                self._tasks[job_id]['machines_found'] = machines_found
+                logger.debug(f"Updated task {job_id} progress to {progress}%")
+
+    def get_task(self, job_id: str) -> dict:
+        """获取任务状态"""
+        with self._lock:
+            return self._tasks.get(job_id, {
+                'status': 'not_found',
+                'progress': 0,
+                'machines_found': 0,
+                'error': None
+            })
+
+    def remove_task(self, job_id: str):
+        """移除任务记录"""
+        with self._lock:
+            if job_id in self._tasks:
+                del self._tasks[job_id]
+                logger.info(f"Removed task {job_id}")
+
+# 创建全局任务状态管理器实例
+task_state = TaskState()

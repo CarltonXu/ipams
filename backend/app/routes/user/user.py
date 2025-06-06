@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify, request, current_app
 from sqlalchemy import desc, asc
 from werkzeug.utils import secure_filename
-from app.models import db, User, IP
+from app.models.models import db, User, IP
 from app.utils.auth import token_required, admin_required, generate_token
 from app.utils import utils
 import os

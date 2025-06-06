@@ -122,12 +122,6 @@
             </el-checkbox-group>
           </el-form-item>
         </el-form>
-
-        <!-- 添加任务进度显示 -->
-        <JobProgress 
-          v-if="createdJobIds.length > 0"
-          :job-ids="createdJobIds"
-        />
       </div>
       <template #footer>
         <el-button @click="scanDialogVisible = false">
@@ -157,7 +151,6 @@ import { useI18n } from 'vue-i18n'
 import dayjs from 'dayjs'
 import ScanPolicyForm from './ScanPolicyForm.vue'
 import PolicyJobsDrawer from './PolicyJobsDrawer.vue'
-import JobProgress from './JobProgress.vue'
 import { useScanPolicyStore } from '../stores/scanPolicy'
 
 const { t } = useI18n()
@@ -173,8 +166,6 @@ const executingScan = ref(false)
 
 const jobsDrawerVisible = ref(false)
 const selectedPolicyId = ref('')
-
-const createdJobIds = ref<string[]>([])
 
 // 格式化日期时间
 const formatDateTime = (dateStr: string) => {
@@ -199,7 +190,6 @@ const getPolicies = async () => {
 const showExecuteScanDialog = (policy: Policy) => {
   currentPolicy.value = policy
   selectedSubnets.value = policy.subnets.map(subnet => subnet.id)
-  createdJobIds.value = [] // 重置任务ID
   scanDialogVisible.value = true
 }
 
@@ -227,25 +217,20 @@ const showPolicyJobs = (policy: Policy) => {
 // 执行扫描
 const executeScan = async () => {
   if (!currentPolicy.value || selectedSubnets.value.length === 0) {
-    ElMessage.warning(t('scan.policy.execute.messages.selectSubnets'))
+    ElMessage.warning(t('scan.policy.execute.selectSubnets'))
     return
   }
 
   try {
     executingScan.value = true
     const policyStore = useScanPolicyStore()
-    const response = await policyStore.executeScan({
+    await policyStore.executeScan({
       policy_id: currentPolicy.value.id,
       subnet_ids: selectedSubnets.value
     })
     
-    // 保存创建的任务ID
-    createdJobIds.value = response.jobs.map((job: any) => job.id)
-    
-    ElMessage.success(t('scan.policy.execute.messages.success'))
-    
-    // 不再自动关闭对话框，让用户可以看到进度
-    // scanDialogVisible.value = false
+    ElMessage.success(t('scan.policy.execute.success'))
+    scanDialogVisible.value = false
     
     // 刷新策略列表
     await getPolicies()
@@ -254,7 +239,7 @@ const executeScan = async () => {
     selectedPolicyId.value = currentPolicy.value.id
     jobsDrawerVisible.value = true
   } catch (error: any) {
-    ElMessage.error(error.message || t('scan.policy.execute.messages.failed'))
+    ElMessage.error(error.message || t('scan.policy.execute.failed'))
   } finally {
     executingScan.value = false
   }
@@ -286,8 +271,30 @@ const deletePolicy = async (policy: Policy) => {
 
 // 编辑策略
 const editPolicy = (policy: Policy) => {
-  editingPolicy.value = { ...policy }
-  dialogVisible.value = true
+  try {
+    // 获取策略关联的子网信息
+    const policySubnets = (policy.subnet_ids || []).map(subnetId => {
+      const subnet = policies.value.find(p => p.subnets?.some(s => s.id === subnetId))?.subnets.find(s => s.id === subnetId);
+      return subnet;
+    }).filter(Boolean);
+
+    // 构建编辑数据
+    editingPolicy.value = {
+      name: policy.name,
+      description: policy.description,
+      subnet_ids: policy.subnet_ids || [],
+      strategies: policy.strategies,
+      start_time: policy.start_time,
+      threads: policy.threads,
+      subnets: policySubnets
+    };
+    
+    console.log('Editing policy data:', editingPolicy.value); // 调试日志
+    dialogVisible.value = true;
+  } catch (error) {
+    console.error('Error editing policy:', error);
+    ElMessage.error(t('scan.policy.show.messages.editFailed'));
+  }
 }
 
 // 显示添加策略对话框
@@ -296,22 +303,10 @@ const showAddPolicyDialog = () => {
   dialogVisible.value = true
 }
 
-// 保存策略
-const handleSavePolicy = async (policyData: any) => {
-  try {
-    const policyStore = useScanPolicyStore()
-    if (editingPolicy.value) {
-      // 处理编辑逻辑
-      ElMessage.success(t('scan.policy.show.messages.editSuccess'))
-    } else {
-      await policyStore.savePolicyConfig(policyData)
-      ElMessage.success(t('scan.policy.show.messages.addSuccess'))
-    }
-    dialogVisible.value = false  // 关闭对话框
-    await getPolicies()  // 刷新列表
-  } catch (error: any) {
-    ElMessage.error(error.message || t('common.error.unknown'))
-  }
+// 处理保存策略
+const handleSavePolicy = async () => {
+  await getPolicies()
+  dialogVisible.value = false
 }
 
 onMounted(() => {
@@ -324,27 +319,49 @@ onMounted(() => {
   padding: 20px;
 }
 
+.card {
+  margin-bottom: 20px;
+}
+
 .toolbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1.5rem;
+  margin-bottom: 20px;
 }
 
-.toolbar-header h2 {
+.toolbar-header {
+  display: flex;
+  flex-direction: column;
+}
+
+.title {
   margin: 0;
   font-size: 24px;
-  color: var(--el-text-color-primary);
+  color: #333;
 }
 
-.toolbar-header .subtitle {
+.subtitle {
   margin: 5px 0 0;
   font-size: 14px;
-  color: var(--el-text-color-secondary);
+  color: #666;
 }
 
-.el-tag {
-  margin-right: 8px;
-  margin-bottom: 4px;
+.scan-dialog-content {
+  padding: 20px;
+}
+
+.policy-info {
+  margin-bottom: 20px;
+  font-size: 16px;
+  color: #333;
+}
+
+:deep(.el-table) {
+  --el-table-border-color: var(--el-border-color-lighter);
+}
+
+:deep(.el-tag) {
+  margin: 2px;
 }
 </style>

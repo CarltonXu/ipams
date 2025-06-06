@@ -108,6 +108,9 @@ export default {
     captchaPlaceholder: 'Please enter captcha',
     captchaError: 'Failed to get captcha',
     captchaRefresh: 'Refresh Captcha',
+    message: {
+      noPermisstions: 'Insufficient permissions',
+    }
   },
   user: {
     profile: 'Profile',
@@ -511,7 +514,7 @@ export default {
           confirm: 'Confirm Execute Scan',
           noSubnets: 'Please select at least one subnet',
           success: 'Scan executed successfully',
-          error: 'Failed to execute scan'
+          failed: 'Failed to execute scan'
         },
         show: {
           columns: {
@@ -527,7 +530,8 @@ export default {
                 running: 'Running',
                 completed: 'Completed',
                 failed: 'Failed',
-                pending: 'Pending'
+                pending: 'Pening',
+                cancelled: 'cancelled',
             },
             actions: {
               title: 'Actions',
@@ -556,23 +560,28 @@ export default {
           }
         },
         jobs: {
-          title: 'Scan Job List',
+          title: 'Scan Jobs',
           jobId: 'Jobs ID',
-          subnet: 'Scan Subnet',
+          subnet: 'Subnet',
           status: 'Status',
           machinesFound: 'Discovery Hosts Count',
-          progress: 'Scan Progress',
+          progress: 'Progress',
           startTime: 'Start Time',
           endTime: 'End Time',
-          fetchError: 'Get Job List Failed',
           errorMessage: 'Task Results',
+          actions: 'Actions',
+          cancel: 'Cancel',
+          viewResults: 'View Results',
+          cancelSuccess: 'Job cancelled successfully',
+          cancelFailed: 'Failed to cancel job',
+          fetchError: 'Failed to fetch jobs',
           refresh: {
-            off: 'Auto Refresh Off',
-            '1s': "every 1s",
-            '5s': 'Every 5s',
-            '10s': 'Every 10s',
-            '30s': 'Every 30s',
-            '60s': 'Every 1min'
+            off: 'Auto-refresh Off',
+            '1s': "Refresh every 1s",
+            '5s': 'Refresh every 5s',
+            '10s': 'Refresh every 10s',
+            '30s': 'Refresh every 30s',
+            '60s': 'Refresh every 60s'
           }
         }
       },
