@@ -232,7 +232,7 @@ class ScanJob(db.Model):
     user = relationship('User', back_populates='scan_jobs')
     policy = relationship('ScanPolicy', back_populates='jobs')
     subnet = relationship('ScanSubnet', back_populates='jobs')
-    results = relationship('ScanResult', back_populates='job', cascade='all, delete-orphan')
+    scan_results = relationship('ScanResult', back_populates='job', lazy='dynamic')
 
     def __repr__(self):
         return f"<ScanJob {self.id} on Subnet {self.subnet_id}>"
@@ -269,34 +269,44 @@ class ScanJob(db.Model):
         }
 
 class ScanResult(db.Model):
+    """扫描结果模型"""
     __tablename__ = 'scan_results'
-    
+
     id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     job_id = db.Column(db.String(36), db.ForeignKey('scan_jobs.id'), nullable=False)
-    ip_address = db.Column(db.String(15), nullable=False)
-    open_ports = db.Column(db.String(255))
-    data = db.Column(db.String(255))
+    ip_address = db.Column(db.String(45), nullable=False)  # 支持 IPv6
+    open_ports = db.Column(db.JSON)  # 存储开放端口信息，格式：{"80": {"protocol": "tcp", "service": "http", "version": "nginx/1.18.0"}, "443": {...}}
+    os_info = db.Column(db.String(255))  # 操作系统信息
+    status = db.Column(db.String(20))    # 主机状态：up/down
+    raw_data = db.Column(db.JSON)        # 原始扫描数据
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    deleted_at = db.Column(db.DateTime, nullable=True)
-    
-    job = relationship('ScanJob', back_populates='results')
+    deleted = db.Column(db.Boolean, default=False)
+    deleted_at = db.Column(db.DateTime)
 
-    def __init__(self, job_id, ip_address, open_ports):
+    # 关联关系
+    job = db.relationship('ScanJob', back_populates='scan_results')
+
+    def __init__(self, job_id, ip_address, open_ports=None, os_info=None, status=None, raw_data=None):
         self.job_id = job_id
         self.ip_address = ip_address
-        self.open_ports = open_ports
+        self.open_ports = open_ports or {}
+        self.os_info = os_info
+        self.status = status
+        self.raw_data = raw_data
+        self.deleted = False
 
     def to_dict(self):
         return {
-            "id": self.id,
-            "job_id": self.job_id,
-            "ip_address": self.ip_address,
-            "open_ports": self.open_ports,
-            "data": self.data,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
-            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
-            "deleted_at": self.deleted_at.isoformat() if self.deleted_at else None
+            'id': self.id,
+            'job_id': self.job_id,
+            'ip_address': self.ip_address,
+            'open_ports': self.open_ports,
+            'os_info': self.os_info,
+            'status': self.status,
+            'raw_data': self.raw_data,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
         }
 
 # 添加策略和子网的关联表

@@ -228,24 +228,106 @@
     <el-dialog
       v-model="schedulerJobsDialogVisible"
       :title="t('scan.policy.show.schedulerJobs')"
-      width="800px"
+      width="900px"
+      destroy-on-close
     >
-      <el-table :data="schedulerJobs" style="width: 100%">
-        <el-table-column prop="policy_name" :label="t('scan.policy.show.columns.name')" />
-        <el-table-column prop="next_run_time" :label="t('scan.policy.show.columns.nextRunTime')">
-          <template #default="{ row }">
-            {{ row.next_run_time ? new Date(row.next_run_time).toLocaleString() : '-' }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="trigger" :label="t('scan.policy.show.columns.trigger')" />
-        <el-table-column prop="is_start_job" :label="t('scan.policy.show.columns.jobType')">
-          <template #default="{ row }">
-            <el-tag :type="row.is_start_job ? 'warning' : 'success'">
-              {{ row.is_start_job ? t('scan.policy.show.columns.startJob') : t('scan.policy.show.columns.cronJob') }}
-            </el-tag>
-          </template>
-        </el-table-column>
-      </el-table>
+      <div class="scheduler-jobs-container">
+        <div class="scheduler-stats">
+          <el-row :gutter="20">
+            <el-col :span="8">
+              <el-card shadow="hover" class="stat-card">
+                <template #header>
+                  <div class="stat-header">
+                    <el-icon><Timer /></el-icon>
+                    <span>{{ t('scan.policy.scheduler.totalJobs') }}</span>
+                  </div>
+                </template>
+                <div class="stat-value">{{ schedulerJobs.length }}</div>
+              </el-card>
+            </el-col>
+            <el-col :span="8">
+              <el-card shadow="hover" class="stat-card">
+                <template #header>
+                  <div class="stat-header">
+                    <el-icon><VideoPlay /></el-icon>
+                    <span>{{ t('scan.policy.scheduler.startJobs') }}</span>
+                  </div>
+                </template>
+                <div class="stat-value">{{ schedulerJobs.filter(job => job.is_start_job).length }}</div>
+              </el-card>
+            </el-col>
+            <el-col :span="8">
+              <el-card shadow="hover" class="stat-card">
+                <template #header>
+                  <div class="stat-header">
+                    <el-icon><Clock /></el-icon>
+                    <span>{{ t('scan.policy.scheduler.cronJobs') }}</span>
+                  </div>
+                </template>
+                <div class="stat-value">{{ schedulerJobs.filter(job => !job.is_start_job).length }}</div>
+              </el-card>
+            </el-col>
+          </el-row>
+        </div>
+
+        <el-table 
+          :data="schedulerJobs" 
+          style="width: 100%; margin-top: 20px"
+          border
+          stripe
+          :max-height="500"
+        >
+          <el-table-column prop="policy_name" :label="t('scan.policy.show.columns.name')" min-width="150">
+            <template #default="{ row }">
+              <div class="policy-name">
+                <el-icon><Document /></el-icon>
+                <span>{{ row.policy_name }}</span>
+              </div>
+            </template>
+          </el-table-column>
+          
+          <el-table-column prop="next_run_time" :label="t('scan.policy.show.columns.nextRunTime')" min-width="180">
+            <template #default="{ row }">
+              <div class="next-run-time">
+                <el-icon><Calendar /></el-icon>
+                <span>{{ row.next_run_time ? new Date(row.next_run_time).toLocaleString() : '-' }}</span>
+              </div>
+            </template>
+          </el-table-column>
+          
+          <el-table-column prop="trigger" :label="t('scan.policy.show.columns.trigger')" min-width="200">
+            <template #default="{ row }">
+              <div class="trigger-info">
+                <el-tag size="small" type="info" class="trigger-tag">
+                  {{ row.trigger }}
+                </el-tag>
+                <el-tooltip
+                  :content="parseCronExpression(row.trigger)"
+                  placement="top"
+                  effect="light"
+                >
+                  <el-icon class="trigger-help"><QuestionFilled /></el-icon>
+                </el-tooltip>
+              </div>
+            </template>
+          </el-table-column>
+          
+          <el-table-column prop="is_start_job" :label="t('scan.policy.show.columns.jobType')" width="120">
+            <template #default="{ row }">
+              <el-tag 
+                :type="row.is_start_job ? 'warning' : 'success'"
+                effect="dark"
+                class="job-type-tag"
+              >
+                <el-icon>
+                  <component :is="row.is_start_job ? VideoPlay : Clock" />
+                </el-icon>
+                {{ row.is_start_job ? t('scan.policy.show.columns.startJob') : t('scan.policy.show.columns.cronJob') }}
+              </el-tag>
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
     </el-dialog>
   </div>
 </template>
@@ -262,7 +344,10 @@ import {
   CircleClose,
   Edit,
   VideoPlay,
-  Delete
+  Delete,
+  Document,
+  Calendar,
+  Clock
 } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n'
 import dayjs from 'dayjs'
@@ -828,5 +913,90 @@ onMounted(() => {
 
 :deep(.el-dropdown-menu__item .el-icon) {
   margin-right: 4px;
+}
+
+.scheduler-jobs-container {
+  padding: 20px;
+}
+
+.scheduler-stats {
+  margin-bottom: 20px;
+}
+
+.stat-card {
+  height: 100%;
+  transition: all 0.3s;
+}
+
+.stat-card:hover {
+  transform: translateY(-5px);
+}
+
+.stat-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--el-text-color-primary);
+}
+
+.stat-header .el-icon {
+  font-size: 20px;
+}
+
+.stat-value {
+  font-size: 24px;
+  font-weight: bold;
+  color: var(--el-color-primary);
+  text-align: center;
+  padding: 10px 0;
+}
+
+.policy-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.policy-name .el-icon {
+  color: var(--el-color-primary);
+}
+
+.next-run-time {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.next-run-time .el-icon {
+  color: var(--el-color-success);
+}
+
+.trigger-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.trigger-tag {
+  font-family: monospace;
+}
+
+.trigger-help {
+  color: var(--el-text-color-secondary);
+  cursor: help;
+}
+
+.trigger-help:hover {
+  color: var(--el-color-primary);
+}
+
+.job-type-tag {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.job-type-tag .el-icon {
+  margin-right: 2px;
 }
 </style>

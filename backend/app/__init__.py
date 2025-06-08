@@ -5,6 +5,7 @@ from flask import Flask, send_from_directory
 from flask_cors import CORS
 from flask_migrate import Migrate
 from redis import Redis
+from flask_sqlalchemy import SQLAlchemy
 
 from app.config import Config
 from app.models.models import db

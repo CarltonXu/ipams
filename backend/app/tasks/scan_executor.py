@@ -398,11 +398,25 @@ class ScanExecutor:
                 if not job:
                     self.app.logger.error(f"Job {self.job_id} not found when saving result")
                     return
-                    
+                
+                # 构建端口信息字典
+                ports_info = {}
+                for port in open_ports:
+                    port_info = self.current_scan_process['scan'][ip]['tcp'][port]
+                    ports_info[str(port)] = {
+                        'protocol': 'tcp',
+                        'service': port_info.get('name', ''),
+                        'version': port_info.get('version', ''),
+                        'banner': port_info.get('banner', ''),
+                        'state': port_info.get('state', '')
+                    }
+                
                 result = ScanResult(
                     job_id=self.job_id,
                     ip_address=ip,
-                    open_ports=','.join(map(str, open_ports))
+                    open_ports=ports_info,
+                    status='up',
+                    raw_data=self.current_scan_process['scan'][ip]
                 )
                 db.session.add(result)
                 db.session.commit()

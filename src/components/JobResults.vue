@@ -28,15 +28,22 @@
         <el-table-column prop="ip_address" :label="t('scan.results.ipAddress')" width="180"></el-table-column>
         <el-table-column prop="open_ports" :label="t('scan.results.openPorts')">
           <template #default="{ row }">
-            <el-tag
-              v-for="port in row.open_ports.split(',')"
-              :key="port"
-              type="success"
-              effect="light"
-              style="margin: 2px"
-            >
-              {{ port }}
-            </el-tag>
+            <div class="ports-container">
+              <el-tag
+                v-for="(info, port) in row.open_ports"
+                :key="port"
+                type="success"
+                effect="light"
+                class="port-tag"
+              >
+                <el-tooltip
+                  :content="`${info.service}${info.version ? ' ' + info.version : ''}`"
+                  placement="top"
+                >
+                  <span>{{ port }}</span>
+                </el-tooltip>
+              </el-tag>
+            </div>
           </template>
         </el-table-column>
         <el-table-column prop="created_at" :label="t('scan.results.createdAt')" width="180">
@@ -75,7 +82,28 @@ import { Search } from '@element-plus/icons-vue'
 
 const { t } = useI18n()
 const route = useRoute()
-const results = ref([])
+
+interface PortInfo {
+  protocol: string;
+  service: string;
+  version: string;
+  banner: string;
+  state: string;
+}
+
+interface ScanResult {
+  id: string;
+  job_id: string;
+  ip_address: string;
+  open_ports: Record<string, PortInfo>;
+  os_info: string;
+  status: string;
+  raw_data: any;
+  created_at: string;
+  updated_at: string;
+}
+
+const results = ref<ScanResult[]>([])
 const searchQuery = ref('')
 const scanPolicyStore = useScanPolicyStore()
 const loading = ref(false)
@@ -197,5 +225,14 @@ const formatDateTime = (dateStr: string) => {
   text-align: center;
   padding: 40px;
   color: var(--el-text-color-secondary);
+}
+
+.ports-container {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.port-tag {
+  margin: 2px;
 }
 </style> 

@@ -662,6 +662,16 @@ export default {
         "everyXWeeks": "Execute every {interval} weeks, ",
         "atWeekdays": "Execute on {weekdays}, ",
         "betweenWeekdays": "Execute every day from {start} to {end}, "
+      },
+      scheduler: {
+        totalJobs: 'Total Jobs',
+        startJobs: 'Start Jobs',
+        cronJobs: 'Cron Jobs',
+        nextRunTime: 'Next Run Time',
+        trigger: 'Trigger',
+        jobType: 'Job Type',
+        startJob: 'Start Job',
+        cronJob: 'Cron Job'
       }
     },
     messages: {
@@ -699,7 +709,7 @@ export default {
       resourceId: 'Resource ID',
       jobId: 'Job ID',
       noData: 'No data'
-    }
+    },
   },
   settings: {
     title: 'System Settings',

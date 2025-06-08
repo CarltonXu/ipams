@@ -597,6 +597,16 @@ export default {
         "everyXWeeks": "每隔 {interval} 周执行一次, ",
         "atWeekdays": "在 {weekdays} 执行, ",
         "betweenWeekdays": "从 {start} 到 {end} 每天执行一次, "
+      },
+      scheduler: {
+        totalJobs: '总任务数',
+        startJobs: '启动任务',
+        cronJobs: '定时任务',
+        nextRunTime: '下次执行时间',
+        trigger: '触发方式',
+        jobType: '任务类型',
+        startJob: '启动任务',
+        cronJob: '定时任务'
       }
     },
     execution: {
@@ -719,6 +729,16 @@ export default {
       resourceId: '资源ID',
       jobId: '任务ID',
       noData: '暂无数据'
+    },
+    scheduler: {
+      totalJobs: '总任务数',
+      startJobs: '启动任务',
+      cronJobs: '定时任务',
+      nextRunTime: '下次执行时间',
+      trigger: '触发方式',
+      jobType: '任务类型',
+      startJob: '启动任务',
+      cronJob: '定时任务'
     }
   },
   settings: {
