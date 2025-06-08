@@ -275,6 +275,7 @@ class ScanResult(db.Model):
     job_id = db.Column(db.String(36), db.ForeignKey('scan_jobs.id'), nullable=False)
     ip_address = db.Column(db.String(15), nullable=False)
     open_ports = db.Column(db.String(255))
+    data = db.Column(db.String(255))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     deleted_at = db.Column(db.DateTime, nullable=True)
@@ -292,6 +293,7 @@ class ScanResult(db.Model):
             "job_id": self.job_id,
             "ip_address": self.ip_address,
             "open_ports": self.open_ports,
+            "data": self.data,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
             "deleted_at": self.deleted_at.isoformat() if self.deleted_at else None

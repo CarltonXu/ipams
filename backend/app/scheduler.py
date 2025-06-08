@@ -74,8 +74,14 @@ class PolicyScheduler:
                         status='active'
                     ).all()
                     
+                    # 移除所有现有的任务
+                    for job in self.scheduler.get_jobs():
+                        self.scheduler.remove_job(job.id)
+                    
+                    # 重新调度所有活动的策略
                     for policy in policies:
-                        self.schedule_policy(policy)
+                        if not policy.deleted and policy.status == 'active':
+                            self.schedule_policy(policy)
                         
                     logger.info(f"Initialized scheduler with {len(policies)} policies")
         except Exception as e:
@@ -84,6 +90,11 @@ class PolicyScheduler:
     def schedule_policy(self, policy):
         """调度单个策略"""
         try:
+            # 检查策略是否被删除或未激活
+            if policy.deleted or policy.status != 'active':
+                logger.info(f"Policy {policy.name} is deleted or inactive, skipping scheduling")
+                return
+
             strategies = json.loads(policy.strategies)
             for strategy in strategies:
                 # 创建定时任务

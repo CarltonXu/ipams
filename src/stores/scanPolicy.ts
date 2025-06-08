@@ -20,13 +20,23 @@ interface PolicyData {
   }>;
 }
 
+export interface SchedulerJob {
+  id: string;
+  policy_id: string;
+  policy_name: string;
+  next_run_time: string | null;
+  trigger: string;
+  is_start_job: boolean;
+}
+
 export const useScanPolicyStore = defineStore('scanPolicy', {
   state: () => ({
     policies: ref<Policy[]>([]),
     subnets: ref<Subnet[]>([]),
     loading: ref(false),
     error: ref<string | null>(null),
-    currentPolicy: null
+    currentPolicy: null,
+    schedulerJobs: ref<SchedulerJob[]>([])
   }),
 
   actions: {
@@ -179,6 +189,33 @@ export const useScanPolicyStore = defineStore('scanPolicy', {
       } catch (error) {
         console.error('Failed to fetch running jobs:', error);
         throw error;
+      }
+    },
+
+    async getSchedulerJobs() {
+      try {
+        this.loading = true;
+        const response = await axios.get('/api/scan/policies/scheduler/jobs');
+        this.schedulerJobs = response.data;
+      } catch (error: any) {
+        this.error = error.response?.data?.message || '获取定时任务信息失败';
+        throw error;
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    async updatePolicyStatus(policyId: string, status: 'active' | 'inactive') {
+      try {
+        this.loading = true;
+        await axios.put(`/api/scan/policies/${policyId}/status`, { status });
+        // 刷新策略列表
+        await this.fetchPolicies();
+      } catch (error: any) {
+        this.error = error.response?.data?.message || '更新策略状态失败';
+        throw error;
+      } finally {
+        this.loading = false;
       }
     }
   }

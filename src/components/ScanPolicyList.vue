@@ -6,9 +6,14 @@
           <h2 class="title">{{ t('scan.policy.title') }}</h2>
           <p class="subtitle">{{ t('scan.policy.subtitle') }}</p>
         </div>
-        <el-button type="primary" @click="showAddPolicyDialog">
-          <el-icon><Plus /></el-icon> {{ t('scan.form.buttons.add') }}
-        </el-button>
+        <div class="toolbar-actions">
+          <el-button type="info" @click="showSchedulerJobs">
+            <el-icon><Timer /></el-icon> {{ t('scan.policy.show.schedulerJobs') }}
+          </el-button>
+          <el-button type="primary" @click="showAddPolicyDialog">
+            <el-icon><Plus /></el-icon> {{ t('scan.form.buttons.add') }}
+          </el-button>
+        </div>
       </div>
 
       <el-table 
@@ -130,31 +135,37 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column :label="t('scan.policy.show.columns.actions.title')" width="200" fixed="right">
+        <el-table-column :label="t('scan.policy.show.columns.actions.title')" width="120" fixed="right">
           <template #default="{ row }">
-            <el-button-group>
-              <el-button 
-                type="primary"
-                size="small"
-                @click="editPolicy(row)"
-              >
-                {{ t('scan.policy.show.columns.actions.edit') }}
+            <el-dropdown trigger="click">
+              <el-button type="primary" size="small">
+                {{ t('scan.policy.show.columns.actions.title') }}
+                <el-icon class="el-icon--right"><arrow-down /></el-icon>
               </el-button>
-              <el-button 
-                type="success"
-                size="small"
-                @click="showExecuteScanDialog(row)"
-              >
-                {{ t('scan.policy.show.columns.actions.scan') }}
-              </el-button>
-              <el-button 
-                type="danger"
-                size="small"
-                @click="deletePolicy(row)"
-              >
-                {{ t('scan.policy.show.columns.actions.delete') }}
-              </el-button>
-            </el-button-group>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item @click="togglePolicyStatus(row)">
+                    <el-icon>
+                      <CircleClose v-if="row.status === 'active'" />
+                      <CircleCheck v-else />
+                    </el-icon>
+                    {{ row.status === 'active' ? t('scan.policy.show.columns.actions.disable') : t('scan.policy.show.columns.actions.enable') }}
+                  </el-dropdown-item>
+                  <el-dropdown-item @click="editPolicy(row)">
+                    <el-icon><edit /></el-icon>
+                    {{ t('scan.policy.show.columns.actions.edit') }}
+                  </el-dropdown-item>
+                  <el-dropdown-item @click="showExecuteScanDialog(row)">
+                    <el-icon><video-play /></el-icon>
+                    {{ t('scan.policy.show.columns.actions.scan') }}
+                  </el-dropdown-item>
+                  <el-dropdown-item divided @click="deletePolicy(row)">
+                    <el-icon><delete /></el-icon>
+                    <span class="text-danger">{{ t('scan.policy.show.columns.actions.delete') }}</span>
+                  </el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
           </template>
         </el-table-column>
       </el-table>
@@ -212,18 +223,53 @@
       v-model="jobsDrawerVisible"
       :policy-id="selectedPolicyId"
     />
+
+    <!-- 定时任务信息对话框 -->
+    <el-dialog
+      v-model="schedulerJobsDialogVisible"
+      :title="t('scan.policy.show.schedulerJobs')"
+      width="800px"
+    >
+      <el-table :data="schedulerJobs" style="width: 100%">
+        <el-table-column prop="policy_name" :label="t('scan.policy.show.columns.name')" />
+        <el-table-column prop="next_run_time" :label="t('scan.policy.show.columns.nextRunTime')">
+          <template #default="{ row }">
+            {{ row.next_run_time ? new Date(row.next_run_time).toLocaleString() : '-' }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="trigger" :label="t('scan.policy.show.columns.trigger')" />
+        <el-table-column prop="is_start_job" :label="t('scan.policy.show.columns.jobType')">
+          <template #default="{ row }">
+            <el-tag :type="row.is_start_job ? 'warning' : 'success'">
+              {{ row.is_start_job ? t('scan.policy.show.columns.startJob') : t('scan.policy.show.columns.cronJob') }}
+            </el-tag>
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, QuestionFilled } from '@element-plus/icons-vue'
+import { 
+  Plus, 
+  QuestionFilled, 
+  Timer, 
+  ArrowDown,
+  CircleCheck,
+  CircleClose,
+  Edit,
+  VideoPlay,
+  Delete
+} from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n'
 import dayjs from 'dayjs'
 import ScanPolicyForm from './ScanPolicyForm.vue'
 import PolicyJobsDrawer from './PolicyJobsDrawer.vue'
 import { useScanPolicyStore } from '../stores/scanPolicy'
+import type { SchedulerJob } from '../stores/scanPolicy'
 
 interface Policy {
   id: string;
@@ -288,6 +334,9 @@ const executingScan = ref(false)
 
 const jobsDrawerVisible = ref(false)
 const selectedPolicyId = ref('')
+
+const schedulerJobsDialogVisible = ref(false)
+const schedulerJobs = ref<SchedulerJob[]>([])
 
 // 格式化日期时间
 const formatDateTime = (dateStr: string) => {
@@ -593,6 +642,30 @@ const getSubnetName = (subnets: any[], subnetId: string) => {
   return subnet ? `${subnet.name} (${subnet.subnet})` : subnetId
 }
 
+// 显示定时任务信息
+const showSchedulerJobs = async () => {
+  try {
+    const policyStore = useScanPolicyStore()
+    await policyStore.getSchedulerJobs()
+    schedulerJobs.value = policyStore.schedulerJobs
+    schedulerJobsDialogVisible.value = true
+  } catch (error: any) {
+    ElMessage.error(error.message || t('scan.policy.show.messages.fetchFailed'))
+  }
+}
+
+// 切换策略状态
+const togglePolicyStatus = async (policy: Policy) => {
+  try {
+    const newStatus = policy.status === 'active' ? 'inactive' : 'active'
+    const policyStore = useScanPolicyStore()
+    await policyStore.updatePolicyStatus(policy.id, newStatus)
+    ElMessage.success(t('scan.policy.show.messages.statusUpdateSuccess'))
+  } catch (error: any) {
+    ElMessage.error(error.message || t('scan.policy.show.messages.statusUpdateFailed'))
+  }
+}
+
 onMounted(() => {
   getPolicies()
 })
@@ -629,6 +702,11 @@ onMounted(() => {
   margin: 5px 0 0;
   font-size: 14px;
   color: #666;
+}
+
+.toolbar-actions {
+  display: flex;
+  gap: 8px;
 }
 
 .scan-dialog-content {
@@ -736,5 +814,19 @@ onMounted(() => {
 
 .scan-param-tag {
   margin: 2px;
+}
+
+.text-danger {
+  color: var(--el-color-danger);
+}
+
+:deep(.el-dropdown-menu__item) {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+:deep(.el-dropdown-menu__item .el-icon) {
+  margin-right: 4px;
 }
 </style>

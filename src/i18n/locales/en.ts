@@ -560,19 +560,28 @@ export default {
         failed: 'Failed to execute scan'
       },
       show: {
+        title: 'Scan Policies',
+        add: 'Add Policy',
+        schedulerJobs: 'Scheduled Jobs',
         columns: {
           name: 'Policy Name',
           description: 'Policy Description',
-          strategy: 'Policy Execution Cron',
+          strategy: 'Execution Schedule',
           startTime: 'Start Time',
-          threads: 'Threads Count',
+          threads: 'Thread Count',
           createdAt: 'Created At',
           subnets: 'Scan Subnets',
-          scan_params: 'Scan Params',
+          scan_params: 'Scan Parameters',
           scan_type: 'Scan Type',
+          nextRunTime: 'Next Run Time',
+          trigger: 'Trigger',
+          jobType: 'Job Type',
+          startJob: 'Start Job',
+          cronJob: 'Cron Job',
           status: {
             title: 'Status',
-            active: 'Active',
+            active: 'Enabled',
+            inactive: 'Disabled',
             running: 'Running',
             completed: 'Completed',
             failed: 'Failed',
@@ -600,9 +609,11 @@ export default {
           saveSuccess: 'Policy saved successfully',
           deleteSuccess: 'Policy deleted successfully',
           updateSuccess: 'Policy updated successfully',
-          fetchFailed: 'Failed to fetch policy list',
+          fetchFailed: 'Failed to fetch policies',
           deleteFailed: 'Failed to delete policy',
-          updateFailed: 'Failed to update policy'
+          editFailed: 'Failed to edit policy',
+          statusUpdateSuccess: 'Policy status updated successfully',
+          statusUpdateFailed: 'Failed to update policy status'
         }
       },
       jobs: {

@@ -139,6 +139,17 @@ def save_policy_config(current_user):
                 )
                 db.session.add(policy)
             
+            # 建立策略和子网的关联关系
+            policy.subnets = []
+            for subnet_data in data.get('subnets', []):
+                subnet = ScanSubnet.query.filter_by(
+                    subnet=subnet_data['subnet'],
+                    user_id=current_user.id,
+                    deleted=False
+                ).first()
+                if subnet:
+                    policy.subnets.append(subnet)
+            
             saved_policies.append(policy)
         
         db.session.commit()
@@ -345,4 +356,77 @@ def get_policy_jobs(current_user, policy_id):
         })
         
     except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# 获取所有定时任务信息
+@policy_bp.route('/policies/scheduler/jobs', methods=['GET'])
+@token_required
+def get_scheduler_jobs(current_user):
+    """Get all scheduled jobs information"""
+    try:
+        jobs = scheduler.scheduler.get_jobs()
+        jobs_info = []
+        
+        for job in jobs:
+            # 解析策略ID
+            policy_id = job.id.split('_')[0]
+            
+            # 获取策略信息
+            policy = ScanPolicy.query.filter_by(
+                id=policy_id,
+                user_id=current_user.id,
+                deleted=False
+            ).first()
+            
+            if not policy:
+                continue
+            
+            job_info = {
+                'id': job.id,
+                'policy_id': policy_id,
+                'policy_name': policy.name,
+                'next_run_time': job.next_run_time.isoformat() if job.next_run_time else None,
+                'trigger': str(job.trigger),
+                'is_start_job': '_start' in job.id
+            }
+            jobs_info.append(job_info)
+        
+        return jsonify(jobs_info)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# 更新策略状态
+@policy_bp.route('/policies/<policy_id>/status', methods=['PUT'])
+@token_required
+def update_policy_status(current_user, policy_id):
+    """Update policy status (enable/disable)"""
+    try:
+        data = request.json
+        new_status = data.get('status')
+        
+        if new_status not in ['active', 'inactive']:
+            return jsonify({'error': 'Invalid status'}), 400
+            
+        policy = ScanPolicy.query.filter_by(
+            id=policy_id,
+            user_id=current_user.id,
+            deleted=False
+        ).first()
+        
+        if not policy:
+            return jsonify({'error': '策略不存在或无权访问'}), 404
+            
+        policy.status = new_status
+        db.session.commit()
+        
+        # 如果禁用策略，从调度器中移除
+        if new_status == 'inactive':
+            scheduler.remove_policy(policy_id)
+        # 如果启用策略，重新调度
+        else:
+            scheduler.schedule_policy(policy)
+            
+        return jsonify({'message': '策略状态更新成功'})
+    except Exception as e:
+        db.session.rollback()
         return jsonify({'error': str(e)}), 500

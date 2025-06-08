@@ -477,23 +477,32 @@ export default {
         failed: '执行扫描失败'
       },
       show: {
+        title: '扫描策略',
+        add: '添加策略',
+        schedulerJobs: '定时任务',
         columns: {
           name: '策略名称',
-          description: '策略描述', 
-          strategy: '策略执行Cron',
+          description: '策略描述',
+          strategy: '执行计划',
           startTime: '开始时间',
+          threads: '线程数',
           createdAt: '创建时间',
-          threads: '扫描线程数',
           subnets: '扫描网段',
           scan_params: '扫描参数',
           scan_type: '扫描类型',
+          nextRunTime: '下次执行时间',
+          trigger: '触发器',
+          jobType: '任务类型',
+          startJob: '启动任务',
+          cronJob: '定时任务',
           status: {
             title: '状态',
-            active: '活跃',
+            active: '已启用',
+            inactive: '已禁用',
             running: '运行中',
             completed: '已完成',
             failed: '失败',
-            pending: '等待执行',
+            pending: '等待中',
             cancelled: '已取消',
           },
           actions: {
@@ -502,8 +511,8 @@ export default {
             disable: '禁用',
             edit: '编辑',
             delete: '删除',
-            scan: '执行扫描'
-          },
+            scan: '扫描'
+          }
         },
         noData: '暂无策略数据',
         dialog: {
@@ -518,8 +527,11 @@ export default {
           deleteSuccess: '策略删除成功',
           updateSuccess: '策略更新成功',
           fetchFailed: '获取策略列表失败',
-          deleteFailed: '删除策略失败',
-          updateFailed: '更新策略失败'
+          deleteFailed: '策略删除失败',
+          updateFailed: '更新策略失败',
+          editFailed: '编辑策略失败',
+          statusUpdateSuccess: '策略状态更新成功',
+          statusUpdateFailed: '策略状态更新失败'
         }
       },
       policyDescription: {
