@@ -478,7 +478,7 @@ export default {
         enableCustomPorts: "Enable Custom Ports",
         portsPlaceholder: "Example: 80,443,8080-8090",
         portsHelp: "Supported formats:<br>- Single port: 80<br>- Port range: 80-100<br>- Multiple ports: 80,443,8080<br>- Combined: 80,443,8080-8090",
-        portsHelpDisplay: "Supported formats:/n- Single port: 80/n- Port range: 80-100/n- Multiple ports: 80,443,8080/n- Combined: 80,443,8080-8090",
+        portsHelpDisplay: "Supported formats:\n- Single port: 80\n- Port range: 80-100\n- Multiple ports: 80,443,8080\n- Combined: 80,443,8080-8090",
         types: {
           default: {
             label: "Default Scan",
@@ -569,6 +569,7 @@ export default {
           createdAt: 'Created At',
           subnets: 'Scan Subnets',
           scan_params: 'Scan Params',
+          scan_type: 'Scan Type',
           status: {
             title: 'Status',
             active: 'Active',
@@ -656,6 +657,7 @@ export default {
       success: {
         addPolicy: 'Policy added successfully',
         savePolicy: 'Policy saved successfully',
+        updatePolicy: 'Policy updated successfully',
         addSubnet: 'Subnet added successfully',
         deleteSubnet: 'Subnet deleted successfully',
         deletePolicy: 'Policy deleted successfully'

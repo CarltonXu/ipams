@@ -486,6 +486,7 @@ export default {
           threads: '扫描线程数',
           subnets: '扫描网段',
           scan_params: '扫描参数',
+          scan_type: '扫描类型',
           status: {
             title: '状态',
             active: '活跃',
@@ -674,6 +675,7 @@ export default {
       success: {
         addPolicy: '策略添加成功',
         savePolicy: '策略保存成功',
+        updatePolicy: '测试更新成功',
         addSubnet: '网段添加成功',
         deleteSubnet: '网段删除成功',
         deletePolicy: '策略删除成功'

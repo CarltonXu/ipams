@@ -70,7 +70,7 @@
                   </div>
                 </div>
                 <div class="strategy-row">
-                  <span class="strategy-field">{{ t('scan.policy.show.columns.scan_params') }}:</span>
+                  <span class="strategy-field">{{ t('scan.policy.show.columns.scan_type') }}:</span>
                   <div class="scan-params">
                     <el-tag 
                       v-if="strategy.scan_params?.enable_custom_scan_type"
@@ -78,10 +78,14 @@
                       type="warning"
                       class="scan-param-tag"
                     >
-                      {{ t(`scan.policy.scanParams.types.${strategy.scan_params.scan_type}`) }}
+                      {{ t(`scan.policy.scanParams.types.${strategy.scan_params.scan_type}.label`) }}
                     </el-tag>
+                  </div>
+                </div>
+                <div class="strategy-row" v-if="strategy.scan_params?.enable_custom_ports">
+                  <span class="strategy-field">{{ t('scan.policy.show.columns.scan_params') }}:</span>
+                  <div class="scan-params">
                     <el-tag 
-                      v-if="strategy.scan_params?.enable_custom_ports"
                       size="small"
                       type="info"
                       class="scan-param-tag"

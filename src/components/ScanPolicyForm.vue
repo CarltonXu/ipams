@@ -118,7 +118,7 @@
                         </div>
 
                         <el-form-item :label="$t('scan.policy.scanParams.scanType')">
-                          <el-radio-group v-model="schedule.scan_params.scan_type">
+                          <el-radio-group v-model="schedule.scan_params.scan_type" @change="handleScanTypeChange(schedule)">
                             <el-radio-button 
                               v-for="type in scanTypes" 
                               :key="type.value" 
@@ -130,31 +130,36 @@
                               </el-tag>
                             </el-radio-button>
                           </el-radio-group>
-                        </el-form-item>
-
-                        <el-form-item :label="$t('scan.policy.scanParams.ports')">
-                          <div class="port-config">
-                            <el-switch
-                              v-model="schedule.scan_params.enable_custom_ports"
-                              :active-text="$t('scan.policy.scanParams.enableCustomPorts')"
-                            />
-                            <el-input
-                              v-if="schedule.scan_params.enable_custom_ports"
-                              v-model="schedule.scan_params.ports"
-                              :placeholder="$t('scan.policy.scanParams.portsPlaceholder')"
-                              class="port-input"
-                            />
-                          </div>
-                          <div class="port-help text-xs text-gray-400 mt-1">
-                            <el-tooltip
-                              :content="$t('scan.policy.scanParams.portsHelp')"
-                              placement="top"
-                              raw-content
-                            >
-                              <span class="cursor-help">{{ $t('scan.policy.scanParams.portsHelpDisplay') }}</span>
-                            </el-tooltip>
+                          <div class="scan-type-desc mt-2">
+                            {{ $t(`scan.policy.scanParams.types.${schedule.scan_params.scan_type}.description`) }}
                           </div>
                         </el-form-item>
+                        <template v-if="schedule.scan_params.scan_type !== 'quick'">
+                          <el-form-item :label="$t('scan.policy.scanParams.ports')">
+                            <div class="port-config">
+                              <el-switch
+                                v-model="schedule.scan_params.enable_custom_ports"
+                                :disabled="schedule.scan_params.scan_type == 'quick'"
+                                :active-text="$t('scan.policy.scanParams.enableCustomPorts')"
+                              />
+                              <el-input
+                                v-if="schedule.scan_params.enable_custom_ports"
+                                v-model="schedule.scan_params.ports"
+                                :placeholder="$t('scan.policy.scanParams.portsPlaceholder')"
+                                class="port-input"
+                              />
+                            </div>
+                            <div class="port-help text-xs text-gray-400 mt-1">
+                              <el-tooltip
+                                :content="$t('scan.policy.scanParams.portsHelp')"
+                                placement="top"
+                                raw-content
+                              >
+                                <span class="cursor-help">{{ $t('scan.policy.scanParams.portsHelpDisplay') }}</span>
+                              </el-tooltip>
+                            </div>
+                          </el-form-item>
+                        </template>
                       </div>
                     </div>
                   </div>
@@ -191,6 +196,12 @@ const props = defineProps<{
       cron: string;
       start_time: string;
       subnet_ids: string[];
+      scan_params?: {
+        enable_custom_ports: boolean;
+        ports: string;
+        enable_custom_scan_type: boolean;
+        scan_type: string;
+      };
     }>;
     start_time: string;
     threads: number;
@@ -199,12 +210,6 @@ const props = defineProps<{
       name: string;
       subnet: string;
     }>;
-    scan_params?: {
-      enable_custom_ports: boolean;
-      ports: string;
-      enable_custom_scan_type: boolean;
-      scan_type: string;
-    };
   } | null;
 }>();
 
@@ -269,25 +274,13 @@ watch(() => props.initialData, (newData) => {
         cron: strategy.cron,
         start_time: new Date(strategy.start_time),
         subnet_ids: strategy.subnet_ids || [],
-        scan_params: {
-          enable_custom_ports: newData.scan_params?.enable_custom_ports || false,
-          ports: newData.scan_params?.ports || '',
-          enable_custom_scan_type: newData.scan_params?.enable_custom_scan_type || false,
-          scan_type: newData.scan_params?.scan_type || 'default'
+        scan_params: strategy.scan_params || {
+          enable_custom_ports: false,
+          ports: '',
+          enable_custom_scan_type: false,
+          scan_type: 'default'
         }
       }));
-    }
-
-    // 更新扫描参数
-    if (newData?.scan_params) {
-      schedules.value.forEach(schedule => {
-        schedule.scan_params = {
-          enable_custom_ports: newData.scan_params?.enable_custom_ports ?? false,
-          ports: newData.scan_params?.ports ?? '',
-          enable_custom_scan_type: newData.scan_params?.enable_custom_scan_type ?? false,
-          scan_type: newData.scan_params?.scan_type ?? 'default'
-        }
-      });
     }
   }
 }, { immediate: true });
@@ -408,12 +401,12 @@ const handleSavePolicy = async () => {
         cron: schedule.cron,
         start_time: schedule.start_time ? schedule.start_time.toISOString() : new Date().toISOString(),
         subnet_ids: schedule.subnet_ids,
-        scan_params: schedules.value.map(schedule => ({
+        scan_params: {
           enable_custom_ports: schedule.scan_params.enable_custom_ports,
           ports: schedule.scan_params.ports,
           enable_custom_scan_type: schedule.scan_params.enable_custom_scan_type,
           scan_type: schedule.scan_params.scan_type
-        })),
+        }
       }))
     }]
 
@@ -483,6 +476,16 @@ const addSchedule = () => {
 const removeSchedule = (index: number) => {
   schedules.value.splice(index, 1)
 }
+
+const handleScanTypeChange = (schedule: any) => {
+  // 如果选择了非默认扫描类型，自动启用自定义扫描类型
+  schedule.scan_params.enable_custom_scan_type = schedule.scan_params.scan_type !== 'default';
+  
+  // 如果是快速扫描，禁用端口配置
+  if (schedule.scan_params.scan_type === 'quick') {
+    schedule.scan_params.enable_custom_ports = false;
+  }
+};
 </script>
 
 <style scoped>
@@ -651,6 +654,15 @@ const removeSchedule = (index: number) => {
 
 .type-name {
   font-size: 14px;
+}
+
+.scan-type-desc {
+  font-size: 13px;
+  color: var(--el-text-color-secondary);
+  line-height: 1.5;
+  padding: 8px 12px;
+  background-color: var(--el-fill-color-blank);
+  border-radius: 4px;
 }
 
 .scan-type-desc {
