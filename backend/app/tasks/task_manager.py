@@ -6,6 +6,8 @@ from app.models.models import db, ScanJob, ScanSubnet, ScanPolicy
 from .scan_executor import ScanExecutor
 from .task_state import task_state
 from flask import current_app
+import shutil
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -25,28 +27,31 @@ class TaskManager:
         if not self._initialized:
             with self._lock:
                 if not self._initialized:
-                    self.executor = ThreadPoolExecutor(max_workers=5)
+                    self._executor = ThreadPoolExecutor(max_workers=10)
+                    self._futures = {}
                     self._initialized = True
                     logger.info("TaskManager initialized with ThreadPoolExecutor")
+
+    def init_app(self, app):
+        """初始化应用实例"""
+        self.app = app
 
     def submit_scan_task(self, job_id: str, policy_id: str, subnet_id: str) -> None:
         """提交扫描任务到线程池"""
         try:
+            # 检查 nmap 是否可用
+            if not shutil.which('nmap'):
+                raise RuntimeError("nmap program not found in system path")
+                
             # 获取当前应用实例
             app = current_app._get_current_object()
             
             with app.app_context():
-                # 确保 Job 记录存在
-                job = ScanJob.query.get(job_id)
-                if not job:
-                    logger.error(f"Job {job_id} not found in database")
-                    raise ValueError(f"Job {job_id} not found in database")
-                
-                # 检查任务是否已存在
-                existing_task = task_state.get_task(job_id)
-                if existing_task['status'] != 'not_found' and existing_task['status'] not in ['failed', 'cancelled']:
-                    logger.warning(f"Task {job_id} already exists with status {existing_task['status']}")
-                    return
+                # 获取策略信息
+                policy = ScanPolicy.query.get(policy_id)
+                if not policy:
+                    logger.error(f"Policy {policy_id} not found in database")
+                    raise ValueError(f"Policy {policy_id} not found in database")
                 
                 # 获取子网信息
                 subnet = ScanSubnet.query.get(subnet_id)
@@ -54,38 +59,49 @@ class TaskManager:
                     logger.error(f"Subnet {subnet_id} not found")
                     raise ValueError(f"Subnet {subnet_id} not found")
                 
-                # 获取策略信息
-                policy = ScanPolicy.query.get(policy_id)
-                if not policy:
-                    logger.error(f"Policy {policy_id} not found")
-                    raise ValueError(f"Policy {policy_id} not found")
+                # 创建扫描任务记录
+                job = ScanJob(
+                    user_id=policy.user_id,
+                    policy_id=policy_id,
+                    subnet_id=subnet_id,
+                    status='pending',
+                    start_time=datetime.utcnow()
+                )
+                db.session.add(job)
+                db.session.commit()
+                
+                # 检查任务是否已存在
+                existing_task = task_state.get_task(job.id)
+                if existing_task['status'] != 'not_found' and existing_task['status'] not in ['failed', 'cancelled']:
+                    logger.warning(f"Task {job.id} already exists with status {existing_task['status']}")
+                    return
                 
                 # 创建扫描执行器
                 executor = ScanExecutor(
-                    job_id=job_id,
+                    job_id=job.id,
                     subnet=subnet.subnet,
-                    threads=policy.threads
+                    threads=policy.threads,
                 )
             
             # 提交任务到线程池
-            future = self.executor.submit(
+            future = self._executor.submit(
                 self._execute_scan_task,
                 app,
-                job_id,
+                job.id,
                 policy_id,
                 subnet_id,
                 executor  # 传递执行器实例
             )
             
             # 创建任务记录，保存 future 对象和执行器实例
-            task_state.create_task(job_id, policy_id, subnet_id, future, executor)
+            task_state.create_task(job.id, policy_id, subnet_id, future, executor)
             
             # 设置回调
             future.add_done_callback(
-                lambda f: self._update_job_status(job_id, f)
+                lambda f: self._update_job_status(job.id, f)
             )
             
-            logger.info(f"Task {job_id} submitted successfully")
+            logger.info(f"Task {job.id} submitted successfully")
         except Exception as e:
             logger.error(f"Failed to submit task {job_id}: {str(e)}")
             task_state.update_task_status(job_id, 'failed', str(e))
@@ -119,51 +135,31 @@ class TaskManager:
                 success = executor.execute()
                 
                 if success:
-                    # 更新任务状态为完成
                     task_state.update_task_status(job_id, 'completed')
-                    logger.info(f"Task {job_id} completed successfully")
                     return {'status': 'completed'}
                 else:
-                    # 更新任务状态为失败
                     task_state.update_task_status(job_id, 'failed', 'Scan execution failed')
-                    logger.error(f"Task {job_id} failed: Scan execution failed")
                     return {'status': 'failed', 'error': 'Scan execution failed'}
                     
             except Exception as e:
-                logger.error(f"Task {job_id} failed: {str(e)}")
+                logger.error(f"Error executing scan task {job_id}: {str(e)}")
                 task_state.update_task_status(job_id, 'failed', str(e))
                 return {'status': 'failed', 'error': str(e)}
 
     def _update_job_status(self, job_id: str, future) -> None:
         """更新任务状态"""
         try:
-            if future.cancelled():
-                logger.info(f"Task {job_id} was cancelled")
-                task_state.update_task_status(job_id, 'cancelled')
-            elif future.exception():
-                error = str(future.exception())
-                logger.error(f"Task {job_id} failed with exception: {error}")
-                task_state.update_task_status(job_id, 'failed', error)
-            else:
-                result = future.result()
-                if result and result.get('status') == 'failed':
-                    logger.error(f"Task {job_id} failed: {result.get('error')}")
-                    task_state.update_task_status(job_id, 'failed', result.get('error'))
-            
-            # 清理任务资源
-            task = task_state.get_task(job_id)
-            if task and task.get('executor'):
-                try:
-                    task['executor'].cleanup()
-                except Exception as e:
-                    logger.error(f"Error cleaning up task {job_id}: {str(e)}")
-            
-            # 移除任务记录
-            task_state.remove_task(job_id)
-            
+            result = future.result()
+            with current_app.app_context():
+                job = ScanJob.query.get(job_id)
+                if job:
+                    job.status = result['status']
+                    if result.get('error'):
+                        job.error_message = result['error']
+                    job.end_time = datetime.utcnow()
+                    db.session.commit()
         except Exception as e:
-            logger.error(f"Failed to update job status for {job_id}: {str(e)}")
-            task_state.update_task_status(job_id, 'failed', str(e))
+            logger.error(f"Error updating job status {job_id}: {str(e)}")
 
     def get_task_status(self, job_id: str) -> Optional[Dict[str, Any]]:
         """获取任务状态"""
@@ -223,7 +219,7 @@ class TaskManager:
     def shutdown(self) -> None:
         """关闭任务管理器"""
         try:
-            if hasattr(self, 'executor'):
+            if hasattr(self, '_executor'):
                 logger.info("Shutting down TaskManager...")
                 
                 # 取消所有正在运行的任务
@@ -245,7 +241,7 @@ class TaskManager:
                 
                 # 关闭线程池，设置超时时间
                 logger.info("Shutting down thread pool...")
-                self.executor.shutdown(wait=False, cancel_futures=True)
+                self._executor.shutdown(wait=False, cancel_futures=True)
                 logger.info("Thread pool shutdown completed")
                 
                 # 清理任务状态
@@ -261,30 +257,33 @@ class TaskManager:
             logger.error(f"Error during TaskManager shutdown: {str(e)}")
             # 强制清理
             try:
-                if hasattr(self, 'executor'):
-                    self.executor.shutdown(wait=False, cancel_futures=True)
+                if hasattr(self, '_executor'):
+                    self._executor.shutdown(wait=False, cancel_futures=True)
                 task_state._tasks.clear()
                 self._initialized = False
                 self._instance = None
             except Exception as cleanup_error:
                 logger.error(f"Error during forced cleanup: {str(cleanup_error)}")
 
+    def update_job_status(self, job_id: str, status: str, result: Optional[Dict] = None) -> None:
+        """更新任务状态"""
+        try:
+            if not self.app:
+                self.app = current_app._get_current_object()
+            
+            with self.app.app_context():
+                job = ScanJob.query.get(job_id)
+                if job:
+                    job.status = status
+                    if result:
+                        job.result = result
+                    db.session.commit()
+                    logger.info(f"Updated task {job_id} status to {status}")
+                else:
+                    logger.error(f"Job {job_id} not found")
+        except Exception as e:
+            logger.error(f"Error updating job status {job_id}: {str(e)}")
+            raise
+
 # 创建全局任务管理器实例
 task_manager = TaskManager()
-
-def init_app(app):
-    """初始化应用"""
-    @app.before_first_request
-    def initialize():
-        """在第一个请求之前初始化"""
-        logger.info("Initializing TaskManager")
-        # 确保 TaskManager 被初始化
-        task_manager
-
-    @app.teardown_appcontext
-    def cleanup(exception=None):
-        """在应用上下文结束时清理"""
-        if exception:
-            logger.error(f"Error during request: {str(exception)}")
-        logger.info("Cleaning up TaskManager")
-        task_manager.shutdown() 

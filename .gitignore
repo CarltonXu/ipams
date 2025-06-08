@@ -71,7 +71,7 @@ $RECYCLE.BIN/
 # Environment files
 .env
 .env.*.local
-*.venv/
+*.*venv/
 .migrations/
 *migrations/
 

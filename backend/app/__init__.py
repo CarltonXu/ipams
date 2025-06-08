@@ -1,4 +1,5 @@
 import atexit
+import os
 
 from flask import Flask, send_from_directory
 from flask_cors import CORS
@@ -13,6 +14,7 @@ from app.routes.auth.auth import auth_bp
 from app.routes.ip.ips import ips_bp
 from app.routes.dashboard.dashboard import dashboard_bp
 from app.tasks.task_manager import task_manager
+from app.scheduler import scheduler
 
 # 创建 db 实例
 migrate = Migrate()
@@ -76,10 +78,13 @@ def create_app(config=None):
     # Create database tables
     with app.app_context():
         db.create_all()
+        
+        # 初始化调度器
+        scheduler.init_app(app)
+        
+        # 初始化任务管理器
+        task_manager.init_app(app)
     
-    # 确保任务管理器已初始化 
-    task_manager
-
     # 在应用退出时关闭任务管理器
     atexit.register(task_manager.shutdown)
     return app

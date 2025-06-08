@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify
 from app.models.models import db, ScanPolicy, ScanSubnet, ScanJob
 from app.utils.auth import token_required
 from sqlalchemy.exc import IntegrityError
+from app.scheduler import scheduler
 import dateutil.parser
 import json
 
@@ -142,6 +143,10 @@ def save_policy_config(current_user):
         
         db.session.commit()
         
+        # 更新调度器
+        for policy in saved_policies:
+            scheduler.update_policy(policy.id)
+        
         # 返回保存的策略信息
         return jsonify({
             'message': 'Configuration saved successfully',
@@ -157,10 +162,7 @@ def save_policy_config(current_user):
                     'id': subnet.id,
                     'name': subnet.name,
                     'subnet': subnet.subnet
-                } for subnet in ScanSubnet.query.filter(
-                    ScanSubnet.id.in_(subnet_id_list),
-                    ScanSubnet.deleted == False
-                ).all()]
+                } for subnet in policy.subnets]
             } for policy in saved_policies]
         })
         
@@ -261,6 +263,9 @@ def update_policy(current_user, policy_id):
         
         db.session.commit()
         
+        # 更新调度器
+        scheduler.update_policy(policy.id)
+        
         # 获取更新后的策略信息
         updated_policy = policy.to_dict()
         
@@ -295,8 +300,12 @@ def delete_policy(current_user, policy_id):
     
     if not policy:
         return jsonify({'error': 'Policy not found'}), 404
-        
-    db.session.delete(policy)
+    
+    # 从调度器中移除策略
+    scheduler.remove_policy(policy_id)
+    
+    # 软删除策略
+    policy.deleted = True
     db.session.commit()
     
     return jsonify({'message': 'Policy deleted successfully'})
@@ -331,7 +340,7 @@ def get_policy_jobs(current_user, policy_id):
                 'start_time': job.start_time.isoformat() if job.start_time else None,
                 'end_time': job.end_time.isoformat() if job.end_time else None,
                 'error_message': job.error_message,
-                'subnets': ScanSubnet.query.filter_by(id=job.subnet_id, deleted=False).first().to_dict()
+                'subnets': job.subnet.to_dict() if job.subnet else None
             } for job in jobs]
         })
         
