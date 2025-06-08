@@ -469,6 +469,39 @@ export default {
       typeRequired: 'Please select policy type',
       subnets: 'Subnets',
       startTimePlaceholder: 'Please select the start time for schedule task',
+      scanParams: {
+        title: "Scan Parameters",
+        help: "Configure scan strategy, different scan types are suitable for different scenarios:<br>- Default Scan: Suitable for daily network monitoring<br>- Quick Scan: Suitable for quick network status overview<br>- Intense Scan: Suitable for detailed network analysis<br>- Vulnerability Scan: Suitable for security auditing",
+        scanType: "Scan Type",
+        scanTypeHelp: "Choose different scan types to meet different scanning needs",
+        ports: "Port Configuration",
+        enableCustomPorts: "Enable Custom Ports",
+        portsPlaceholder: "Example: 80,443,8080-8090",
+        portsHelp: "Supported formats:<br>- Single port: 80<br>- Port range: 80-100<br>- Multiple ports: 80,443,8080<br>- Combined: 80,443,8080-8090",
+        portsHelpDisplay: "Supported formats:/n- Single port: 80/n- Port range: 80-100/n- Multiple ports: 80,443,8080/n- Combined: 80,443,8080-8090",
+        types: {
+          default: {
+            label: "Default Scan",
+            tag: "Basic",
+            description: "Uses basic scan parameters with customizable port ranges. Suitable for general purpose scanning."
+          },
+          quick: {
+            label: "Quick Scan",
+            tag: "Fast",
+            description: "Scans only the most common 100 ports for quick network status overview."
+          },
+          intense: {
+            label: "Intense Scan",
+            tag: "Comprehensive",
+            description: "Performs comprehensive scanning including OS detection and version detection. Port range can be customized."
+          },
+          vulnerability: {
+            label: "Vulnerability Scan",
+            tag: "Security",
+            description: "Adds vulnerability detection to intense scanning. Port range can be customized."
+          }
+        }
+      },
       types: {
         everyMinute: 'Every Minute',
         everyHour: 'Every Hour', 
@@ -535,6 +568,7 @@ export default {
           threads: 'Threads Count',
           createdAt: 'Created At',
           subnets: 'Scan Subnets',
+          scan_params: 'Scan Params',
           status: {
             title: 'Status',
             active: 'Active',

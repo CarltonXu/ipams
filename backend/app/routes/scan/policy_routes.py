@@ -3,7 +3,6 @@ from app.models.models import db, ScanPolicy, ScanSubnet, ScanJob
 from app.utils.auth import token_required
 from sqlalchemy.exc import IntegrityError
 from app.scheduler import scheduler
-import dateutil.parser
 import json
 
 policy_bp = Blueprint('policy', __name__)
@@ -117,7 +116,8 @@ def save_policy_config(current_user):
                     strategies.append({
                         'cron': strategy['cron'],
                         'start_time': strategy['start_time'],
-                        'subnet_ids': subnet_id_list
+                        'subnet_ids': subnet_id_list,
+                        'scan_params': strategy['scan_params'],
                     })
             
             if not strategies:  # 如果没有有效的策略配置，跳过这个策略
@@ -234,7 +234,7 @@ def update_policy(current_user, policy_id):
             strategies = data['strategies']
             # 验证策略数据
             for strategy in strategies:
-                if not all(key in strategy for key in ['cron', 'start_time']):
+                if not all(key in strategy for key in ['cron', 'start_time', 'scan_params']):
                     return jsonify({'error': 'Invalid strategy format'}), 400
                 
                 # 处理子网ID列表

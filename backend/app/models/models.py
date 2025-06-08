@@ -164,6 +164,7 @@ class ScanPolicy(db.Model):
     __tablename__ = 'scan_policies'
 
     id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = db.Column(db.String(36), db.ForeignKey('users.id'), nullable=False)
     name = db.Column(db.String(100), nullable=False)
     description = db.Column(db.Text)
     strategies = db.Column(db.Text)  # JSON string of strategies

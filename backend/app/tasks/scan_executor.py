@@ -1,18 +1,25 @@
+import logging
 import nmap
-import threading
-import time
-from datetime import datetime
-from flask import current_app
-from app.models.models import db, ScanJob, ScanResult, IP
-from app.tasks.task_state import task_state
 import os
 import psutil
+import time
+import threading
+import xml.etree.ElementTree as ET
+
+from typing import Optional, Dict
+from datetime import datetime
+
+from flask import current_app
+from app.models.models import db, ScanJob, ScanResult, IP
+
+logger = logging.getLogger(__name__)
 
 class ScanExecutor:
-    def __init__(self, job_id: str, subnet: str, threads: int = 10):
+    def __init__(self, job_id: str, subnet: str, threads: int = 5, scan_params: Optional[Dict] = None):
         self.job_id = job_id
         self.subnet = subnet
         self.threads = threads
+        self.scan_params = scan_params or {}
         self.lock = threading.Lock()
         self.machines_found = 0
         self.nm = nmap.PortScanner()
@@ -239,7 +246,43 @@ class ScanExecutor:
 
             # 获取扫描端口配置
             scan_ports = self.app.config.get("SCAN_PORTS", "80,443,22,21,23,25,53,110,143,3306,3389,5432,6379,8080,8443")
-            self.app.logger.info(f"Job {self.job_id}: Using scan ports: {scan_ports}")
+            
+            # 构建扫描参数
+            scan_args = '-sT -T4 --host-timeout 10s --max-rtt-timeout 500ms --max-retries 1'
+            
+            # 如果启用了自定义扫描类型，添加相应的参数
+            if self.scan_params.get('enable_custom_scan_type'):
+                scan_type = self.scan_params.get('scan_type', 'default')
+                if scan_type == 'quick':
+                    # 快速扫描使用 -F 参数，只扫描最常见的100个端口
+                    scan_args = '-sT -T4 -F --host-timeout 10s --max-rtt-timeout 500ms --max-retries 1'
+                    scan_ports = None  # 快速扫描模式下不使用自定义端口
+                    self.app.logger.info(f"Job {self.job_id}: Using quick scan mode (top 100 ports)")
+                elif scan_type == 'intense':
+                    # 深度扫描使用 -A 参数，进行全面的扫描
+                    scan_args = '-sT -T4 -A -v --host-timeout 10s --max-rtt-timeout 500ms --max-retries 1'
+                    if self.scan_params.get('enable_custom_ports') and self.scan_params.get('ports'):
+                        scan_ports = self.scan_params['ports']
+                        self.app.logger.info(f"Job {self.job_id}: Using intense scan mode with custom ports: {scan_ports}")
+                    else:
+                        scan_ports = None  # 深度扫描模式下扫描所有端口
+                        self.app.logger.info(f"Job {self.job_id}: Using intense scan mode (all ports)")
+                elif scan_type == 'vulnerability':
+                    # 漏洞扫描使用 -A 和 --script vuln 参数
+                    scan_args = '-sT -T4 -A -v --script vuln --host-timeout 10s --max-rtt-timeout 500ms --max-retries 1'
+                    if self.scan_params.get('enable_custom_ports') and self.scan_params.get('ports'):
+                        scan_ports = self.scan_params['ports']
+                        self.app.logger.info(f"Job {self.job_id}: Using vulnerability scan mode with custom ports: {scan_ports}")
+                    else:
+                        scan_ports = None  # 漏洞扫描模式下扫描所有端口
+                        self.app.logger.info(f"Job {self.job_id}: Using vulnerability scan mode (all ports)")
+            else:
+                # 默认扫描模式，使用自定义端口或默认端口
+                if self.scan_params.get('enable_custom_ports') and self.scan_params.get('ports'):
+                    scan_ports = self.scan_params['ports']
+                    self.app.logger.info(f"Job {self.job_id}: Using default scan mode with custom ports: {scan_ports}")
+                else:
+                    self.app.logger.info(f"Job {self.job_id}: Using default scan mode with default ports: {scan_ports}")
 
             # 端口扫描
             for i, host in enumerate(active_hosts, 1):
@@ -250,11 +293,15 @@ class ScanExecutor:
 
                 self.app.logger.info(f"Job {self.job_id}: Starting port scan for host {i}/{self.total_hosts}: {host}")
                 try:
-                    # 使用更简单的扫描参数，添加超时控制
+                    # 使用配置的扫描参数
                     self.app.logger.info(f"Job {self.job_id}: Executing nmap scan for {host}")
+                    scan_arguments = scan_args
+                    if scan_ports:
+                        scan_arguments += f' -p {scan_ports}'
+                    
                     self.current_scan_process = self.nm.scan(
                         hosts=host,
-                        arguments=f'-sT -p {scan_ports} -T4 --host-timeout 10s --max-rtt-timeout 500ms --max-retries 1'
+                        arguments=scan_arguments
                     )
                     
                     # 检查是否被取消

@@ -104,6 +104,58 @@
                           </el-option>
                         </el-select>
                       </el-form-item>
+
+                      <div class="scan-params-section">
+                        <div class="section-header">
+                          <h4 class="section-title">{{ $t('scan.policy.scanParams.title') }}</h4>
+                          <el-tooltip
+                            :content="$t('scan.policy.scanParams.help')"
+                            placement="top"
+                            raw-content
+                          >
+                            <el-icon class="help-icon"><QuestionFilled /></el-icon>
+                          </el-tooltip>
+                        </div>
+
+                        <el-form-item :label="$t('scan.policy.scanParams.scanType')">
+                          <el-radio-group v-model="schedule.scan_params.scan_type">
+                            <el-radio-button 
+                              v-for="type in scanTypes" 
+                              :key="type.value" 
+                              :label="type.value"
+                            >
+                              {{ type.label }}
+                              <el-tag size="small" :type="type.tagType" class="ml-2">
+                                {{ type.tag }}
+                              </el-tag>
+                            </el-radio-button>
+                          </el-radio-group>
+                        </el-form-item>
+
+                        <el-form-item :label="$t('scan.policy.scanParams.ports')">
+                          <div class="port-config">
+                            <el-switch
+                              v-model="schedule.scan_params.enable_custom_ports"
+                              :active-text="$t('scan.policy.scanParams.enableCustomPorts')"
+                            />
+                            <el-input
+                              v-if="schedule.scan_params.enable_custom_ports"
+                              v-model="schedule.scan_params.ports"
+                              :placeholder="$t('scan.policy.scanParams.portsPlaceholder')"
+                              class="port-input"
+                            />
+                          </div>
+                          <div class="port-help text-xs text-gray-400 mt-1">
+                            <el-tooltip
+                              :content="$t('scan.policy.scanParams.portsHelp')"
+                              placement="top"
+                              raw-content
+                            >
+                              <span class="cursor-help">{{ $t('scan.policy.scanParams.portsHelpDisplay') }}</span>
+                            </el-tooltip>
+                          </div>
+                        </el-form-item>
+                      </div>
                     </div>
                   </div>
                 </el-form>
@@ -126,8 +178,7 @@
 import { ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { useScanPolicyStore } from '../stores/scanPolicy';
-import { Plus } from '@element-plus/icons-vue';
+import { Plus, QuestionFilled } from '@element-plus/icons-vue';
 
 const { t } = useI18n();
 
@@ -136,7 +187,11 @@ const props = defineProps<{
     name: string;
     description: string;
     subnet_ids: string[];
-    strategies: string;
+    strategies: Array<{
+      cron: string;
+      start_time: string;
+      subnet_ids: string[];
+    }>;
     start_time: string;
     threads: number;
     subnets?: Array<{
@@ -144,6 +199,12 @@ const props = defineProps<{
       name: string;
       subnet: string;
     }>;
+    scan_params?: {
+      enable_custom_ports: boolean;
+      ports: string;
+      enable_custom_scan_type: boolean;
+      scan_type: string;
+    };
   } | null;
 }>();
 
@@ -151,27 +212,39 @@ const subnetName = ref('');
 const newSubnet = ref('');
 const loading = ref(false);
 
-const strategyName = ref('');
-const scheduleType = ref(t('scan.form.types.everyDay'));
-const intervalMinutes = ref(null);
-const intervalHours = ref(null);
-const intervalDays = ref(null);
-const dailyTime = ref(null);
-const weeklyDays = ref([]);
-const weeklyTime = ref(null);
-const monthlyDays = ref([]);
-const monthlyTime = ref(null);
-const customCron = ref('');
-const customCronTime = ref(null);
-const startExecutionTime = ref(null);
+interface Subnet {
+  id?: string;
+  name: string;
+  subnet: string;
+  created_at?: string;
+}
 
-const cachedSubnets = ref([]);
-const cachedPolicies = ref([]);
+const cachedSubnets = ref<Subnet[]>([]);
 
 const policyName = ref('')
 const policyDescription = ref('')
 const policyThreads = ref(5)
-const schedules = ref([])
+
+interface Schedule {
+  cron: string;
+  start_time: Date | null;
+  subnet_ids: string[];
+  scan_params: {
+    enable_custom_ports: boolean;
+    ports: string;
+    enable_custom_scan_type: boolean;
+    scan_type: string;
+  };
+}
+
+const schedules = ref<Schedule[]>([])
+
+const scanTypes = [
+  { value: 'default', label: t('scan.policy.scanParams.types.default.label'), tagType: 'info', tag: t('scan.policy.scanParams.types.default.tag') },
+  { value: 'quick', label: t('scan.policy.scanParams.types.quick.label'), tagType: 'success', tag: t('scan.policy.scanParams.types.quick.tag') },
+  { value: 'intense', label: t('scan.policy.scanParams.types.intense.label'), tagType: 'warning', tag: t('scan.policy.scanParams.types.intense.tag') },
+  { value: 'vulnerability', label: t('scan.policy.scanParams.types.vulnerability.label'), tagType: 'danger', tag: t('scan.policy.scanParams.types.vulnerability.tag') },
+]
 
 const emit = defineEmits(['cancel', 'save'])
 
@@ -195,8 +268,26 @@ watch(() => props.initialData, (newData) => {
       schedules.value = newData.strategies.map(strategy => ({
         cron: strategy.cron,
         start_time: new Date(strategy.start_time),
-        subnet_ids: strategy.subnet_ids || []
+        subnet_ids: strategy.subnet_ids || [],
+        scan_params: {
+          enable_custom_ports: newData.scan_params?.enable_custom_ports || false,
+          ports: newData.scan_params?.ports || '',
+          enable_custom_scan_type: newData.scan_params?.enable_custom_scan_type || false,
+          scan_type: newData.scan_params?.scan_type || 'default'
+        }
       }));
+    }
+
+    // 更新扫描参数
+    if (newData?.scan_params) {
+      schedules.value.forEach(schedule => {
+        schedule.scan_params = {
+          enable_custom_ports: newData.scan_params?.enable_custom_ports ?? false,
+          ports: newData.scan_params?.ports ?? '',
+          enable_custom_scan_type: newData.scan_params?.enable_custom_scan_type ?? false,
+          scan_type: newData.scan_params?.scan_type ?? 'default'
+        }
+      });
     }
   }
 }, { immediate: true });
@@ -209,64 +300,6 @@ const isValidIP = (ip: string) => {
 const isValidSubnet = (subnet: string) => {
   const subnetRegex = /^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\/([8-9]|[1-2][0-9]|3[0-2])$/;
   return subnetRegex.test(subnet);
-};
-
-const validateInputs = () => {
-  if (!strategyName.value.trim()) {
-    ElMessage.error(t('scan.form.validation.strategyName'));
-    return false;
-  }
-
-  const scheduleTypes = {
-    [t('scan.policy.types.everyMinute')]: true,
-    [t('scan.policy.types.everyHour')]: true,
-    [t('scan.policy.types.everyDay')]: true
-  };
-
-  if (scheduleTypes[scheduleType.value] && !startExecutionTime.value) {
-    ElMessage.error(t('scan.form.validation.selectStartTime'));
-    return false;
-  }
-
-  if (scheduleType.value === t('scan.policy.types.everyMinute') && !intervalMinutes.value) {
-    ElMessage.error(t('scan.form.validation.selectInterval'));
-    return false;
-  }
-
-  if (scheduleType.value === t('scan.policy.types.everyHour') && !intervalHours.value) {
-    ElMessage.error(t('scan.form.validation.selectInterval'));
-    return false;
-  }
-
-  if (scheduleType.value === t('scan.policy.types.everyDay') && !intervalDays.value) {
-    ElMessage.error(t('scan.form.validation.selectInterval'));
-    return false;
-  }
-
-  if (scheduleType.value === t('scan.policy.types.everyWeek') && 
-      (weeklyDays.value.length === 0 || !startExecutionTime.value)) {
-    ElMessage.error(t('scan.form.validation.weeklyConfig'));
-    return false;
-  }
-
-  if (scheduleType.value === t('scan.policy.types.everyMonth') && 
-      (monthlyDays.value.length === 0 || !startExecutionTime.value)) {
-    ElMessage.error(t('scan.form.validation.monthlyConfig'));
-    return false;
-  }
-
-  if (scheduleType.value === t('scan.policy.types.custom') && 
-      (!customCron.value.trim() || !startExecutionTime.value)) {
-    ElMessage.error(t('scan.form.validation.cronRequired'));
-    return false;
-  }
-
-  return true;
-};
-
-const formatTime = (time: Date | null) => {
-  if (!time) return '';
-  return `${time.getHours()}:${time.getMinutes().toString().padStart(2, '0')}`;
 };
 
 const validateSubnet = () => {
@@ -324,20 +357,6 @@ const removeSubnet = async (subnet: any) => {
   }
 };
 
-const handleAddPolicy = () => {
-  if (!validateInputs()) return;
-  const newPolicy = {
-    name: strategyName.value,
-    description: generatePolicyDescription(),
-    cron: generateCrontabExpression(),
-    created_at: new Date().toLocaleString(),
-    startTime: startExecutionTime.value,
-  };
-  cachedPolicies.value.push(newPolicy);
-  ElMessage.success(t('scan.messages.success.addPolicy'));
-  resetForm();
-};
-
 const handleSavePolicy = async () => {
   try {
     // 检查是否有网段配置
@@ -387,8 +406,14 @@ const handleSavePolicy = async () => {
       threads: policyThreads.value,
       strategies: schedules.value.map(schedule => ({
         cron: schedule.cron,
-        start_time: schedule.start_time.toISOString(),
-        subnet_ids: schedule.subnet_ids
+        start_time: schedule.start_time ? schedule.start_time.toISOString() : new Date().toISOString(),
+        subnet_ids: schedule.subnet_ids,
+        scan_params: schedules.value.map(schedule => ({
+          enable_custom_ports: schedule.scan_params.enable_custom_ports,
+          ports: schedule.scan_params.ports,
+          enable_custom_scan_type: schedule.scan_params.enable_custom_scan_type,
+          scan_type: schedule.scan_params.scan_type
+        })),
       }))
     }]
 
@@ -421,76 +446,41 @@ const resetAllData = () => {
   policyThreads.value = 5
   schedules.value = []
 
+  // 重置扫描参数
+  schedules.value.forEach(schedule => {
+    schedule.scan_params = {
+      enable_custom_ports: false,
+      ports: '',
+      enable_custom_scan_type: false,
+      scan_type: 'default'
+    }
+  })
+
   // 重置折叠面板状态
   activeCollapse.value = ['subnet', 'policy']
 }
-
-// 原有的重置表单方法
-const resetForm = () => {
-  strategyName.value = ''
-  scheduleType.value = t('scan.form.types.everyDay')
-  intervalMinutes.value = null
-  intervalHours.value = null
-  intervalDays.value = null
-  startExecutionTime.value = null
-  dailyTime.value = null
-  weeklyDays.value = []
-  weeklyTime.value = null
-  monthlyDays.value = []
-  monthlyTime.value = null
-  customCron.value = ''
-  customCronTime.value = null
-}
-
-const removePolicy = async (policy: any) => {
-  try {
-    await ElMessageBox.confirm(
-      t('scan.messages.confirm.deletePolicy'),
-      t('common.warning'),
-      {
-        type: 'warning'
-      }
-    );
-    cachedPolicies.value = cachedPolicies.value.filter(p => p !== policy);
-    ElMessage.success(t('scan.messages.success.deletePolicy'));
-  } catch (error) {
-    // 用户取消删除操作
-  }
-};
-
-watch(scheduleType, (newType) => {
-  intervalMinutes.value = null;
-  intervalHours.value = null;
-  intervalDays.value = null;
-  startExecutionTime.value = null;
-
-  if (newType === t('scan.form.types.everyDay')) {
-    dailyTime.value = null;
-  } else if (newType === t('scan.form.types.everyWeek')) {
-    weeklyTime.value = null;
-    weeklyDays.value = [];
-  } else if (newType === t('scan.form.types.everyMonth')) {
-    monthlyTime.value = null;
-    monthlyDays.value = [];
-  } else if (newType === t('scan.form.types.custom')) {
-    customCron.value = '';
-  }
-});
 
 // 添加折叠面板的激活状态控制
 const activeCollapse = ref(['subnet', 'policy'])
 
 // 添加新的时间点
 const addSchedule = () => {
-  schedules.value.push({
+  const newSchedule = {
     cron: '',
-    start_time: null,
-    subnet_ids: []
-  })
-}
+    start_time: new Date(),
+    subnet_ids: [],
+    scan_params: {
+      enable_custom_ports: false,
+      ports: '',
+      enable_custom_scan_type: false,
+      scan_type: 'default'
+    }
+  };
+  schedules.value.push(newSchedule);
+};
 
 // 移除时间点
-const removeSchedule = (index) => {
+const removeSchedule = (index: number) => {
   schedules.value.splice(index, 1)
 }
 </script>
@@ -620,5 +610,91 @@ const removeSchedule = (index) => {
 .schedule-header h4 {
   margin: 0;
   color: #606266;
+}
+
+.scan-params-section {
+  margin-bottom: 24px;
+  padding: 16px;
+  background-color: var(--el-fill-color-light);
+  border-radius: 8px;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.section-header h3 {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--el-text-color-primary);
+  margin: 0;
+}
+
+.scan-strategy {
+  padding: 0 8px;
+}
+
+.scan-type-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.scan-type-item {
+  display: flex;
+  align-items: center;
+  padding: 4px 0;
+}
+
+.type-name {
+  font-size: 14px;
+}
+
+.scan-type-desc {
+  font-size: 13px;
+  color: var(--el-text-color-secondary);
+  line-height: 1.5;
+  padding: 8px 12px;
+  background-color: var(--el-fill-color-blank);
+  border-radius: 4px;
+}
+
+.port-config {
+  display: flex;
+  flex-direction: column;
+  width: 20%;
+}
+
+.port-input {
+  display: flex;
+  flex-direction: column;
+}
+
+.port-help {
+  line-height: 1.5;
+  white-space: pre-line;
+  color: darkgray;
+  font-size: 12px;
+  padding: 10px;
+}
+
+.cursor-help {
+  cursor: help;
+  white-space: pre-line;
+}
+
+:deep(.el-radio-button__inner) {
+  padding: 8px 16px;
+}
+
+:deep(.el-radio-button:first-child .el-radio-button__inner) {
+  border-radius: 4px 0 0 4px;
+}
+
+:deep(.el-radio-button:last-child .el-radio-button__inner) {
+  border-radius: 0 4px 4px 0;
 }
 </style>

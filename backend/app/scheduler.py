@@ -168,6 +168,13 @@ class PolicyScheduler:
                     
                     # 获取要扫描的子网
                     subnet_ids = strategy.get('subnet_ids', [])
+                    scan_params = strategy.get('scan_params', {
+                        'enable_custom_ports': False,
+                        'ports': '',
+                        'enable_custom_scan_type': False,
+                        'scan_type': 'default'
+                    })
+
                     if not subnet_ids:
                         # 如果没有指定子网，使用策略关联的所有子网
                         subnet_ids = [subnet.id for subnet in policy.subnets]
@@ -180,7 +187,7 @@ class PolicyScheduler:
                         
                         try:
                             # 使用任务管理器执行扫描
-                            self.task_manager.submit_scan_task(None, policy_id, subnet_id)
+                            self.task_manager.submit_scan_task(None, policy_id, subnet_id, scan_params)
                         except Exception as e:
                             error_msg = f"Failed to submit scan task for subnet {subnet_id}: {str(e)}"
                             logger.error(error_msg)

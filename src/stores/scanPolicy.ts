@@ -3,6 +3,23 @@ import axios from 'axios';
 import { ref } from 'vue';
 import type { Policy, Subnet } from '../types/policy';
 
+interface PolicyData {
+  name: string;
+  description: string;
+  threads: number;
+  strategies: Array<{
+    cron: string;
+    start_time: string;
+    subnet_ids: string[];
+    scan_params: {
+      enable_custom_ports: boolean;
+      ports: string;
+      enable_custom_scan_type: boolean;
+      scan_type: string;
+    };
+  }>;
+}
+
 export const useScanPolicyStore = defineStore('scanPolicy', {
   state: () => ({
     policies: ref<Policy[]>([]),
@@ -29,16 +46,7 @@ export const useScanPolicyStore = defineStore('scanPolicy', {
 
     async createPolicy(data: {
       subnets: Array<{ name: string; subnet: string }>;
-      policies: Array<{
-        name: string;
-        description: string;
-        threads: number;
-        strategies: Array<{
-          cron: string;
-          start_time: string;
-          subnet_ids: string[];
-        }>;
-      }>;
+      policies: PolicyData[];
     }) {
       try {
         this.loading = true;
@@ -61,6 +69,12 @@ export const useScanPolicyStore = defineStore('scanPolicy', {
         cron: string;
         start_time: string;
         subnet_ids: string[];
+        scan_params: {
+          enable_custom_ports: boolean;
+          ports: string;
+          enable_custom_scan_type: boolean;
+          scan_type: string;
+        };
       }>;
     }) {
       try {

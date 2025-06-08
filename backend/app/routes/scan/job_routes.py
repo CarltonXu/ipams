@@ -1,5 +1,7 @@
+import json
+
 from flask import Blueprint, request, jsonify
-from app.models.models import db, ScanJob, ScanSubnet, ScanResult
+from app.models.models import db, ScanJob, ScanPolicy, ScanSubnet, ScanResult
 from app.tasks.task_manager import task_manager
 from app.utils.auth import token_required
 from datetime import datetime
@@ -40,15 +42,28 @@ def get_jobs(current_user):
 @token_required
 def create_job(current_user):
     """Create new scan job"""
-    data = request.json
-    subnet_ids = data.get('subnet_ids', [])
-    policy_id = data.get('policy_id')
+    try: 
+        data = request.json
+        subnet_ids = data.get('subnet_ids', [])
+        policy_id = data.get('policy_id')
     
-    if not policy_id or not subnet_ids:
-        return jsonify({'error': 'Missing required parameters'}), 400
-    
-    try:
-        # 验证所有网段是否存在且属于当前用户
+        if not policy_id or not subnet_ids:
+            return jsonify({'error': 'Missing required parameters'}), 400
+
+        # 获取策略信息
+        policy = ScanPolicy.query.filter_by(
+            id=policy_id,
+            user_id=current_user.id,
+            deleted=False
+        ).first()
+
+        if not policy:
+            return jsonify({'error': 'Scan policy is not exists.'}), 400
+
+        # 解析策略中的扫描计划
+        strategies = json.loads(policy.strategies) if isinstance(policy.strategies, str) else policy.strategies
+
+        # 验证所有的子网是否都存在
         subnets = []
         for subnet_id in subnet_ids:
             subnet = ScanSubnet.query.filter_by(
@@ -56,49 +71,46 @@ def create_job(current_user):
                 user_id=current_user.id,
                 deleted=False
             ).first()
-            
+    
             if not subnet:
                 return jsonify({'error': f'Invalid subnet: {subnet_id}'}), 400
             subnets.append(subnet)
-        
+
         # 为每个网段创建扫描任务
         jobs = []
         for subnet in subnets:
-            # Create new job record
-            new_job = ScanJob(
-                user_id=current_user.id,
-                subnet_id=subnet.id,
-                policy_id=policy_id,
-                status='pending',
-                progress=0,
-                start_time=datetime.utcnow(),
-                machines_found=0
-            )
-            
-            db.session.add(new_job)
-            db.session.commit()  # 先提交事务，确保job记录存在
-            
+            # 查找包含当前子网的策略
+            matching_strategy = None
+            for strategy in strategies:
+                if subnet_id in strategy.get('subnet_ids', []):
+                    matching_strategy = strategy
+                    break        
+
+            if not matching_strategy:
+                continue
+
+            # 获取扫描参数
+            scan_params = matching_strategy.get('scan_params', {
+                'enable_custom_ports': False,
+                'ports': '',
+                'enable_custom_scan_type': False,
+                'scan_type': 'default'
+            })
+
             try:
                 # Submit task to task manager
-                task_manager.submit_scan_task(new_job.id, policy_id, subnet.id)
-                jobs.append(new_job)
+                job = task_manager.submit_scan_task(None, policy_id, subnet.id, scan_params)
+                jobs.append(job)
             except Exception as e:
-                # 如果任务提交失败，更新job状态
-                new_job.status = 'failed'
-                new_job.error_message = str(e)
-                new_job.end_time = datetime.utcnow()
-                db.session.commit()
-                raise
-        
+                raise f"Submit scan task failed, error: {e}"
+            
         return jsonify({
             'message': 'Scan jobs created successfully',
             'jobs': [job.to_dict() for job in jobs]
         }), 201
-        
     except Exception as e:
-        db.session.rollback()
         return jsonify({'error': str(e)}), 500
-
+        
 @job_bp.route('/jobs/<job_id>', methods=['GET'])
 @token_required
 def get_job_status(current_user, job_id):

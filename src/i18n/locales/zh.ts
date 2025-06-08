@@ -394,6 +394,39 @@ export default {
       typeRequired: '请选择策略类型',
       subnets: '网段',
       startTimePlaceholder: '请输入计划开始时间',
+      scanParams: {
+        title: "扫描参数配置",
+        help: "配置扫描策略，不同的扫描类型适用于不同的场景：<br>- 默认扫描：适合日常网络监控<br>- 快速扫描：适合快速了解网络状态<br>- 深度扫描：适合详细分析网络情况<br>- 漏洞扫描：适合安全审计",
+        scanType: "扫描类型",
+        scanTypeHelp: "选择不同的扫描类型来满足不同的扫描需求",
+        ports: "端口配置",
+        enableCustomPorts: "启用自定义端口",
+        portsPlaceholder: "例如: 80,443,8080-8090",
+        portsHelp: "支持以下格式：<br>- 单个端口: 80<br>- 端口范围: 80-100<br>- 多个端口: 80,443,8080<br>- 组合: 80,443,8080-8090",
+        portsHelpDisplay: "支持以下格式：\n- 单个端口: 80\n- 端口范围: 80-100\n- 多个端口: 80,443,8080\n- 组合: 80,443,8080-8090",
+        types: {
+          default: {
+            label: "默认扫描",
+            tag: "基础",
+            description: "使用基本的扫描参数，可以自定义端口范围。适合一般用途的扫描。"
+          },
+          quick: {
+            label: "快速扫描",
+            tag: "快速",
+            description: "只扫描最常见的100个端口，扫描速度快。适合快速了解网络状态。"
+          },
+          intense: {
+            label: "深度扫描",
+            tag: "全面",
+            description: "进行全面的扫描，包括操作系统检测和版本检测。可以选择是否限制端口范围。"
+          },
+          vulnerability: {
+            label: "漏洞扫描",
+            tag: "安全",
+            description: "在深度扫描的基础上，增加漏洞检测。可以选择是否限制端口范围。"
+          }
+        }
+      },
       types: {
         everyMinute: '每分钟',
         everyHour: '每小时',
@@ -452,6 +485,7 @@ export default {
           createdAt: '创建时间',
           threads: '扫描线程数',
           subnets: '扫描网段',
+          scan_params: '扫描参数',
           status: {
             title: '状态',
             active: '活跃',

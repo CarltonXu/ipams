@@ -69,6 +69,27 @@
                     </el-tag>
                   </div>
                 </div>
+                <div class="strategy-row">
+                  <span class="strategy-field">{{ t('scan.policy.show.columns.scan_params') }}:</span>
+                  <div class="scan-params">
+                    <el-tag 
+                      v-if="strategy.scan_params?.enable_custom_scan_type"
+                      size="small"
+                      type="warning"
+                      class="scan-param-tag"
+                    >
+                      {{ t(`scan.policy.scanParams.types.${strategy.scan_params.scan_type}`) }}
+                    </el-tag>
+                    <el-tag 
+                      v-if="strategy.scan_params?.enable_custom_ports"
+                      size="small"
+                      type="info"
+                      class="scan-param-tag"
+                    >
+                      {{ t('scan.policy.scanParams.ports') }}: {{ strategy.scan_params.ports }}
+                    </el-tag>
+                  </div>
+                </div>
               </div>
             </div>
           </template>
@@ -199,6 +220,56 @@ import dayjs from 'dayjs'
 import ScanPolicyForm from './ScanPolicyForm.vue'
 import PolicyJobsDrawer from './PolicyJobsDrawer.vue'
 import { useScanPolicyStore } from '../stores/scanPolicy'
+
+interface Policy {
+  id: string;
+  name: string;
+  description: string;
+  subnet_ids: string[];
+  threads: number;
+  strategies: Array<{
+    cron: string;
+    start_time: string;
+    subnet_ids: string[];
+    scan_params: {
+      enable_custom_ports: boolean;
+      ports: string;
+      enable_custom_scan_type: boolean;
+      scan_type: string;
+    };
+  }>;
+  subnets: Array<{
+    id: string;
+    name: string;
+    subnet: string;
+  }>;
+  created_at: string;
+  status: string;
+  start_time: string;
+}
+
+interface SavePolicyData {
+  subnets: Array<{
+    name: string;
+    subnet: string;
+  }>;
+  policies: Array<{
+    name: string;
+    description: string;
+    threads: number;
+    strategies: Array<{
+      cron: string;
+      start_time: string;
+      subnet_ids: string[];
+      scan_params: {
+        enable_custom_ports: boolean;
+        ports: string;
+        enable_custom_scan_type: boolean;
+        scan_type: string;
+      };
+    }>;
+  }>;
+}
 
 const { t } = useI18n()
 const dialogVisible = ref(false)
@@ -405,7 +476,7 @@ const deletePolicy = async (policy: Policy) => {
     )
     
     const policyStore = useScanPolicyStore()
-    await policyStore.deletePolicyById(policy.id)
+    await policyStore.deletePolicy(policy.id)
     ElMessage.success(t('scan.policy.show.messages.deleteSuccess'))
     await getPolicies()
   } catch (error: any) {
@@ -428,13 +499,22 @@ const editPolicy = (policy: Policy) => {
       strategies: policy.strategies.map(strategy => ({
         cron: strategy.cron,
         start_time: strategy.start_time,
-        subnet_ids: strategy.subnet_ids || []
+        subnet_ids: strategy.subnet_ids || [],
+        scan_params: strategy.scan_params || {
+          enable_custom_ports: false,
+          ports: '',
+          enable_custom_scan_type: false,
+          scan_type: 'default'
+        }
       })),
       subnets: policy.subnets.map(subnet => ({
         id: subnet.id,
         name: subnet.name,
         subnet: subnet.subnet
-      }))
+      })),
+      created_at: policy.created_at,
+      status: policy.status,
+      start_time: policy.strategies[0]?.start_time || new Date().toISOString()
     };
     
     dialogVisible.value = true;
@@ -450,7 +530,7 @@ const showAddPolicyDialog = () => {
 }
 
 // 处理保存策略
-const handleSavePolicy = async (data) => {
+const handleSavePolicy = async (data: SavePolicyData) => {
   try {
     const policyStore = useScanPolicyStore()
     
@@ -464,7 +544,8 @@ const handleSavePolicy = async (data) => {
         strategies: data.policies[0].strategies.map(strategy => ({
           cron: strategy.cron,
           start_time: strategy.start_time,
-          subnet_ids: strategy.subnet_ids
+          subnet_ids: strategy.subnet_ids,
+          scan_params: strategy.scan_params
         }))
       }
       console.log('Update policy data:', updateData) // 添加日志
@@ -481,7 +562,8 @@ const handleSavePolicy = async (data) => {
           strategies: policy.strategies.map(strategy => ({
             cron: strategy.cron,
             start_time: strategy.start_time,
-            subnet_ids: strategy.subnet_ids
+            subnet_ids: strategy.subnet_ids,
+            scan_params: strategy.scan_params
           }))
         }))
       })
@@ -491,9 +573,13 @@ const handleSavePolicy = async (data) => {
     // 刷新列表并关闭对话框
     await getPolicies()
     dialogVisible.value = false
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Save error:', error)
-    ElMessage.error(error.message || t('common.error.unknown'))
+    if (error instanceof Error) {
+      ElMessage.error(error.message || t('common.error.unknown'))
+    } else {
+      ElMessage.error(t('common.error.unknown'))
+    }
   }
 }
 
@@ -636,5 +722,15 @@ onMounted(() => {
 
 .cron-help:hover {
   color: var(--el-color-primary);
+}
+
+.scan-params {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.scan-param-tag {
+  margin: 2px;
 }
 </style>

@@ -36,8 +36,8 @@ class TaskManager:
         """初始化应用实例"""
         self.app = app
 
-    def submit_scan_task(self, job_id: str, policy_id: str, subnet_id: str) -> None:
-        """提交扫描任务到线程池"""
+    def submit_scan_task(self, job_id: str, policy_id: str, subnet_id: str, scan_params: dict = None) -> ScanJob:
+        """提交扫描任务"""
         try:
             # 检查 nmap 是否可用
             if not shutil.which('nmap'):
@@ -74,13 +74,14 @@ class TaskManager:
                 existing_task = task_state.get_task(job.id)
                 if existing_task['status'] != 'not_found' and existing_task['status'] not in ['failed', 'cancelled']:
                     logger.warning(f"Task {job.id} already exists with status {existing_task['status']}")
-                    return
+                    return job
                 
                 # 创建扫描执行器
                 executor = ScanExecutor(
                     job_id=job.id,
                     subnet=subnet.subnet,
                     threads=policy.threads,
+                    scan_params=scan_params  # 传递扫描参数
                 )
             
             # 提交任务到线程池
@@ -102,6 +103,7 @@ class TaskManager:
             )
             
             logger.info(f"Task {job.id} submitted successfully")
+            return job
         except Exception as e:
             logger.error(f"Failed to submit task {job_id}: {str(e)}")
             task_state.update_task_status(job_id, 'failed', str(e))
@@ -158,6 +160,9 @@ class TaskManager:
                         job.error_message = result['error']
                     job.end_time = datetime.utcnow()
                     db.session.commit()
+                    logger.info(f"Updated task {job_id} status to {result['status']}")
+                else:
+                    logger.error(f"Job {job_id} not found")
         except Exception as e:
             logger.error(f"Error updating job status {job_id}: {str(e)}")
 
