@@ -793,4 +793,11 @@ export default {
     prev: 'Previous',
     next: 'Next',
   },
+  errors: {
+    database: {
+      connection: 'Database connection failed, please check network connection or contact administrator'
+    },
+    network: 'Network connection failed, please check network settings',
+    unknown: 'An unknown error occurred, please try again later'
+  },
 };

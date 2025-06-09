@@ -16,6 +16,7 @@ from app.routes.ip.ips import ips_bp
 from app.routes.dashboard.dashboard import dashboard_bp
 from app.tasks.task_manager import task_manager
 from app.scheduler import scheduler
+from .core.middleware import register_error_handlers
 
 # 创建 db 实例
 migrate = Migrate()
@@ -64,6 +65,9 @@ def create_app(config=None):
     
     # Initialize extensions
     CORS(app)
+    
+    # 注册错误处理器
+    register_error_handlers(app)
     
     # Register blueprints
     app.register_blueprint(dashboard_bp, url_prefix="/api")

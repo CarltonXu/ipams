@@ -823,4 +823,11 @@ export default {
     prev: '上一页',
     next: '下一页',
   },
+  errors: {
+    database: {
+      connection: '数据库连接失败，请检查网络连接或联系管理员'
+    },
+    network: '网络连接失败，请检查网络设置',
+    unknown: '发生未知错误，请稍后重试'
+  },
 };
