@@ -2,9 +2,11 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, Any, Optional
 import logging
 import threading
+import os
+import multiprocessing
 from app.models.models import db, ScanJob, ScanSubnet, ScanPolicy
-from .scan_executor import ScanExecutor
-from .task_state import task_state
+from app.services.scan.executor import ScanExecutor
+from app.tasks.task_state import task_state
 from flask import current_app
 import shutil
 from datetime import datetime
@@ -27,14 +29,30 @@ class TaskManager:
         if not self._initialized:
             with self._lock:
                 if not self._initialized:
-                    self._executor = ThreadPoolExecutor(max_workers=10)
+                    # 根据系统CPU核心数动态设置线程池大小
+                    cpu_count = multiprocessing.cpu_count()
+                    max_workers = min(cpu_count * 2, 20)  # 最多20个线程
+                    
+                    # 从环境变量获取线程池大小
+                    env_workers = os.getenv('TASK_MANAGER_WORKERS')
+                    if env_workers:
+                        try:
+                            max_workers = min(int(env_workers), 50)  # 最多50个线程
+                        except ValueError:
+                            logger.warning(f"Invalid TASK_MANAGER_WORKERS value: {env_workers}")
+                    
+                    self._executor = ThreadPoolExecutor(
+                        max_workers=max_workers,
+                        thread_name_prefix='scan_worker'
+                    )
                     self._futures = {}
                     self._initialized = True
-                    logger.info("TaskManager initialized with ThreadPoolExecutor")
+                    logger.info(f"TaskManager initialized with ThreadPoolExecutor (max_workers={max_workers})")
 
     def init_app(self, app):
         """初始化应用实例"""
         self.app = app
+        logger.info("TaskManager app initialized")
 
     def submit_scan_task(self, job_id: str, policy_id: str, subnet_id: str, scan_params: dict = None) -> ScanJob:
         """提交扫描任务"""

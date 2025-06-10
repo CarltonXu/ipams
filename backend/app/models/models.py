@@ -315,3 +315,26 @@ policy_subnet_association = db.Table('policy_subnet_association',
     db.Column('subnet_id', db.String(36), db.ForeignKey('scan_subnets.id'), primary_key=True),
     db.Column('created_at', db.DateTime, default=datetime.utcnow)
 )
+
+class SystemConfig(db.Model):
+    """系统配置模型"""
+    __tablename__ = 'system_configs'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    key = db.Column(db.String(64), unique=True, nullable=False)
+    value = db.Column(db.Text, nullable=False)
+    description = db.Column(db.String(256))
+    is_public = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'key': self.key,
+            'value': self.value,
+            'description': self.description,
+            'is_public': self.is_public,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }

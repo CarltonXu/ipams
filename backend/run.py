@@ -1,7 +1,7 @@
 import os
 import argparse
 from app import create_app
-from app.config import get_config
+from app.core.config.settings import get_config
 
 def parse_args():
     """解析命令行参数"""
