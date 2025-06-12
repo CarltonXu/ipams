@@ -24,15 +24,21 @@
           <span>{{ $t('menu.scanConfig') }}</span>
         </el-menu-item>
       </router-link>
-      <router-link to="/notifications">
+      <router-link to="/tasks">
         <el-menu-item index="4">
+          <el-icon><Clock /></el-icon>
+          <span>{{ $t('menu.task') }}</span>
+        </el-menu-item>
+      </router-link>
+      <router-link to="/notifications">
+        <el-menu-item index="5">
           <el-icon><Bell /></el-icon>
           <span>{{ $t('menu.notifications') }}</span>
         </el-menu-item>
       </router-link>
     </template>
     <router-link to="/settings">
-      <el-menu-item index="5">
+      <el-menu-item index="6">
         <el-icon><Setting /></el-icon>
         <span>{{ $t('menu.settings') }}</span>
       </el-menu-item>
@@ -43,7 +49,7 @@
 <script setup lang="ts">
 import { useAuthStore } from "../stores/auth"
 import { ElMenu, ElMenuItem, ElIcon } from 'element-plus';
-import { Setting, User, Bell, Operation } from '@element-plus/icons-vue';  // 引入 Element Plus 的图标
+import { Setting, User, Bell, Operation, Clock } from '@element-plus/icons-vue';  // 引入 Element Plus 的图标
 
 const authStore = useAuthStore();
 </script>

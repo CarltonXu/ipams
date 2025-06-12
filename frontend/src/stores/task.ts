@@ -46,6 +46,16 @@ export const useTaskStore = defineStore('Task', {
   }),
 
   actions: {
+    async fetchAllTasks() {
+      try {
+        const { data } = await axios.get(`${API_CONFIG.BASE_API_URL}${API_CONFIG.ENDPOINTS.TASK.LIST}`);
+        return data;
+      } catch (error) {
+        console.error('Failed to fetch all jobs:', error);
+        throw error;
+      }
+    },
+
     // 获取运行中的任务
     async fetchRunningJobs() {
       try {

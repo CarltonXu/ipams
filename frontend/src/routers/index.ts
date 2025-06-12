@@ -11,6 +11,7 @@ import ScanPolicyList from '../components/ScanPolicyList.vue';
 import JobResults from '../components/JobResults.vue';
 import Dashboard from '../components/Dashboard.vue';
 import NotificationHistory from '../views/NotificationHistory.vue';
+import Tasks from '../views/Tasks.vue';
 
 const routes: RouteRecordRaw[] = [
     {
@@ -20,6 +21,7 @@ const routes: RouteRecordRaw[] = [
           { path: 'ips', name: 'ShowIPs', component: IPList, meta: { requiresAuth: true } },
           { path: 'users', name: 'UserManagement', component: UserManagement, meta: { requiresAuth: true } },
           { path: 'scans', name: 'scan', component: ScanPolicyList, meta: { requiresAuth: true } },
+          { path: 'tasks', name: 'task', component: Tasks, meta: { requiresAuth: true } },
           { path: 'settings', name: 'Settings', component: Settings, meta: { requiresAuth: true } },
           { path: 'profile', name: 'Profile', component: Profile, meta: { requiresAuth: true } },
           { path: 'jobs/:jobId/results', name: 'JobResults', component: JobResults, meta: { requiresAuth: true } },

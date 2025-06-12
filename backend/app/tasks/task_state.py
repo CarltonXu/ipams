@@ -48,6 +48,7 @@ class TaskState:
         """获取任务状态"""
         with self._lock:
             return self._tasks.get(job_id, {
+                'name': None,
                 'status': 'not_found',
                 'progress': 0,
                 'machines_found': 0,

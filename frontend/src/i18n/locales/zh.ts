@@ -63,11 +63,16 @@ export default {
     actions: '操作',
     refresh: '刷新',
     autoRefresh: '自动刷新',
+    enabled: '启用',
+    disabled: '禁用',
+    view: '查看详情',
+    stop: '停止',
   },
   menu: {
     home: '首页',
     ipManagement: '主机管理',
     scanConfig: '配置扫描',
+    task: '任务管理',
     settings: '系统设置',
     userManagement: '用户管理',
     notifications: '通知历史',
@@ -872,6 +877,8 @@ export default {
       fetchUsersFailed: '获取用户列表失败',
       emailAlreadyExists: '邮箱已存在',
       usernameAlreadyExists: '用户名已存在',
+      unsavedChanges: '您有未保存的更改，确定要放弃这些更改吗？',
+      confirmSave: '确定要保存当前设置吗？',
       notification: {
         testEmailSuccess: '测试邮件发送成功',
         testEmailFailed: '测试邮件发送失败',
@@ -991,5 +998,74 @@ export default {
     },
     network: '网络连接失败，请检查网络设置',
     unknown: '发生未知错误，请稍后重试'
+  },
+  tasks: {
+    title: '任务管理',
+    subtitle: '查看和管理所有任务及扫描结果',
+    tabs: {
+      running: '运行中',
+      history: '历史记录'
+    },
+    refresh: {
+      off: '关闭自动刷新',
+      '1s': '1 秒',
+      '5s': '5 秒',
+      '10s': '10 秒',
+      '30s': '30 秒',
+      '60s': '1 分钟'
+    },
+    table: {
+      name: '任务名称',
+      type: '类型',
+      status: '状态',
+      progress: '进度',
+      startTime: '开始时间',
+      endTime: '结束时间',
+      actions: '操作'
+    },
+    types: {
+      scan: '扫描任务',
+      backup: '备份任务',
+      sync: '同步任务',
+      other: '其他任务'
+    },
+    status: {
+      running: '运行中',
+      completed: '已完成',
+      failed: '失败',
+      stopped: '已停止',
+      pending: '等待中',
+      cancelled: '已取消',
+    },
+    scanStatus: {
+      success: '成功',
+      failed: '失败',
+      warning: '警告',
+      info: '信息'
+    },
+    details: {
+      title: '任务详情',
+      name: '任务名称',
+      type: '任务类型',
+      status: '任务状态',
+      progress: '任务进度',
+      startTime: '开始时间',
+      endTime: '结束时间',
+      scanResults: '扫描结果',
+      ip: 'IP 地址',
+      resultStatus: '状态',
+      details: '详细信息',
+      scanTime: '扫描时间',
+      logs: '任务日志'
+    },
+    actions: {
+      create: '创建任务'
+    },
+    messages: {
+      confirmStop: '确定要停止该任务吗？',
+      stopSuccess: '任务已停止',
+      stopFailed: '停止任务失败',
+      loadFailed: '加载任务列表失败'
+    }
   },
 };

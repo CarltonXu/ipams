@@ -63,11 +63,16 @@ export default {
     actions: 'Actions',
     refresh: 'Refresh',
     autoRefresh: 'Auto Refresh',
+    enabled: 'Enabled',
+    disabled: 'Disabled',
+    view: 'View Details',
+    stop: 'Stop',
   },
   menu: {
     home: 'Home',
     ipManagement: 'IP Management',
     scanConfig: 'Scan Config',
+    task: 'Task Managent',
     settings: 'Settings',
     userManagement: 'User Management',
     notifications: 'Notification History',
@@ -842,6 +847,8 @@ export default {
       fetchUsersFailed: 'Failed to fetch user list',
       emailAlreadyExists: 'Email already exists',
       usernameAlreadyExists: 'Username already exists',
+      unsavedChanges: 'You have unsaved changes. Are you sure you want to discard them?',
+      confirmSave: 'Are you sure you want to save the current settings?',
       notification: {
         testEmailSuccess: 'Test email sent successfully',
         testEmailFailed: 'Failed to send test email',
@@ -910,5 +917,74 @@ export default {
         fetchFailed: 'Failed to fetch notifications'
       }
     },
+  },
+  tasks: {
+    title: 'Task Management',
+    subtitle: 'View and manage all tasks and scan results',
+    tabs: {
+      running: 'Running',
+      history: 'History'
+    },
+    refresh: {
+      off: 'Auto Refresh Off',
+      '1s': '1 Second',
+      '5s': '5 Seconds',
+      '10s': '10 Seconds',
+      '30s': '30 Seconds',
+      '60s': '1 Minute'
+    },
+    table: {
+      name: 'Task Name',
+      type: 'Type',
+      status: 'Status',
+      progress: 'Progress',
+      startTime: 'Start Time',
+      endTime: 'End Time',
+      actions: 'Actions'
+    },
+    types: {
+      scan: 'Scan Task',
+      backup: 'Backup Task',
+      sync: 'Sync Task',
+      other: 'Other Task'
+    },
+    status: {
+      running: 'Running',
+      completed: 'Completed',
+      failed: 'Failed',
+      stopped: 'Stopped',
+      pending: 'Pending',
+      cancelled: 'cancelled',
+    },
+    scanStatus: {
+      success: 'Success',
+      failed: 'Failed',
+      warning: 'Warning',
+      info: 'Info'
+    },
+    details: {
+      title: 'Task Details',
+      name: 'Task Name',
+      type: 'Task Type',
+      status: 'Task Status',
+      progress: 'Task Progress',
+      startTime: 'Start Time',
+      endTime: 'End Time',
+      scanResults: 'Scan Results',
+      ip: 'IP Address',
+      resultStatus: 'Status',
+      details: 'Details',
+      scanTime: 'Scan Time',
+      logs: 'Task Logs'
+    },
+    actions: {
+      create: 'Create Task'
+    },
+    messages: {
+      confirmStop: 'Are you sure you want to stop this task?',
+      stopSuccess: 'Task stopped successfully',
+      stopFailed: 'Failed to stop task',
+      loadFailed: 'Failed to load task list'
+    }
   },
 };

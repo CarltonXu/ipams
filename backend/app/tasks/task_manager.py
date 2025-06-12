@@ -208,27 +208,59 @@ class TaskManager:
                 logger.warning(f"Cannot cancel task {job_id} with status {task['status']}")
                 return False
             
-            # 获取任务相关的 future
-            future = task.get('future')
-            if future:
-                # 尝试取消任务
-                cancelled = future.cancel()
+            # 先尝试停止扫描执行器
+            executor = task.get('executor')
+            if executor and hasattr(executor, 'cancel'):
+                # 强制停止执行器
+                executor.cancel()
+                logger.info(f"Scan executor for task {job_id} cancelled")
                 
-                # 即使 future 取消失败，也尝试停止扫描执行器
-                executor = task.get('executor')
-                if executor and hasattr(executor, 'cancel'):
-                    executor.cancel()
-                    logger.info(f"Scan executor for task {job_id} cancelled")
-                    
-                    # 更新任务状态为已取消
-                    task_state.update_task_status(job_id, 'cancelled')
-                    logger.info(f"Task {job_id} marked as cancelled")
-                    return True
-                else:
-                    logger.warning(f"No executor found for task {job_id}")
-                    return False
+                # 更新任务状态为已取消
+                task_state.update_task_status(job_id, 'cancelled')
+                logger.info(f"Task {job_id} marked as cancelled")
+                
+                # 尝试取消 future
+                future = task.get('future')
+                if future:
+                    if not future.done():
+                        try:
+                            # 尝试取消 future
+                            cancelled = future.cancel()
+                            if cancelled:
+                                logger.info(f"Future for task {job_id} cancelled successfully")
+                            else:
+                                logger.warning(f"Failed to cancel future for task {job_id}")
+                                # 如果 future 取消失败，尝试强制停止
+                                if hasattr(future, '_thread'):
+                                    import ctypes
+                                    try:
+                                        thread_id = future._thread.ident
+                                        if thread_id:
+                                            res = ctypes.pythonapi.PyThreadState_SetAsyncExc(
+                                                ctypes.c_long(thread_id),
+                                                ctypes.py_object(SystemExit)
+                                            )
+                                            if res == 0:
+                                                logger.warning(f"Failed to force stop thread for task {job_id}")
+                                            elif res != 1:
+                                                logger.warning(f"Failed to force stop thread for task {job_id}, res={res}")
+                                    except Exception as e:
+                                        logger.error(f"Error force stopping thread for task {job_id}: {str(e)}")
+                        except Exception as e:
+                            logger.error(f"Error cancelling future for task {job_id}: {str(e)}")
+                    else:
+                        logger.info(f"Future for task {job_id} already done")
+                
+                # 清理任务状态
+                try:
+                    task_state.remove_task(job_id)
+                    logger.info(f"Task {job_id} removed from task state")
+                except Exception as e:
+                    logger.error(f"Error removing task {job_id} from task state: {str(e)}")
+                
+                return True
             else:
-                logger.warning(f"No future found for task {job_id}")
+                logger.warning(f"No executor found for task {job_id}")
                 return False
                 
         except Exception as e:

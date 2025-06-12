@@ -129,9 +129,17 @@ def get_job_status(current_user, job_id):
         # 获取任务状态
         task_status = task_manager.get_task_status(job_id)
         
+        # 只返回可序列化的数据
+        serializable_status = {
+            'status': task_status.get('status'),
+            'progress': task_status.get('progress'),
+            'machines_found': task_status.get('machines_found'),
+            'error': task_status.get('error')
+        }
+        
         return jsonify({
             'job_id': job_id,
-            'status': task_status,
+            'status': serializable_status,
             'job': {
                 'id': job.id,
                 'status': job.status,
