@@ -1,6 +1,6 @@
 <template>
   <div class="settings">
-    <el-card>
+    <el-card shadow="always" class="main-settings-card">
       <div class="page-title">
         <div class="page-header">
           <h2>{{ t('settings.title') }}</h2>
@@ -31,7 +31,7 @@
           <el-collapse-item :title="t('settings.sections.interface')" name="2">
             <el-form-item :label="t('settings.form.notifications.label')">
               <el-switch 
-                v-model="settings.notifications" 
+                v-model="settings.notificationsEnabled" 
                 :active-text="t('settings.form.notifications.on')" 
                 :inactive-text="t('settings.form.notifications.off')"
               ></el-switch>
@@ -45,248 +45,571 @@
             </el-form-item>
           </el-collapse-item>
 
-          <!-- 账户设置 -->
-          <el-collapse-item :title="t('settings.sections.account')" name="3">
-            <el-form-item :label="t('settings.form.password.label')">
-              <el-button @click="showChangePasswordDialog" type="primary">
-                {{ t('settings.form.password.button') }}
-              </el-button>
+          <!-- 通知设置 -->
+          <el-collapse-item :title="t('settings.sections.notification')" name="4">
+            <div class="notification-section-title">{{ t('settings.form.notifications.email.title') }}</div>
+            <el-form-item class="notification-toggle-item" label-width="60px">
+              <el-switch
+                v-model="emailEnabled"
+                @change="handleEmailEnabledChange"
+                :active-text="t('settings.form.notifications.email.enabled')"
+                :inactive-text="t('settings.form.notifications.email.disabled')"
+              />
             </el-form-item>
+            
+            <template v-if="emailEnabled">
+              <el-form ref="emailFormRef" :model="settings.emailConfig" :rules="emailRules" label-width="166px" class="notification-config-form">
+                <el-form-item :label="t('settings.form.notifications.email.smtp.host')" prop="smtpServer">
+                  <el-input v-model="settings.emailConfig.smtpServer" :placeholder="t('settings.form.notifications.email.smtp.host')">
+                    <template #prefix>
+                      <el-icon><Connection /></el-icon>
+                    </template>
+                  </el-input>
+                </el-form-item>
+                
+                <el-form-item :label="t('settings.form.notifications.email.smtp.port')" prop="smtpPort">
+                  <el-input-number v-model="settings.emailConfig.smtpPort" :min="1" :max="65535" class="w-full" />
+                </el-form-item>
+                
+                <el-form-item :label="t('settings.form.notifications.email.smtp.username')" prop="smtpUsername">
+                  <el-input v-model="settings.emailConfig.smtpUsername" :placeholder="t('settings.form.notifications.email.smtp.username')">
+                    <template #prefix>
+                      <el-icon><User /></el-icon>
+                    </template>
+                  </el-input>
+                </el-form-item>
+                
+                <el-form-item :label="t('settings.form.notifications.email.smtp.password')" prop="smtpPassword">
+                  <el-input
+                    v-model="settings.emailConfig.smtpPassword"
+                    type="password"
+                    :placeholder="t('settings.form.notifications.email.smtp.password')"
+                    show-password
+                  >
+                    <template #prefix>
+                      <el-icon><Lock /></el-icon>
+                    </template>
+                  </el-input>
+                </el-form-item>
+                
+                <el-form-item :label="t('settings.form.notifications.email.smtp.from')" prop="smtpFrom">
+                  <el-input v-model="settings.emailConfig.smtpFrom" :placeholder="t('settings.form.notifications.email.smtp.from')">
+                    <template #prefix>
+                      <el-icon><Position /></el-icon>
+                    </template>
+                  </el-input>
+                </el-form-item>
+                
+                <el-form-item class="text-right" label-width="70px">
+                  <el-button
+                    type="primary"
+                    @click="testEmailConfig"
+                    :loading="testingEmail"
+                  >
+                    <el-icon><Check /></el-icon>
+                    {{ t('settings.form.notifications.email.smtp.test') }}
+              </el-button>
+                </el-form-item>
+              </el-form>
+            </template>
+
+            <el-divider />
+
+            <div class="notification-section-title">{{ t('settings.form.notifications.wechat.title') }}</div>
+            <el-form-item class="notification-toggle-item" label-width="60px">
+              <el-switch
+                v-model="wechatEnabled"
+                @change="handleWechatEnabledChange"
+                :active-text="t('settings.form.notifications.wechat.enabled')"
+                :inactive-text="t('settings.form.notifications.wechat.disabled')"
+              />
+            </el-form-item>
+            
+            <template v-if="wechatEnabled">
+              <el-form ref="wechatFormRef" :model="settings.wechatConfig" :rules="wechatRules" label-width="120px" class="notification-config-form">
+                <el-form-item :label="t('settings.form.notifications.wechat.config.title')" label-width="166px" prop="webhookUrl">
+                  <el-input
+                    v-model="settings.wechatConfig.webhookUrl"
+                    :placeholder="t('settings.form.notifications.wechat.config.appId')"
+                  >
+                    <template #prefix>
+                      <el-icon><Link /></el-icon>
+                    </template>
+                  </el-input>
+                </el-form-item>
+                
+                <el-form-item class="text-right" label-width="70px">
+                  <el-button
+                    type="primary"
+                    @click="testWechatConfig"
+                    :loading="testingWechat"
+                  >
+                    <el-icon><Check /></el-icon>
+                    {{ t('settings.form.notifications.wechat.config.test') }}
+                  </el-button>
+                </el-form-item>
+              </el-form>
+            </template>
+
+            <el-divider />
+
+            <div class="notification-section-title">{{ t('settings.form.notifications.events.title') }}</div>
+            <div class="event-category-wrapper">
+              <div class="event-category">
+                <h4>{{ t('settings.form.notifications.events.scan.title') }}</h4>
+                <div class="event-settings-grid">
+                  <div class="grid-item">
+                    <label>{{ t('settings.form.notifications.events.scan.complete') }}</label>
+                    <el-switch v-model="scanCompleted" />
+                  </div>
+                  
+                  <div class="grid-item">
+                    <label>{{ t('settings.form.notifications.events.scan.error') }}</label>
+                    <el-switch v-model="scanFailed" />
+                  </div>
+                </div>
+              </div>
+              
+              <el-divider v-if="t('settings.form.notifications.events.ip.title')" />
+
+              <div class="event-category">
+                <h4>{{ t('settings.form.notifications.events.ip.title') }}</h4>
+                <div class="event-settings-grid">
+                  <div class="grid-item">
+                    <label>{{ t('settings.form.notifications.events.ip.claim') }}</label>
+                    <el-switch v-model="ipClaimed" />
+                  </div>
+                  
+                  <div class="grid-item">
+                    <label>{{ t('settings.form.notifications.events.ip.release') }}</label>
+                    <el-switch v-model="ipReleased" />
+                  </div>
+                </div>
+              </div>
+
+              <el-divider v-if="t('settings.form.notifications.events.system.title')" />
+
+              <div class="event-category">
+                <h4>{{ t('settings.form.notifications.events.system.title') }}</h4>
+                <div class="event-settings-grid">
+                  <div class="grid-item">
+                    <label>{{ t('settings.form.notifications.events.system.info') }}</label>
+                    <el-switch v-model="policyCreated" />
+                  </div>
+                  
+                  <div class="grid-item">
+                    <label>{{ t('settings.form.notifications.events.system.warning') }}</label>
+                    <el-switch v-model="policyUpdated" />
+                  </div>
+                  
+                  <div class="grid-item">
+                    <label>{{ t('settings.form.notifications.events.system.error') }}</label>
+                    <el-switch v-model="policyDeleted" />
+                  </div>
+                </div>
+              </div>
+            </div>
           </el-collapse-item>
         </el-collapse>
-
         <el-button type="primary" @click="saveSettings" class="save-button">
           {{ t('settings.buttons.save') }}
         </el-button>
       </el-form>
-
-      <!-- 修改密码对话框 -->
-      <el-dialog 
-        v-model="changePasswordDialogVisible"
-        :title="t('settings.form.password.dialog.title')" 
-        width="600px"
-      >
-        <el-form :model="passwordForm" label-width="160px">
-          <el-form-item 
-            :label="t('settings.form.password.dialog.old')"
-            :rules="[{ required: true, message: t('settings.validation.oldPassword') }]"
-          >
-            <el-input 
-              v-model="passwordForm.oldPassword" 
-              type="password"
-              style="width: 360px;"
-              :show-password="true"
-            />
-          </el-form-item>
-          <el-form-item 
-            :label="t('settings.form.password.dialog.new')"
-            :rules="[{ required: true, message: t('settings.validation.newPassword') }]"
-          >
-            <el-input 
-              v-model="passwordForm.newPassword" 
-              type="password"
-              style="width: 360px;"
-              :show-password="true"
-            />
-          </el-form-item>
-          <el-form-item 
-            :label="t('settings.form.password.dialog.confirm')"
-            :rules="[{ required: true, message: t('settings.validation.confirmPassword') }]"
-          >
-            <el-input 
-              v-model="passwordForm.confirmPassword" 
-              type="password"
-              style="width: 360px;"
-              :show-password="true"
-            />
-          </el-form-item>
-        </el-form>
-        <template #footer>
-          <div class="dialog-footer">
-            <el-button @click="changePasswordDialogVisible = false">
-              {{ t('settings.buttons.cancel') }}
-            </el-button>
-            <el-button type="primary" @click="changePassword">
-              {{ t('settings.buttons.confirm') }}
-            </el-button>
-          </div>
-        </template>
-      </el-dialog>
     </el-card>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted } from 'vue';
+import { ref, watch, onMounted, computed } from 'vue';
 import { ElMessage } from 'element-plus';
 import { useI18n } from 'vue-i18n';
 import { useTheme } from '../composables/useTheme';
 import { useSettingsStore } from '../stores/settings';
-import { useAuthStore } from '../stores/auth';
-import { useUserStore } from '../stores/user';
-import { useRouter } from 'vue-router';
-import { useGlobalConfig } from 'element-plus';
-// 导入 Element Plus 的语言包
-import zhCn from 'element-plus/dist/locale/zh-cn.mjs';
-import en from 'element-plus/dist/locale/en.mjs';
+import type { FormInstance, FormRules } from 'element-plus';
+import { Link, Connection, User, Lock, Position, Check  } from '@element-plus/icons-vue';
 
-const { t, locale } = useI18n();
-const { theme, toggleTheme } = useTheme();
+const { t } = useI18n();
+const { toggleTheme } = useTheme();
 const settingsStore = useSettingsStore();
-const authStore = useAuthStore();
-const userStore = useUserStore();
-const router = useRouter();
-const globalConfig = useGlobalConfig();
+
+// 表单验证规则
+const emailRules: FormRules = {
+  smtpServer: [
+    { required: true, message: t('settings.form.notifications.email.smtp.host'), trigger: 'blur' }
+  ],
+  smtpPort: [
+    { required: true, message: t('settings.form.notifications.email.smtp.port'), trigger: 'blur' }
+  ],
+  smtpUsername: [
+    { required: true, message: t('settings.form.notifications.email.smtp.username'), trigger: 'blur' }
+  ],
+  smtpPassword: [
+    { required: true, message: t('settings.form.notifications.email.smtp.password'), trigger: 'blur' }
+  ],
+  smtpFrom: [
+    { required: true, message: t('settings.form.notifications.email.smtp.from'), trigger: 'blur' },
+    { type: 'email', message: t('settings.form.notifications.email.smtp.from'), trigger: 'blur' }
+  ]
+};
+
+const wechatRules: FormRules = {
+  webhookUrl: [
+    { required: true, message: t('settings.form.notifications.wechat.config.appId'), trigger: 'blur' }
+  ]
+};
+
 // 系统设置的数据模型
 const settings = ref({
-  language: locale.value,
-  theme: theme.value,
-  notifications: settingsStore.notifications,
-  timeFormat: settingsStore.timeFormat
+  language: 'zh',
+  theme: 'light',
+  notificationsEnabled: false,
+  timeFormat: '24h',
+  emailConfig: {
+    enabled: false,
+    smtpServer: '',
+    smtpPort: 587,
+    smtpUsername: '',
+    smtpPassword: '',
+    smtpFrom: ''
+  },
+  wechatConfig: {
+    enabled: false,
+    webhookUrl: ''
+  },
+  eventConfig: {
+    scanCompleted: true,
+    scanFailed: true,
+    ipClaimed: true,
+    ipReleased: true,
+    policyCreated: true,
+    policyUpdated: true,
+    policyDeleted: true
+  }
 });
+
+// 计算属性用于处理双向绑定
+const emailEnabled = computed({
+  get: () => settings.value.emailConfig?.enabled ?? false,
+  set: (value) => {
+    if (!settings.value.emailConfig) {
+      settings.value.emailConfig = {
+        enabled: false,
+        smtpServer: '',
+        smtpPort: 587,
+        smtpUsername: '',
+        smtpPassword: '',
+        smtpFrom: ''
+      };
+    }
+    settings.value.emailConfig.enabled = value;
+  }
+});
+
+const wechatEnabled = computed({
+  get: () => settings.value.wechatConfig?.enabled ?? false,
+  set: (value) => {
+    if (!settings.value.wechatConfig) {
+      settings.value.wechatConfig = {
+        enabled: false,
+        webhookUrl: ''
+      };
+    }
+    settings.value.wechatConfig.enabled = value;
+  }
+});
+
+// 事件配置的计算属性
+const scanCompleted = computed({
+  get: () => settings.value.eventConfig?.scanCompleted ?? false,
+  set: (value) => {
+    if (!settings.value.eventConfig) {
+      settings.value.eventConfig = {
+        scanCompleted: false,
+        scanFailed: false,
+        ipClaimed: false,
+        ipReleased: false,
+        policyCreated: false,
+        policyUpdated: false,
+        policyDeleted: false
+      };
+    }
+    settings.value.eventConfig.scanCompleted = value;
+  }
+});
+
+const scanFailed = computed({
+  get: () => settings.value.eventConfig?.scanFailed ?? false,
+  set: (value) => {
+    if (!settings.value.eventConfig) {
+      settings.value.eventConfig = {
+        scanCompleted: false,
+        scanFailed: false,
+        ipClaimed: false,
+        ipReleased: false,
+        policyCreated: false,
+        policyUpdated: false,
+        policyDeleted: false
+      };
+    }
+    settings.value.eventConfig.scanFailed = value;
+  }
+});
+
+const ipClaimed = computed({
+  get: () => settings.value.eventConfig?.ipClaimed ?? false,
+  set: (value) => {
+    if (!settings.value.eventConfig) {
+      settings.value.eventConfig = {
+        scanCompleted: false,
+        scanFailed: false,
+        ipClaimed: false,
+        ipReleased: false,
+        policyCreated: false,
+        policyUpdated: false,
+        policyDeleted: false
+      };
+    }
+    settings.value.eventConfig.ipClaimed = value;
+  }
+});
+
+const ipReleased = computed({
+  get: () => settings.value.eventConfig?.ipReleased ?? false,
+  set: (value) => {
+    if (!settings.value.eventConfig) {
+      settings.value.eventConfig = {
+        scanCompleted: false,
+        scanFailed: false,
+        ipClaimed: false,
+        ipReleased: false,
+        policyCreated: false,
+        policyUpdated: false,
+        policyDeleted: false
+      };
+    }
+    settings.value.eventConfig.ipReleased = value;
+  }
+});
+
+const policyCreated = computed({
+  get: () => settings.value.eventConfig?.policyCreated ?? false,
+  set: (value) => {
+    if (!settings.value.eventConfig) {
+      settings.value.eventConfig = {
+        scanCompleted: false,
+        scanFailed: false,
+        ipClaimed: false,
+        ipReleased: false,
+        policyCreated: false,
+        policyUpdated: false,
+        policyDeleted: false
+      };
+    }
+    settings.value.eventConfig.policyCreated = value;
+  }
+});
+
+const policyUpdated = computed({
+  get: () => settings.value.eventConfig?.policyUpdated ?? false,
+  set: (value) => {
+    if (!settings.value.eventConfig) {
+      settings.value.eventConfig = {
+        scanCompleted: false,
+        scanFailed: false,
+        ipClaimed: false,
+        ipReleased: false,
+        policyCreated: false,
+        policyUpdated: false,
+        policyDeleted: false
+      };
+    }
+    settings.value.eventConfig.policyUpdated = value;
+  }
+});
+
+const policyDeleted = computed({
+  get: () => settings.value.eventConfig?.policyDeleted ?? false,
+  set: (value) => {
+    if (!settings.value.eventConfig) {
+      settings.value.eventConfig = {
+        scanCompleted: false,
+        scanFailed: false,
+        ipClaimed: false,
+        ipReleased: false,
+        policyCreated: false,
+        policyUpdated: false,
+        policyDeleted: false
+      };
+    }
+    settings.value.eventConfig.policyDeleted = value;
+  }
+});
+
+// 测试状态
+const testingEmail = ref(false);
+const testingWechat = ref(false);
 
 // 监听设置变化
 watch(() => settings.value.language, (newLang) => {
-  locale.value = newLang;
-  // 更新 Element Plus 的语言
-  globalConfig.locale = newLang === 'zh' ? zhCn : en;
   settingsStore.setLanguage(newLang);
 });
 
 watch(() => settings.value.theme, (newTheme) => {
-  toggleTheme(newTheme);
-  settingsStore.setTheme(newTheme);
+  toggleTheme(newTheme as 'light' | 'dark');
+  settingsStore.setTheme(newTheme as 'light' | 'dark');
 });
 
-watch(() => settings.value.notifications, (value) => {
-  settingsStore.setNotifications(value);
+watch(() => settings.value.notificationsEnabled, (value) => {
+  settingsStore.setNotificationsEnabled(value);
 });
 
 watch(() => settings.value.timeFormat, (value) => {
-  settingsStore.setTimeFormat(value);
+  settingsStore.setTimeFormat(value as '12h' | '24h');
 });
 
 // 初始化加载设置
-onMounted(() => {
+onMounted(async () => {
+  try {
+    // 加载通知配置
+    await settingsStore.fetchConfig();
+    
+    // 更新本地状态
   settings.value = {
     language: settingsStore.language,
     theme: settingsStore.theme,
-    notifications: settingsStore.notifications,
-    timeFormat: settingsStore.timeFormat
-  };
+      notificationsEnabled: settingsStore.notificationsEnabled,
+      timeFormat: settingsStore.timeFormat,
+      emailConfig: settingsStore.emailConfig || {
+        enabled: false,
+        smtpServer: '',
+        smtpPort: 587,
+        smtpUsername: '',
+        smtpPassword: '',
+        smtpFrom: ''
+      },
+      wechatConfig: settingsStore.wechatConfig || {
+        enabled: false,
+        webhookUrl: ''
+      },
+      eventConfig: settingsStore.eventConfig || {
+        scanCompleted: false,
+        scanFailed: false,
+        ipClaimed: false,
+        ipReleased: false,
+        policyCreated: false,
+        policyUpdated: false,
+        policyDeleted: false
+      }
+    };
+  } catch (error) {
+    console.error('加载设置失败:', error);
+    ElMessage.error(t('settings.messages.loadFailed'));
+  }
 });
-
-// 修改密码的表单数据
-const passwordForm = ref({
-  oldPassword: '',
-  newPassword: '',
-  confirmPassword: ''
-});
-
-// 控制修改密码对话框显示
-const changePasswordDialogVisible = ref(false);
 
 // 控制折叠面板的展开项
-const activeNames = ref(['1', '2', '3']);
+const activeNames = ref(['1', '2', '3', '4']);
+
+// 表单引用
+const emailFormRef = ref<FormInstance>();
+const wechatFormRef = ref<FormInstance>();
+
+// 处理邮件配置启用状态变化
+const handleEmailEnabledChange = (value: boolean) => {
+  emailEnabled.value = value;
+  if (!value) {
+    settings.value.emailConfig = {
+      enabled: false,
+      smtpServer: '',
+      smtpPort: 587,
+      smtpUsername: '',
+      smtpPassword: '',
+      smtpFrom: ''
+    };
+  }
+};
+
+// 处理微信配置启用状态变化
+const handleWechatEnabledChange = (value: boolean) => {
+  wechatEnabled.value = value;
+  if (!value) {
+    settings.value.wechatConfig = {
+      enabled: false,
+      webhookUrl: ''
+    };
+  }
+};
+
+// 测试邮件配置
+const testEmailConfig = async () => {
+  if (!emailFormRef.value) return;
+  await emailFormRef.value.validate(async (valid: boolean) => {
+    if (valid) {
+      try {
+        testingEmail.value = true;
+        const success = await settingsStore.testConfig('email', settings.value.emailConfig);
+        if (success) {
+          ElMessage.success(t('settings.messages.notification.testEmailSuccess'));
+        } else {
+          ElMessage.error(t('settings.messages.notification.testEmailFailed'));
+        }
+      } catch (error) {
+        // 理论上这里不会捕获到错误，因为 testConfig 已经内部处理并返回布尔值
+        console.error('测试发送时发生意外错误:', error);
+        ElMessage.error(t('common.error')); // 通用错误消息
+      } finally {
+        testingEmail.value = false;
+      }
+    }
+  });
+};
+
+// 测试微信配置
+const testWechatConfig = async () => {
+  if (!wechatFormRef.value) return;
+  await wechatFormRef.value.validate(async (valid: boolean) => {
+    if (valid) {
+      try {
+        testingWechat.value = true;
+        const success = await settingsStore.testConfig('wechat', settings.value.wechatConfig);
+        if (success) {
+          ElMessage.success(t('settings.form.notifications.wechat.config.testSuccess'));
+        } else {
+          ElMessage.error(t('settings.form.notifications.wechat.config.testFailed'));
+        }
+      } catch (error) {
+        console.error('测试发送时发生意外错误:', error);
+        ElMessage.error(t('common.error')); // 通用错误消息
+      } finally {
+        testingWechat.value = false;
+      }
+    }
+  });
+};
 
 // 保存系统设置
-const saveSettings = () => {
-  ElMessage.success(t('settings.messages.saveSuccess'));
-};
-
-// 显示修改密码对话框
-const showChangePasswordDialog = () => {
-  changePasswordDialogVisible.value = true;
-  // 重置密码表单
-  passwordForm.value = {
-    oldPassword: '',
-    newPassword: '',
-    confirmPassword: ''
-  };
-};
-
-// 执行修改密码操作
-const changePassword = async () => {
-  // 获取表单数据
-  const { oldPassword, newPassword, confirmPassword } = passwordForm.value;
-  
-  // 检查所有字段是否为空
-  if (!oldPassword.trim()) {
-    ElMessage.error(t('settings.validation.oldPassword'));
-    return;
-  }
-  
-  if (!newPassword.trim()) {
-    ElMessage.error(t('settings.validation.newPassword'));
-    return;
-  }
-  
-  if (!confirmPassword.trim()) {
-    ElMessage.error(t('settings.validation.confirmPassword'));
-    return;
-  }
-
-  // 验证新密码和确认密码是否一致
-  if (newPassword !== confirmPassword) {
-    ElMessage.error(t('settings.messages.passwordMismatch'));
-    return;
-  }
-
+const saveSettings = async () => {
   try {
-    // 从 auth store 获取当前用户 ID
-    const currentUserId = authStore.user?.id;
-    
-    if (!currentUserId) {
-      throw new Error('未找到用户信息');
-    }
-
-    // 调用 store 的修改密码方法
-    await userStore.updatePassword(
-      currentUserId,
-      oldPassword,
-      newPassword
-    );
-
-    // 修改成功后的处理
-    ElMessage.success(t('settings.messages.passwordSuccess'));
-    changePasswordDialogVisible.value = false;
-    
-    // 重置表单
-    passwordForm.value = {
-      oldPassword: '',
-      newPassword: '', 
-      confirmPassword: ''
-    };
-
-    // 显示提示信息并倒计时
-    ElMessage({
-      type: 'success',
-      message: t('settings.messages.passwordSuccessRedirect'),
-      duration: 5000  // 显示5秒
+    await settingsStore.updateConfig({
+      emailConfig: settings.value.emailConfig,
+      wechatConfig: settings.value.wechatConfig,
+      eventConfig: settings.value.eventConfig
     });
-
-    // 5秒后登出并跳转到登录页
-    setTimeout(async () => {
-      await authStore.logout();  // 调用登出方法
-      router.push('/login');     // 跳转到登录页
-    }, 5000);
-
-  } catch (error: any) {
-    // 错误处理
-    ElMessage.error(error.message || t('settings.messages.passwordError'));
+    ElMessage.success(t('settings.messages.notification.saveSuccess'));
+  } catch (error) {
+    ElMessage.error(t('settings.messages.notification.saveFailed'));
   }
 };
 </script>
 
 <style scoped>
-:deep(.el-collapse-item__header) {
-  font-size: 16px;
-  font-weight: 500;
-  padding: 12px 0;
+.settings {
+  padding: 20px;
 }
 
-:deep(.el-collapse-item__content) {
-  padding: 20px;
+.main-settings-card {
+  margin-bottom: 20px;
+  box-shadow: var(--el-box-shadow-light); /* 更明显的阴影 */
 }
 
 .page-title {
@@ -301,29 +624,184 @@ const changePassword = async () => {
 .page-header h2 {
   font-size: 24px;
   margin: 0;
-  color: #333;
+  color: var(--el-text-color-primary);
 }
 
 .page-header .subtitle {
-  color: #666;
+  color: var(--el-text-color-regular);
   margin: 5px 0 0;
   font-size: 14px;
 }
 
-.settings {
+:deep(.el-collapse-item__header) {
+  font-size: 16px;
+  font-weight: 500;
+  padding: 12px 0;
+  color: var(--el-text-color-primary);
+}
+
+:deep(.el-collapse-item__content) {
   padding: 20px;
 }
 
 .save-button {
   margin-top: 20px;
   margin-left: auto;
+  margin-right: auto; /* 居中 */
+  display: block;
+  min-width: 150px; /* 增加按钮最小宽度 */
+  text-align: center;
 }
 
-.dialog-footer {
-  text-align: right;
+/* 通知部分容器 */
+.notification-section {
+  margin-bottom: 25px; /* 增加部分间距 */
+  padding: 20px;
+  border-radius: var(--el-border-radius-base);
+  background-color: var(--el-fill-color-extra-light); /* 轻微背景色 */
+  box-shadow: var(--el-box-shadow-lighter);
+  transition: all 0.2s ease-in-out;
+  &:hover {
+    box-shadow: var(--el-box-shadow-light); /* 鼠标悬停时阴影加深 */
+  }
 }
 
-.el-form-item {
+/* 通知部分标题 */
+.notification-section-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin-top: 25px; /* 与上一部分有更大间距 */
   margin-bottom: 20px;
+  color: var(--el-text-color-primary);
+  padding-left: 10px;
+  border-left: 4px solid var(--el-color-primary); /* 增加左侧主色边框 */
+}
+
+/* 通知开关项样式 */
+.notification-toggle-item {
+  margin-bottom: 20px;
+  padding-left: 10px; /* 与标题对齐 */
+  :deep(.el-form-item__content) {
+    justify-content: flex-end; /* 使开关靠右 */
+    width: 100%;
+  }
+}
+
+/* 通知配置表单样式 */
+.notification-config-form {
+  padding: 0;
+  border: none;
+  margin-bottom: 0;
+}
+
+/* 事件分类包裹器 */
+.event-category-wrapper {
+  padding-top: 10px;
+}
+
+/* 事件分类标题和内容块 */
+.event-category {
+  margin-bottom: 25px; /* 增加分类间距 */
+  &:last-child {
+    margin-bottom: 0;
+  }
+  h4 {
+    font-size: 16px; /* 稍大一些 */
+    font-weight: 600;
+    color: var(--el-text-color-regular);
+    margin-top: 0;
+    margin-bottom: 15px;
+    padding-left: 10px;
+    border-left: 3px solid var(--el-color-info-light-3); /* 稍浅的边框色 */
+  }
+}
+
+/* 事件设置网格布局 */
+.event-settings-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); /* 调整列宽，适应更多列 */
+  gap: 15px;
+  padding: 0;
+  border: none;
+}
+
+.grid-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: var(--el-color-white); /* 保持白色背景 */
+  border: 1px solid var(--el-border-color-lighter); /* 细边框 */
+  padding: 12px 18px;
+  border-radius: var(--el-border-radius-base);
+  box-shadow: var(--el-box-shadow-light); /* 增加轻微阴影 */
+  transition: all 0.2s ease-in-out; /* 添加过渡效果 */
+  cursor: pointer;
+  label {
+    color: var(--el-text-color-regular);
+    font-size: 14px;
+    margin-right: 10px; /* 标签和开关之间的距离 */
+    flex-grow: 1; /* 标签占据更多空间 */
+  }
+  &:hover {
+    box-shadow: var(--el-box-shadow-hover); /* 鼠标悬停时的阴影效果 */
+    transform: translateY(-3px); /* 轻微上浮效果 */
+  }
+}
+
+.text-right {
+  display: flex;
+  justify-content: flex-end;
+  width: 100%;
+  margin-top: 20px;
+  padding-right: 0;
+}
+
+/* 确保表单项内部开关对齐 */
+:deep(.el-form-item) {
+  margin-bottom: 18px;
+  .el-form-item__label {
+    justify-content: flex-end;
+    padding-right: 12px;
+    line-height: 1.5;
+    align-items: center;
+    width: 166px!important;
+  }
+  .el-form-item__content {
+    display: flex;
+    align-items: center;
+  }
+}
+
+/* 其他通用 Element Plus 样式 */
+:deep(.el-input-number) {
+  width: 100%;
+}
+
+:deep(.el-switch__label) {
+  color: var(--el-text-color-regular);
+}
+
+:deep(.el-switch__label.is-active) {
+  color: var(--el-color-primary);
+}
+
+:deep(.el-input__wrapper) {
+  box-shadow: 0 0 0 1px var(--el-border-color) inset;
+  &:hover {
+    box-shadow: 0 0 0 1px var(--el-color-primary) inset;
+  }
+  &.is-focus {
+    box-shadow: 0 0 0 1px var(--el-color-primary) inset;
+  }
+}
+
+:deep(.el-button) {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+:deep(.el-button .el-icon) {
+  margin-right: 4px;
 }
 </style>

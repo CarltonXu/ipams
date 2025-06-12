@@ -4,21 +4,25 @@ import router from './routers';
 import { createPinia } from 'pinia';
 import ElementPlus from 'element-plus';
 import 'element-plus/dist/index.css';
-import i18n from './i18n';
-// 导入 Element Plus 的语言包
-import zhCn from 'element-plus/dist/locale/zh-cn.mjs';
-import en from 'element-plus/dist/locale/en.mjs';
+// 从你的 i18n/index.ts 导入 i18n 实例以及 Element Plus 的语言包
+import i18n, { enLocale, zhCn } from './i18n';
 import './style.css'
 
 const app = createApp(App);
 const pinia = createPinia();
 
-// 根据当前语言设置 Element Plus 的语言
-const currentLocale = localStorage.getItem('language') || 'zh';
-const elementLocale = currentLocale === 'zh' ? zhCn : en;
+// 根据当前语言动态选择 Element Plus 的语言包
+const getElementPlusLocale = (locale: string) => {
+  if (locale === 'zh') {
+    return zhCn;
+  } else {
+    return enLocale;
+  }
+};
 
 app.use(ElementPlus, {
-  locale: elementLocale, // 设置 Element Plus 的语言
+  locale: getElementPlusLocale(i18n.global.locale.value), // 动态设置 Element Plus 的语言
+  i18n: i18n.global.t, // 将 i18n 翻译函数传递给 Element Plus
 });
 app.use(i18n);
 app.use(pinia);

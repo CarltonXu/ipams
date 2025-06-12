@@ -70,6 +70,8 @@ export default {
     scanConfig: 'Scan Config',
     settings: 'Settings',
     userManagement: 'User Management',
+    notifications: 'Notification History',
+    notificationSettings: 'Notification Settings'
   },
   auth: {
     login: 'Login',
@@ -717,7 +719,8 @@ export default {
     sections: {
       basic: 'Basic Settings',
       interface: 'Interface Settings',
-      account: 'Account Settings'
+      account: 'Account Settings',
+      notification: 'Notification Settings'
     },
     form: {
       language: {
@@ -739,7 +742,55 @@ export default {
       notifications: {
         label: 'Notifications',
         on: 'On',
-        off: 'Off'
+        off: 'Off',
+        email: {
+          title: 'Email Notifications',
+          enabled: 'Enable Email Notifications',
+          disabled: 'Disable Email Notifications',
+          smtp: {
+            title: 'SMTP Server Configuration',
+            host: 'SMTP Server Address',
+            port: 'SMTP Port',
+            username: 'SMTP Username',
+            password: 'SMTP Password',
+            from: 'Sender Email',
+            to: 'Recipient Email',
+            test: 'Test Email Configuration'
+          }
+        },
+        wechat: {
+          title: 'WeChat Notifications',
+          enabled: 'Enable WeChat Notifications',
+          disabled: 'Disable WeChat Notifications',
+          config: {
+            title: 'WeChat Configuration',
+            appId: 'WeChat AppID',
+            appSecret: 'WeChat AppSecret',
+            templateId: 'Template Message ID',
+            test: 'Test WeChat Configuration'
+          }
+        },
+        events: {
+          title: 'Notification Events',
+          scan: {
+            title: 'Scan Events',
+            start: 'Scan Start',
+            complete: 'Scan Complete',
+            error: 'Scan Error'
+          },
+          ip: {
+            title: 'IP Events',
+            claim: 'IP Claim',
+            release: 'IP Release',
+            update: 'IP Update'
+          },
+          system: {
+            title: 'System Events',
+            error: 'System Error',
+            warning: 'System Warning',
+            info: 'System Info'
+          }
+        }
       },
       timeFormat: {
         label: 'Time Format',
@@ -765,7 +816,20 @@ export default {
       theme: 'Please select a theme',
       oldPassword: 'Please enter old password',
       newPassword: 'Please enter new password',
-      confirmPassword: 'Please confirm new password'
+      confirmPassword: 'Please confirm new password',
+      smtp: {
+        host: 'Please enter SMTP server address',
+        port: 'Please enter SMTP port',
+        username: 'Please enter SMTP username',
+        password: 'Please enter SMTP password',
+        from: 'Please enter sender email',
+        to: 'Please enter recipient email'
+      },
+      wechat: {
+        appId: 'Please enter WeChat AppID',
+        appSecret: 'Please enter WeChat AppSecret',
+        templateId: 'Please enter template message ID'
+      }
     },
     messages: {
       addUserFailed: 'Failed to add user: {error}',
@@ -777,12 +841,21 @@ export default {
       updateUserFailed: 'Failed to update user: {error}',
       fetchUsersFailed: 'Failed to fetch user list',
       emailAlreadyExists: 'Email already exists',
-      usernameAlreadyExists: 'Username already exists'
+      usernameAlreadyExists: 'Username already exists',
+      notification: {
+        testEmailSuccess: 'Test email sent successfully',
+        testEmailFailed: 'Failed to send test email',
+        testWechatSuccess: 'Test WeChat message sent successfully',
+        testWechatFailed: 'Failed to send test WeChat message',
+        saveSuccess: 'Notification settings saved successfully',
+        saveFailed: 'Failed to save notification settings'
+      }
     },
     buttons: {
       save: 'Save Settings',
       cancel: 'Cancel',
-      confirm: 'Confirm'
+      confirm: 'Confirm',
+      test: 'Test Configuration'
     }
   },
   pagination: {
@@ -799,5 +872,43 @@ export default {
     },
     network: 'Network connection failed, please check network settings',
     unknown: 'An unknown error occurred, please try again later'
+  },
+  notifications: {
+    history: {
+      title: 'Notification History',
+      subtitle: 'View and manage system notifications',
+      actions: {
+        markAllAsRead: 'Mark All as Read',
+        clearAll: 'Clear All Notifications'
+      },
+      columns: {
+        title: 'Title',
+        content: 'Content',
+        type: 'Type',
+        status: 'Status',
+        createdAt: 'Created At',
+        actions: 'Actions'
+      },
+      status: {
+        read: 'Read',
+        unread: 'Unread'
+      },
+      types: {
+        scan: 'Scan',
+        ip: 'IP',
+        policy: 'Policy'
+      },
+      messages: {
+        markAsReadSuccess: 'Marked as read successfully',
+        markAsReadFailed: 'Failed to mark as read',
+        markAllAsReadSuccess: 'All notifications marked as read',
+        markAllAsReadFailed: 'Failed to mark all as read',
+        deleteSuccess: 'Notification deleted successfully',
+        deleteFailed: 'Failed to delete notification',
+        clearAllSuccess: 'All notifications cleared',
+        clearAllFailed: 'Failed to clear all notifications',
+        fetchFailed: 'Failed to fetch notifications'
+      }
+    },
   },
 };

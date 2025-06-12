@@ -64,11 +64,12 @@ export const API_CONFIG = {
     NOTIFICATION: {
       CONFIG: '/notification/config',
       HISTORY: '/notification/history',
-      MARK_READ: (id: number) => `/notification/${id}/read`,
+      MARK_READ: (id: string) => `/notification/${id}/read`,
       MARK_ALL_READ: '/notification/read-all',
-      DELETE: (id: number) => `/notification/${id}`,
+      DELETE: (id: string) => `/notification/${id}`,
       CLEAR_ALL: '/notification/clear-all',
-      TEST: '/notification/test'
+      TEST: '/notification/test',
+      UNREAD_COUNT: '/notification/unread-count'
     }
   }
 } 

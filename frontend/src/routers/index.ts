@@ -10,8 +10,7 @@ import Register from '../views/Register.vue';
 import ScanPolicyList from '../components/ScanPolicyList.vue';
 import JobResults from '../components/JobResults.vue';
 import Dashboard from '../components/Dashboard.vue';
-import NotificationHistory from '../views/NotificationHistory.vue'
-import NotificationSettings from '../views/NotificationSettings.vue'
+import NotificationHistory from '../views/NotificationHistory.vue';
 
 const routes: RouteRecordRaw[] = [
     {
@@ -26,44 +25,42 @@ const routes: RouteRecordRaw[] = [
           { path: 'jobs/:jobId/results', name: 'JobResults', component: JobResults, meta: { requiresAuth: true } },
           { path: 'dashboard', name: 'Dashboard', component: Dashboard, meta: { requiresAuth: true } },
           // 通知相关路由
-          { path: 'notifications', name: 'Notifications', component: NotificationHistory, meta: { requiresAuth: true, title: '通知历史'} },
-          { path: 'notification-settings', name: 'NotificationSettings', component: NotificationSettings, meta: { requiresAuth: true, title: '通知配置'} }
+          { 
+            path: 'notifications', 
+            name: 'Notifications', 
+            component: NotificationHistory, 
+            meta: { requiresAuth: true, title: '通知历史'}
+          },
         ],
     },
     {
         path: '/login',
         name: 'Login',
         component: Login,
-        meta: { requiresAuth: true }
+        meta: { requiresAuth: false }
     },
     {
         path: '/register',
         name: 'Register',
-        component: Register
-    },
-    {
-        path: '/:pathMatch(.*)*',
-        redirect: '/login'
+        component: Register,
+        meta: { requiresAuth: false }
     }
 ];
 
 const router = createRouter({
-    history: createWebHistory(import.meta.env.BASE_URL),
-    routes,
+    history: createWebHistory(),
+    routes
 });
 
-// 添加导航守卫，检查用户是否已登录
+// 路由守卫
 router.beforeEach((to, from, next) => {
     const authStore = useAuthStore();
-    if (to.meta.requiresAuth && !authStore.isAuthenticated) {
-        // 如果用户未认证并且访问的是需要认证的页面
-        if (to.path !== '/login') {  // 如果目标页面不是登录页
-            next('/login');  // 重定向到登录页
-        } else {
-            next();  // 如果已经在登录页，继续执行
-        }
+    const requiresAuth = to.matched.some(record => record.meta.requiresAuth);
+
+    if (requiresAuth && !authStore.isAuthenticated) {
+        next('/login');
     } else {
-        next();  // 否则继续执行
+        next();
     }
 });
 

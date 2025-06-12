@@ -1,23 +1,29 @@
 export interface NotificationConfig {
-  ENABLE_EMAIL_NOTIFICATION: string;
-  SMTP_SERVER: string;
-  SMTP_PORT: string;
-  SMTP_USERNAME: string;
-  SMTP_PASSWORD: string;
-  SMTP_FROM: string;
-  ENABLE_WECHAT_NOTIFICATION: string;
-  WECHAT_WEBHOOK_URL: string;
-  NOTIFY_SCAN_COMPLETED: string;
-  NOTIFY_SCAN_FAILED: string;
-  NOTIFY_IP_CLAIMED: string;
-  NOTIFY_IP_RELEASED: string;
-  NOTIFY_POLICY_CREATED: string;
-  NOTIFY_POLICY_UPDATED: string;
-  NOTIFY_POLICY_DELETED: string;
+  emailConfig: {
+    enabled: boolean;
+    smtpServer: string;
+    smtpPort: number;
+    smtpUsername: string;
+    smtpPassword: string;
+    smtpFrom: string;
+  };
+  wechatConfig: {
+    enabled: boolean;
+    webhookUrl: string;
+  };
+  eventConfig: {
+    scanCompleted: boolean;
+    scanFailed: boolean;
+    ipClaimed: boolean;
+    ipReleased: boolean;
+    policyCreated: boolean;
+    policyUpdated: boolean;
+    policyDeleted: boolean;
+  };
 }
 
 export interface Notification {
-  id: number;
+  id: string;
   title: string;
   content: string;
   type: 'scan' | 'ip' | 'policy';

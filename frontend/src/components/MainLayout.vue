@@ -1,5 +1,6 @@
 <!-- src/layouts/MainLayout.vue -->
 <template>
+  <n-message-provider>
   <el-container>
     <!-- 顶部导航栏 -->
     <el-header class="header">
@@ -32,6 +33,7 @@
       <footer-nav />
     </el-footer>
   </el-container>
+  </n-message-provider>
 </template>
 
 <script setup lang="ts">
@@ -39,6 +41,7 @@ import HeaderRight from '../components/HeaderRight.vue';
 import HeaderCenter from '../components/HeaderCenter.vue';
 import FooterNav from '../components/FooterNav.vue';
 import Sidebar from '../components/Sidebar.vue';
+import { NMessageProvider } from 'naive-ui';
 </script>
 
 <style scoped>

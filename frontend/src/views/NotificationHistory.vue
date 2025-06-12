@@ -1,277 +1,213 @@
 <template>
-  <n-card title="通知历史">
-    <!-- 工具栏 -->
-    <div class="toolbar">
-      <n-space>
-        <n-button
-          type="primary"
-          @click="markAllAsRead"
-          :loading="markingAllAsRead"
-        >
-          全部标记为已读
-        </n-button>
-        <n-button
-          type="error"
-          @click="clearAll"
-          :loading="clearingAll"
-        >
-          清空通知
-        </n-button>
-      </n-space>
-      
-      <n-space>
-        <n-select
-          v-model:value="filters.type"
-          style="width: 120px"
-          placeholder="通知类型"
-          clearable
-          :options="typeOptions"
-        />
-        
-        <n-select
-          v-model:value="filters.status"
-          style="width: 120px"
-          placeholder="状态"
-          clearable
-          :options="statusOptions"
-        />
-        
-        <n-date-picker
-          v-model:value="filters.dateRange"
-          type="daterange"
-          clearable
-          :show-time="true"
-          format="yyyy-MM-dd HH:mm:ss"
-        />
-        
-        <n-button
-          type="primary"
-          @click="handleSearch"
-        >
-          搜索
-        </n-button>
-      </n-space>
+  <div class="notification-history">
+    <el-card shadow="always" class="main-card">
+      <div class="page-title">
+        <div class="page-header">
+          <h2>{{ t('notifications.history.title') }}</h2>
+          <p class="subtitle">{{ t('notifications.history.subtitle') }}</p>
+        </div>
+      </div>
+
+      <div class="action-bar">
+        <el-button type="primary" @click="handleMarkAllAsRead" :disabled="!hasUnread">
+          <el-icon><Check /></el-icon>
+          {{ t('notifications.history.actions.markAllAsRead') }}
+        </el-button>
+        <el-button type="danger" @click="handleClearAll" :disabled="!notifications.length">
+          <el-icon><Delete /></el-icon>
+          {{ t('notifications.history.actions.clearAll') }}
+        </el-button>
     </div>
     
-    <!-- 通知列表 -->
-    <n-list
-      :loading="loading"
+      <el-table
       :data="notifications"
+        v-loading="loading"
+        style="width: 100%"
+        border
+        class="notification-table"
     >
-      <template #render-item="{ item }">
-        <n-list-item>
-          <n-thing
-            :title="item.title"
-            :title-extra="item.created_at"
-          >
-            <template #header-extra>
-              <n-tag
-                :type="getTypeTagType(item.type)"
+        <el-table-column prop="title" :label="t('notifications.history.columns.title')" min-width="200" show-overflow-tooltip>
+          <template #default="{ row }">
+            <span :class="{ 'read-notification': row.read }">{{ row.title }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="content" :label="t('notifications.history.columns.content')" min-width="300" show-overflow-tooltip>
+          <template #default="{ row }">
+            <span :class="{ 'read-notification': row.read }">{{ row.content }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="type" :label="t('notifications.history.columns.type')" width="100">
+          <template #default="{ row }">
+            <el-tag :type="getTypeTagType(row.type)" effect="light">
+              {{ t(`notifications.history.types.${row.type}`) }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="read" :label="t('notifications.history.columns.status')" width="100">
+          <template #default="{ row }">
+            <el-tag :type="row.read ? 'info' : 'danger'" effect="light">
+              {{ row.read ? t('notifications.history.status.read') : t('notifications.history.status.unread') }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="created_at" :label="t('notifications.history.columns.createdAt')" width="180">
+          <template #default="{ row }">
+            <span :class="{ 'read-notification': row.read }">{{ formatDate(row.created_at) }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column :label="t('notifications.history.columns.actions')" width="200" fixed="right">
+          <template #default="{ row }">
+            <el-space>
+              <el-button
+                v-if="!row.read"
+                type="primary"
                 size="small"
+                @click="handleMarkAsRead(row.id)"
               >
-                {{ getTypeLabel(item.type) }}
-              </n-tag>
-            </template>
-            
-            <template #description>
-              <div class="notification-content">
-                <p>{{ item.content }}</p>
-                <div class="notification-meta">
-                  <n-tag
-                    :type="item.read ? 'default' : 'warning'"
+                <el-icon><Check /></el-icon>
+                {{ t('notifications.history.status.read') }}
+              </el-button>
+              <el-button
+                type="danger"
                     size="small"
-                  >
-                    {{ item.read ? '已读' : '未读' }}
-                  </n-tag>
-                </div>
-              </div>
+                @click="handleDelete(row.id)"
+              >
+                <el-icon><Delete /></el-icon>
+                {{ t('common.delete') }}
+              </el-button>
+            </el-space>
             </template>
-            
-            <template #action>
-              <n-space>
-                <n-button
-                  v-if="!item.read"
-                  type="primary"
-                  text
-                  @click="markAsRead(item.id)"
-                >
-                  标记已读
-                </n-button>
-                <n-button
-                  type="error"
-                  text
-                  @click="deleteNotification(item.id)"
-                >
-                  删除
-                </n-button>
-              </n-space>
-            </template>
-          </n-thing>
-        </n-list-item>
-      </template>
-    </n-list>
-    
-    <!-- 分页 -->
-    <div class="pagination">
-      <n-pagination
-        v-model:page="pagination.page"
-        v-model:page-size="pagination.pageSize"
-        :item-count="total"
+        </el-table-column>
+      </el-table>
+
+      <div class="pagination-container">
+        <el-pagination
+          v-model:current-page="currentPage"
+          v-model:page-size="pageSize"
         :page-sizes="[10, 20, 30, 40]"
-        show-size-picker
-        show-quick-jumper
-        @update:page="handlePageChange"
-        @update:page-size="handlePageSizeChange"
+          :total="total"
+          background
+          layout="total, sizes, prev, pager, next, jumper"
+          @size-change="handlePageSizeChange"
+          @current-change="handlePageChange"
       />
     </div>
-  </n-card>
+    </el-card>
+  </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed } from 'vue'
-import { useDialog } from 'naive-ui'
+import { ref, onMounted, computed } from 'vue'
 import { useNotificationStore } from '../stores/notification'
+import { ElMessage } from 'element-plus'
 import type { Notification } from '../types/notification'
+import { formatDate } from '../utils/date'
+import { Check, Delete } from '@element-plus/icons-vue'
+import { useI18n } from 'vue-i18n'
 
-const dialog = useDialog()
+const { t } = useI18n()
 const notificationStore = useNotificationStore()
 
-// 状态
 const loading = ref(false)
-const markingAllAsRead = ref(false)
-const clearingAll = ref(false)
+const notifications = ref<Notification[]>([])
+const currentPage = ref(1)
+const pageSize = ref(10)
 const total = ref(0)
 
-// 分页
-const pagination = reactive({
-  page: 1,
-  pageSize: 10
+const hasUnread = computed(() => {
+  return notifications.value.some(n => !n.read)
 })
 
-// 筛选条件
-const filters = reactive({
-  type: undefined as 'scan' | 'ip' | 'policy' | undefined,
-  status: undefined as 'read' | 'unread' | undefined,
-  dateRange: null as [Date, Date] | null
-})
+const getTypeTagType = (type: string) => {
+  const typeMap: Record<string, string> = {
+    scan: 'info',
+    ip: 'success',
+    policy: 'warning'
+  }
+  return typeMap[type] || 'default'
+}
 
-// 选项
-const typeOptions = [
-  { label: '扫描通知', value: 'scan' },
-  { label: 'IP管理通知', value: 'ip' },
-  { label: '策略通知', value: 'policy' }
-]
-
-const statusOptions = [
-  { label: '未读', value: 'unread' },
-  { label: '已读', value: 'read' }
-]
-
-// 获取通知列表
-const notifications = computed(() => notificationStore.notifications)
-
-// 加载通知历史
 const loadNotifications = async () => {
   try {
     loading.value = true
     await notificationStore.fetchHistory({
-      type: filters.type,
-      status: filters.status,
-      dateRange: filters.dateRange || undefined,
-      page: pagination.page,
-      per_page: pagination.pageSize
+      page: currentPage.value,
+      per_page: pageSize.value
     })
+    notifications.value = notificationStore.notifications
     total.value = notificationStore.total
   } catch (error) {
-    // 错误处理已在 store 中完成
+    ElMessage.error(t('notifications.history.messages.fetchFailed'))
   } finally {
     loading.value = false
   }
 }
 
-// 标记为已读
-const markAsRead = async (id: number) => {
-  await notificationStore.markAsRead(id)
-}
-
-// 全部标记为已读
-const markAllAsRead = async () => {
-  try {
-    markingAllAsRead.value = true
-    await notificationStore.markAllAsRead()
-  } finally {
-    markingAllAsRead.value = false
-  }
-}
-
-// 删除通知
-const deleteNotification = async (id: number) => {
-  dialog.warning({
-    title: '确认删除',
-    content: '确定要删除这条通知吗？',
-    positiveText: '确定',
-    negativeText: '取消',
-    onPositiveClick: async () => {
-      await notificationStore.deleteNotification(id)
-    }
-  })
-}
-
-// 清空所有通知
-const clearAll = () => {
-  dialog.warning({
-    title: '确认清空',
-    content: '确定要清空所有通知吗？此操作不可恢复。',
-    positiveText: '确定',
-    negativeText: '取消',
-    onPositiveClick: async () => {
-      try {
-        clearingAll.value = true
-        await notificationStore.clearAll()
-      } finally {
-        clearingAll.value = false
-      }
-    }
-  })
-}
-
-// 处理搜索
-const handleSearch = () => {
-  pagination.page = 1
-  loadNotifications()
-}
-
-// 处理分页变化
 const handlePageChange = (page: number) => {
-  pagination.page = page
+  currentPage.value = page
   loadNotifications()
 }
 
-// 处理每页条数变化
-const handlePageSizeChange = (pageSize: number) => {
-  pagination.pageSize = pageSize
-  pagination.page = 1
+const handlePageSizeChange = (size: number) => {
+  pageSize.value = size
+  currentPage.value = 1
   loadNotifications()
 }
 
-// 获取通知类型标签样式
-const getTypeTagType = (type: Notification['type']) => {
-  const typeMap = {
-    scan: 'info',
-    ip: 'success',
-    policy: 'warning'
+const handleMarkAsRead = async (id: string) => {
+  try {
+    const success = await notificationStore.markAsRead(id)
+    if (success) {
+      ElMessage.success(t('notifications.history.messages.markAsReadSuccess'))
+      loadNotifications()
+    } else {
+      ElMessage.error(t('notifications.history.messages.markAsReadFailed'))
+    }
+  } catch (error) {
+    ElMessage.error(t('notifications.history.messages.markAsReadFailed'))
   }
-  return typeMap[type]
 }
 
-// 获取通知类型标签文本
-const getTypeLabel = (type: Notification['type']) => {
-  const typeMap = {
-    scan: '扫描通知',
-    ip: 'IP管理通知',
-    policy: '策略通知'
+const handleMarkAllAsRead = async () => {
+  try {
+    const success = await notificationStore.markAllAsRead()
+    if (success) {
+      ElMessage.success(t('notifications.history.messages.markAllAsReadSuccess'))
+      loadNotifications()
+    } else {
+      ElMessage.error(t('notifications.history.messages.markAllAsReadFailed'))
+    }
+  } catch (error) {
+    ElMessage.error(t('notifications.history.messages.markAllAsReadFailed'))
   }
-  return typeMap[type]
+}
+
+const handleDelete = async (id: string) => {
+      try {
+    const success = await notificationStore.deleteNotification(id)
+    if (success) {
+      ElMessage.success(t('notifications.history.messages.deleteSuccess'))
+      loadNotifications()
+    } else {
+      ElMessage.error(t('notifications.history.messages.deleteFailed'))
+    }
+  } catch (error) {
+    ElMessage.error(t('notifications.history.messages.deleteFailed'))
+}
+}
+
+const handleClearAll = async () => {
+  try {
+    const success = await notificationStore.clearAll()
+    if (success) {
+      ElMessage.success(t('notifications.history.messages.clearAllSuccess'))
+  loadNotifications()
+    } else {
+      ElMessage.error(t('notifications.history.messages.clearAllFailed'))
+    }
+  } catch (error) {
+    ElMessage.error(t('notifications.history.messages.clearAllFailed'))
+  }
 }
 
 onMounted(() => {
@@ -280,21 +216,86 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.toolbar {
+.notification-history {
+  padding: 20px;
+}
+
+.main-card {
+  margin-bottom: 20px;
+  box-shadow: var(--el-box-shadow-light);
+}
+
+.page-title {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 24px;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  gap: 1rem;
 }
 
-.notification-content {
-  .notification-meta {
-    margin-top: 8px;
-  }
+.page-header h2 {
+  font-size: 24px;
+  margin: 0;
+  color: var(--el-text-color-primary);
 }
 
-.pagination {
-  margin-top: 24px;
+.page-header .subtitle {
+  color: var(--el-text-color-regular);
+  margin: 5px 0 0;
+  font-size: 14px;
+}
+
+.action-bar {
+  margin-bottom: 20px;
+  display: flex;
+  gap: 12px;
+}
+
+.notification-table {
+  margin-bottom: 20px;
+}
+
+.pagination-container {
   display: flex;
   justify-content: flex-end;
+  margin-top: 20px;
+}
+
+:deep(.el-button) {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+:deep(.el-button .el-icon) {
+  margin-right: 4px;
+}
+
+:deep(.el-table .el-table__cell) {
+  padding: 12px 0;
+}
+
+:deep(.el-tag) {
+  border-radius: 4px;
+}
+
+:deep(.el-table) {
+  --el-table-border-color: var(--el-border-color-lighter);
+  --el-table-header-bg-color: var(--el-fill-color-light);
+}
+
+:deep(.el-table th) {
+  font-weight: 600;
+  background-color: var(--el-fill-color-light);
+}
+
+:deep(.el-table--border) {
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.read-notification {
+  color: #909399; /* Element Plus 的灰色文字颜色 */
 }
 </style> 

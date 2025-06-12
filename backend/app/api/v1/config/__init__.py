@@ -1,5 +1,3 @@
-from flask import Blueprint
+from .config import config_bp
 
-config_bp = Blueprint('config', __name__)
-
-from . import config 
+__all__ = ["config_bp"]

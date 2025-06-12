@@ -70,6 +70,8 @@ export default {
     scanConfig: '配置扫描',
     settings: '系统设置',
     userManagement: '用户管理',
+    notifications: '通知历史',
+    notificationSettings: '通知配置'
   },
   auth: {
     login: '登录',
@@ -747,7 +749,8 @@ export default {
     sections: {
       basic: '基本设置',
       interface: '界面设置',
-      account: '账户设置'
+      account: '账户设置',
+      notification: '通知设置'
     },
     form: {
       language: {
@@ -769,7 +772,55 @@ export default {
       notifications: {
         label: '通知开关',
         on: '开',
-        off: '关'
+        off: '关',
+        email: {
+          title: '邮件通知',
+          enabled: '启用邮件通知',
+          disabled: '禁用邮件通知',
+          smtp: {
+            title: 'SMTP 服务器配置',
+            host: 'SMTP 服务器地址',
+            port: 'SMTP 端口',
+            username: 'SMTP 用户名',
+            password: 'SMTP 密码',
+            from: '发件人邮箱',
+            to: '收件人邮箱',
+            test: '测试邮件配置'
+          }
+        },
+        wechat: {
+          title: '微信通知',
+          enabled: '启用微信通知',
+          disabled: '禁用微信通知',
+          config: {
+            title: '微信配置',
+            appId: '微信 AppID',
+            appSecret: '微信 AppSecret',
+            templateId: '模板消息 ID',
+            test: '测试微信配置'
+          }
+        },
+        events: {
+          title: '通知事件',
+          scan: {
+            title: '扫描事件',
+            start: '扫描开始',
+            complete: '扫描完成',
+            error: '扫描错误'
+          },
+          ip: {
+            title: 'IP 事件',
+            claim: 'IP 认领',
+            release: 'IP 释放',
+            update: 'IP 更新'
+          },
+          system: {
+            title: '系统事件',
+            error: '系统错误',
+            warning: '系统警告',
+            info: '系统信息'
+          }
+        }
       },
       timeFormat: {
         label: '时间格式',
@@ -795,7 +846,20 @@ export default {
       theme: '请选择主题',
       oldPassword: '请输入旧密码',
       newPassword: '请输入新密码',
-      confirmPassword: '请确认新密码'
+      confirmPassword: '请确认新密码',
+      smtp: {
+        host: '请输入 SMTP 服务器地址',
+        port: '请输入 SMTP 端口',
+        username: '请输入 SMTP 用户名',
+        password: '请输入 SMTP 密码',
+        from: '请输入发件人邮箱',
+        to: '请输入收件人邮箱'
+      },
+      wechat: {
+        appId: '请输入微信 AppID',
+        appSecret: '请输入微信 AppSecret',
+        templateId: '请输入模板消息 ID'
+      }
     },
     messages: {
       addUserFailed: '添加用户失败: {error}',
@@ -807,12 +871,110 @@ export default {
       updateUserFailed: '更新用户信息失败: {error}',
       fetchUsersFailed: '获取用户列表失败',
       emailAlreadyExists: '邮箱已存在',
-      usernameAlreadyExists: '用户名已存在'
+      usernameAlreadyExists: '用户名已存在',
+      notification: {
+        testEmailSuccess: '测试邮件发送成功',
+        testEmailFailed: '测试邮件发送失败',
+        testWechatSuccess: '测试微信消息发送成功',
+        testWechatFailed: '测试微信消息发送失败',
+        saveSuccess: '通知设置保存成功',
+        saveFailed: '通知设置保存失败'
+      }
     },
     buttons: {
       save: '保存设置',
       cancel: '取 消',
-      confirm: '确 定'
+      confirm: '确 定',
+      test: '测试配置'
+    }
+  },
+  notifications: {
+    label: '通知开关',
+    on: '开',
+    off: '关',
+    email: {
+      title: '邮件通知',
+      enabled: '启用邮件通知',
+      disabled: '禁用邮件通知',
+      smtp: {
+        title: 'SMTP 服务器配置',
+        host: 'SMTP 服务器地址',
+        port: 'SMTP 端口',
+        username: 'SMTP 用户名',
+        password: 'SMTP 密码',
+        from: '发件人邮箱',
+        to: '收件人邮箱',
+        test: '测试邮件配置'
+      }
+    },
+    wechat: {
+      title: '微信通知',
+      enabled: '启用微信通知',
+      disabled: '禁用微信通知',
+      config: {
+        title: '微信配置',
+        appId: '微信 AppID',
+        appSecret: '微信 AppSecret',
+        templateId: '模板消息 ID',
+        test: '测试微信配置'
+      }
+    },
+    events: {
+      title: '通知事件',
+      scan: {
+        title: '扫描事件',
+        start: '扫描开始',
+        complete: '扫描完成',
+        error: '扫描错误'
+      },
+      ip: {
+        title: 'IP 事件',
+        claim: 'IP 认领',
+        release: 'IP 释放',
+        update: 'IP 更新'
+      },
+      system: {
+        title: '系统事件',
+        error: '系统错误',
+        warning: '系统警告',
+        info: '系统信息'
+      }
+    },
+    history: {
+      title: '通知历史',
+      subtitle: '查看和管理系统通知',
+      actions: {
+        markAllAsRead: '全部标记为已读',
+        clearAll: '清空所有通知'
+      },
+      columns: {
+        title: '标题',
+        content: '内容',
+        type: '类型',
+        status: '状态',
+        createdAt: '创建时间',
+        actions: '操作'
+      },
+      status: {
+        read: '已读',
+        unread: '未读'
+      },
+      types: {
+        scan: '扫描',
+        ip: 'IP',
+        policy: '策略'
+      },
+      messages: {
+        markAsReadSuccess: '标记已读成功',
+        markAsReadFailed: '标记已读失败',
+        markAllAsReadSuccess: '全部标记已读成功',
+        markAllAsReadFailed: '全部标记已读失败',
+        deleteSuccess: '删除成功',
+        deleteFailed: '删除失败',
+        clearAllSuccess: '清空成功',
+        clearAllFailed: '清空失败',
+        fetchFailed: '获取通知历史失败'
+      }
     }
   },
   pagination: {

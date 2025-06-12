@@ -2,16 +2,14 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import axios from 'axios';
 import type { Notification, NotificationConfig } from '../types/notification'
-import { notificationApi } from '../utils/notification'
-import { useMessage } from 'naive-ui'
 import { API_CONFIG } from '../config/api';
 
 export const useNotificationStore = defineStore('notification', () => {
-  const message = useMessage()
   const notifications = ref<Notification[]>([])
   const total = ref(0)
   const loading = ref(false)
   const config = ref<NotificationConfig | null>(null)
+  const _unreadCount = ref(0)
 
   // 获取通知配置
   const fetchConfig = async () => {
@@ -19,7 +17,7 @@ export const useNotificationStore = defineStore('notification', () => {
       const { data } = await axios.get(`${API_CONFIG.BASE_API_URL}${API_CONFIG.ENDPOINTS.NOTIFICATION.CONFIG}`)
       config.value = data
     } catch (error) {
-      message.error('获取通知配置失败')
+      console.error('获取通知配置失败:', error)
     }
   }
 
@@ -28,9 +26,10 @@ export const useNotificationStore = defineStore('notification', () => {
     try {
       await axios.put(`${API_CONFIG.BASE_API_URL}${API_CONFIG.ENDPOINTS.NOTIFICATION.CONFIG}`, newConfig)
       await fetchConfig()
-      message.success('更新配置成功')
+      return true
     } catch (error) {
-      message.error('更新配置失败')
+      console.error('更新配置失败:', error)
+      return false
     }
   }
 
@@ -38,9 +37,10 @@ export const useNotificationStore = defineStore('notification', () => {
   const testConfig = async (type: 'email' | 'wechat', config: Record<string, any>) => {
     try {
       await axios.post(`${API_CONFIG.BASE_API_URL}${API_CONFIG.ENDPOINTS.NOTIFICATION.TEST}`, { type, config })
-      message.success('测试发送成功')
+      return true
     } catch (error) {
-      message.error('测试发送失败')
+      console.error('测试发送失败:', error)
+      return false
     }
   }
 
@@ -58,46 +58,52 @@ export const useNotificationStore = defineStore('notification', () => {
       notifications.value = data.notifications
       total.value = data.total
     } catch (error) {
-      message.error('获取通知历史失败')
+      console.error('获取通知历史失败:', error)
     } finally {
       loading.value = false
     }
   }
 
   // 标记通知为已读
-  const markAsRead = async (id: number) => {
+  const markAsRead = async (id: string) => {
     try {
       await axios.put(`${API_CONFIG.BASE_API_URL}${API_CONFIG.ENDPOINTS.NOTIFICATION.MARK_READ(id)}`)
       const notification = notifications.value.find(n => n.id === id)
       if (notification) {
         notification.read = true
       }
-      message.success('标记已读成功')
+      await fetchUnreadCount()
+      return true
     } catch (error) {
-      message.error('标记已读失败')
+      console.error('标记已读失败:', error)
+      return false
     }
   }
 
   // 标记所有通知为已读
   const markAllAsRead = async () => {
     try {
-      await notificationApi.markAllAsRead()
       await axios.put(`${API_CONFIG.BASE_API_URL}${API_CONFIG.ENDPOINTS.NOTIFICATION.MARK_ALL_READ}`)
       notifications.value.forEach(n => n.read = true)
-      message.success('全部标记已读成功')
+      await fetchUnreadCount()
+      return true
     } catch (error) {
-      message.error('全部标记已读失败')
+      console.error('全部标记已读失败:', error)
+      return false
     }
   }
 
   // 删除通知
-  const deleteNotification = async (id: number) => {
+  const deleteNotification = async (id: string) => {
     try {
-      await notificationApi.delete(id)
+      await axios.delete(`${API_CONFIG.BASE_API_URL}${API_CONFIG.ENDPOINTS.NOTIFICATION.DELETE(id)}`)
       notifications.value = notifications.value.filter(n => n.id !== id)
-      message.success('删除通知成功')
+      total.value = total.value - 1
+      await fetchUnreadCount()
+      return true
     } catch (error) {
-      message.error('删除通知失败')
+      console.error('删除通知失败:', error)
+      return false
     }
   }
 
@@ -107,16 +113,27 @@ export const useNotificationStore = defineStore('notification', () => {
       await axios.delete(`${API_CONFIG.BASE_API_URL}${API_CONFIG.ENDPOINTS.NOTIFICATION.CLEAR_ALL}`)
       notifications.value = []
       total.value = 0
-      message.success('清空通知成功')
+      _unreadCount.value = 0
+      return true
     } catch (error) {
-      message.error('清空通知失败')
+      console.error('清空通知失败:', error)
+      return false
     }
   }
 
-  // 未读通知数量
-  const unreadCount = computed(() => {
-    return notifications.value.filter(n => !n.read).length
-  })
+  // 获取未读通知数量
+  const fetchUnreadCount = async () => {
+    try {
+      const { data } = await axios.get(`${API_CONFIG.BASE_API_URL}${API_CONFIG.ENDPOINTS.NOTIFICATION.UNREAD_COUNT}`)
+      _unreadCount.value = data.count
+    } catch (error) {
+      console.error('获取未读通知数量失败:', error)
+      _unreadCount.value = 0
+    }
+  }
+
+  // 未读通知数量（对外暴露）
+  const unreadCount = computed(() => _unreadCount.value)
 
   return {
     notifications,
@@ -131,6 +148,7 @@ export const useNotificationStore = defineStore('notification', () => {
     markAsRead,
     markAllAsRead,
     deleteNotification,
-    clearAll
+    clearAll,
+    fetchUnreadCount
   }
 }) 

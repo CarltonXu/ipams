@@ -11,7 +11,7 @@
       </el-menu-item>
     </router-link>
     <!-- 仅管理员可见 -->
-    <template v-if="authStore.user.is_admin">
+    <template v-if="authStore.user?.is_admin">
       <router-link to="/users">
         <el-menu-item index="2">
           <el-icon><User /></el-icon>
@@ -24,9 +24,15 @@
           <span>{{ $t('menu.scanConfig') }}</span>
         </el-menu-item>
       </router-link>
+      <router-link to="/notifications">
+        <el-menu-item index="4">
+          <el-icon><Bell /></el-icon>
+          <span>{{ $t('menu.notifications') }}</span>
+        </el-menu-item>
+      </router-link>
     </template>
     <router-link to="/settings">
-      <el-menu-item index="4">
+      <el-menu-item index="5">
         <el-icon><Setting /></el-icon>
         <span>{{ $t('menu.settings') }}</span>
       </el-menu-item>
@@ -37,7 +43,7 @@
 <script setup lang="ts">
 import { useAuthStore } from "../stores/auth"
 import { ElMenu, ElMenuItem, ElIcon } from 'element-plus';
-import { Setting, User, Operation } from '@element-plus/icons-vue';  // 引入 Element Plus 的图标
+import { Setting, User, Bell, Operation } from '@element-plus/icons-vue';  // 引入 Element Plus 的图标
 
 const authStore = useAuthStore();
 </script>

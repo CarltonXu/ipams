@@ -18,6 +18,7 @@ from app.services.scan.scheduler import PolicyScheduler
 from app.core.middleware import register_error_handlers
 from app.core.errors import DatabaseError
 from app.services.notification import NotificationManager
+from app.scripts.init_notification_templates import init_notification_templates
 
 # 配置日志
 logging.basicConfig(
@@ -127,8 +128,17 @@ def create_app(config=None):
     else:
         app.config.from_object(Config)
 
-    # 初始化CORS
-    CORS(app)
+    # 初始化CORS，允许所有域名访问
+    CORS(app, resources={
+        r"/api/*": {
+            "origins": "*",
+            "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+            "allow_headers": ["Content-Type", "Authorization", "X-Requested-With"],
+            "expose_headers": ["Content-Type", "Authorization"],
+            "supports_credentials": True,
+            "max_age": 3600
+        }
+    })
     
     # 注册错误处理器
     register_error_handlers(app)
@@ -147,6 +157,10 @@ def create_app(config=None):
     with app.app_context():
         db.create_all()
         logger.info("Database tables created successfully")
+        
+        # 初始化通知模板
+        init_notification_templates()
+        logger.info("Notification templates initialized successfully")
     
     # 在应用退出时关闭任务管理器
     atexit.register(task_manager.shutdown)

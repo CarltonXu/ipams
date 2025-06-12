@@ -27,11 +27,20 @@ class ScanExecutor:
         self.scanning = False
         self.current_phase = "discovery"
         self.app = current_app._get_current_object()
+        self.notification_manager = current_app.notification_manager
         self.cancelled = False
         self.current_scan_process = None
         self.monitor_thread = None
+        self.job_user_id = None
         self.app.logger.info(f"Initializing scan executor for job {job_id} on subnet {subnet}")
         
+    def _load_job_user_id(self):
+        """加载任务的user_id"""
+        with self.app.app_context():
+            job = ScanJob.query.get(self.job_id)
+            if job:
+                self.job_user_id = job.user_id
+
     def monitor_progress(self):
         """监控扫描进度"""
         last_progress = -1
@@ -191,189 +200,192 @@ class ScanExecutor:
 
     def scan_network(self):
         try:
-            self.scanning = True
-            self.current_phase = "discovery"
-            self.scanned_hosts = 0
-            self.app.logger.info(f"Job {self.job_id}: Starting host discovery on subnet {self.subnet}")
-            
-            # 更新任务状态为运行中
-            try:
-                job = ScanJob.query.get(self.job_id)
-                if job:
-                    job.status = 'running'
-                    db.session.commit()
-                    self.app.logger.info(f"Job {self.job_id}: Status updated to running")
-            except Exception as e:
-                self.app.logger.error(f"Job {self.job_id}: Error updating initial status: {str(e)}")
-                db.session.rollback()
-            
-            # 启动监控线程
-            self.monitor_thread = threading.Thread(target=self.monitor_progress)
-            self.monitor_thread.daemon = True
-            self.monitor_thread.start()
-            
-            # 主机发现
-            try:
-                self.current_scan_process = self.nm.scan(
-                    hosts=self.subnet,
-                    arguments='-sn -T5 --stats-every 1s'
-                )
-            except Exception as e:
-                self.app.logger.error(f"Job {self.job_id}: Error during host discovery: {str(e)}")
-                return False
+            with self.app.app_context():
+                self.scanning = True
+                self.current_phase = "discovery"
+                self.scanned_hosts = 0
+                self.app.logger.info(f"Job {self.job_id}: Starting host discovery on subnet {self.subnet}")
 
-            # 检查是否被取消
-            if self.cancelled:
-                self.app.logger.info(f"Job {self.job_id}: Scan cancelled during discovery phase")
-                return False
-
-            active_hosts = [
-                host for host in self.current_scan_process['scan']
-                if self.current_scan_process['scan'][host].get('status', {}).get('state') == 'up'
-            ]
-
-            self._save_discovery_result(active_hosts)
-            
-            self.total_hosts = len(active_hosts)
-            self.app.logger.info(f"Job {self.job_id}: Found {self.total_hosts} active hosts")
-            
-            if self.total_hosts == 0:
-                self.scanning = False
-                self.monitor_thread.join(timeout=5)
-                self._update_progress(100)
-                return True
+                self._load_job_user_id()
                 
-            self.current_phase = "port_scan"
-
-            # 获取扫描端口配置
-            scan_ports = self.app.config.get("SCAN_PORTS", "80,443,22,21,23,25,53,110,143,3306,3389,5432,6379,8080,8443")
-            
-            # 构建扫描参数
-            scan_args = '-sT -T4 --host-timeout 10s --max-rtt-timeout 500ms --max-retries 1'
-            
-            # 如果启用了自定义扫描类型，添加相应的参数
-            if self.scan_params.get('enable_custom_scan_type'):
-                scan_type = self.scan_params.get('scan_type', 'default')
-                if scan_type == 'quick':
-                    # 快速扫描使用 -F 参数，只扫描最常见的100个端口
-                    scan_args = '-sT -T4 -F --host-timeout 10s --max-rtt-timeout 500ms --max-retries 1'
-                    scan_ports = None  # 快速扫描模式下不使用自定义端口
-                    self.app.logger.info(f"Job {self.job_id}: Using quick scan mode (top 100 ports)")
-                elif scan_type == 'intense':
-                    # 深度扫描使用 -A 参数，进行全面的扫描
-                    scan_args = '-sT -T4 -A -v --host-timeout 10s --max-rtt-timeout 500ms --max-retries 1'
-                    if self.scan_params.get('enable_custom_ports') and self.scan_params.get('ports'):
-                        scan_ports = self.scan_params['ports']
-                        self.app.logger.info(f"Job {self.job_id}: Using intense scan mode with custom ports: {scan_ports}")
-                    else:
-                        scan_ports = None  # 深度扫描模式下扫描所有端口
-                        self.app.logger.info(f"Job {self.job_id}: Using intense scan mode (all ports)")
-                elif scan_type == 'vulnerability':
-                    # 漏洞扫描使用 -A 和 --script vuln 参数
-                    scan_args = '-sT -T4 -A -v --script vuln --host-timeout 10s --max-rtt-timeout 500ms --max-retries 1'
-                    if self.scan_params.get('enable_custom_ports') and self.scan_params.get('ports'):
-                        scan_ports = self.scan_params['ports']
-                        self.app.logger.info(f"Job {self.job_id}: Using vulnerability scan mode with custom ports: {scan_ports}")
-                    else:
-                        scan_ports = None  # 漏洞扫描模式下扫描所有端口
-                        self.app.logger.info(f"Job {self.job_id}: Using vulnerability scan mode (all ports)")
-            else:
-                # 默认扫描模式，使用自定义端口或默认端口
-                if self.scan_params.get('enable_custom_ports') and self.scan_params.get('ports'):
-                    scan_ports = self.scan_params['ports']
-                    self.app.logger.info(f"Job {self.job_id}: Using default scan mode with custom ports: {scan_ports}")
-                else:
-                    self.app.logger.info(f"Job {self.job_id}: Using default scan mode with default ports: {scan_ports}")
-
-            # 端口扫描
-            for i, host in enumerate(active_hosts, 1):
-                # 检查是否被取消
-                if self.cancelled:
-                    self.app.logger.info(f"Job {self.job_id}: Scan cancelled during port scan phase")
+                # 更新任务状态为运行中
+                try:
+                    job = ScanJob.query.get(self.job_id)
+                    if job:
+                        job.status = 'running'
+                        db.session.commit()
+                        self.app.logger.info(f"Job {self.job_id}: Status updated to running")
+                except Exception as e:
+                    self.app.logger.error(f"Job {self.job_id}: Error updating initial status: {str(e)}")
+                    db.session.rollback()
+                
+                # 启动监控线程
+                self.monitor_thread = threading.Thread(target=self.monitor_progress)
+                self.monitor_thread.daemon = True
+                self.monitor_thread.start()
+                
+                # 主机发现
+                try:
+                    self.current_scan_process = self.nm.scan(
+                        hosts=self.subnet,
+                        arguments='-sn -T5 --stats-every 1s'
+                    )
+                except Exception as e:
+                    self.app.logger.error(f"Job {self.job_id}: Error during host discovery: {str(e)}")
                     return False
 
-                self.app.logger.info(f"Job {self.job_id}: Starting port scan for host {i}/{self.total_hosts}: {host}")
-                try:
-                    # 使用配置的扫描参数
-                    self.app.logger.info(f"Job {self.job_id}: Executing nmap scan for {host}")
-                    scan_arguments = scan_args
-                    if scan_ports:
-                        scan_arguments += f' -p {scan_ports}'
+                # 检查是否被取消
+                if self.cancelled:
+                    self.app.logger.info(f"Job {self.job_id}: Scan cancelled during discovery phase")
+                    return False
+
+                active_hosts = [
+                    host for host in self.current_scan_process['scan']
+                    if self.current_scan_process['scan'][host].get('status', {}).get('state') == 'up'
+                ]
+
+                self._save_discovery_result(active_hosts)
+                
+                self.total_hosts = len(active_hosts)
+                self.app.logger.info(f"Job {self.job_id}: Found {self.total_hosts} active hosts")
+                
+                if self.total_hosts == 0:
+                    self.scanning = False
+                    self.monitor_thread.join(timeout=5)
+                    self._update_progress(100)
+                    return True
                     
-                    self.current_scan_process = self.nm.scan(
-                        hosts=host,
-                        arguments=scan_arguments
-                    )
-                    
+                self.current_phase = "port_scan"
+
+                # 获取扫描端口配置
+                scan_ports = self.app.config.get("SCAN_PORTS", "80,443,22,21,23,25,53,110,143,3306,3389,5432,6379,8080,8443")
+                
+                # 构建扫描参数
+                scan_args = '-sT -T4 --host-timeout 10s --max-rtt-timeout 500ms --max-retries 1'
+                
+                # 如果启用了自定义扫描类型，添加相应的参数
+                if self.scan_params.get('enable_custom_scan_type'):
+                    scan_type = self.scan_params.get('scan_type', 'default')
+                    if scan_type == 'quick':
+                        # 快速扫描使用 -F 参数，只扫描最常见的100个端口
+                        scan_args = '-sT -T4 -F --host-timeout 10s --max-rtt-timeout 500ms --max-retries 1'
+                        scan_ports = None  # 快速扫描模式下不使用自定义端口
+                        self.app.logger.info(f"Job {self.job_id}: Using quick scan mode (top 100 ports)")
+                    elif scan_type == 'intense':
+                        # 深度扫描使用 -A 参数，进行全面的扫描
+                        scan_args = '-sT -T4 -A -v --host-timeout 10s --max-rtt-timeout 500ms --max-retries 1'
+                        if self.scan_params.get('enable_custom_ports') and self.scan_params.get('ports'):
+                            scan_ports = self.scan_params['ports']
+                            self.app.logger.info(f"Job {self.job_id}: Using intense scan mode with custom ports: {scan_ports}")
+                        else:
+                            scan_ports = None  # 深度扫描模式下扫描所有端口
+                            self.app.logger.info(f"Job {self.job_id}: Using intense scan mode (all ports)")
+                    elif scan_type == 'vulnerability':
+                        # 漏洞扫描使用 -A 和 --script vuln 参数
+                        scan_args = '-sT -T4 -A -v --script vuln --host-timeout 10s --max-rtt-timeout 500ms --max-retries 1'
+                        if self.scan_params.get('enable_custom_ports') and self.scan_params.get('ports'):
+                            scan_ports = self.scan_params['ports']
+                            self.app.logger.info(f"Job {self.job_id}: Using vulnerability scan mode with custom ports: {scan_ports}")
+                        else:
+                            scan_ports = None  # 漏洞扫描模式下扫描所有端口
+                            self.app.logger.info(f"Job {self.job_id}: Using vulnerability scan mode (all ports)")
+                else:
+                    # 默认扫描模式，使用自定义端口或默认端口
+                    if self.scan_params.get('enable_custom_ports') and self.scan_params.get('ports'):
+                        scan_ports = self.scan_params['ports']
+                        self.app.logger.info(f"Job {self.job_id}: Using default scan mode with custom ports: {scan_ports}")
+                    else:
+                        self.app.logger.info(f"Job {self.job_id}: Using default scan mode with default ports: {scan_ports}")
+
+                # 端口扫描
+                for i, host in enumerate(active_hosts, 1):
                     # 检查是否被取消
                     if self.cancelled:
                         self.app.logger.info(f"Job {self.job_id}: Scan cancelled during port scan phase")
                         return False
-                    
-                    self.app.logger.info(f"Job {self.job_id}: Port scan results for {host}: {self.current_scan_process}")
-                    
-                    if host in self.current_scan_process['scan']:
-                        open_ports = []
-                        try:
-                            for port in self.current_scan_process['scan'][host].get('tcp', {}):
-                                if self.current_scan_process['scan'][host]['tcp'][port]['state'] == 'open':
-                                    open_ports.append(port)
-                            
-                            if open_ports:
-                                self.machines_found += 1
-                                self._save_result(host, open_ports)
-                                self.app.logger.info(f"Job {self.job_id}: Found {len(open_ports)} open ports on {host}")
-                            else:
-                                self.app.logger.info(f"Job {self.job_id}: No open ports found on {host}")
-                        except Exception as e:
-                            self.app.logger.error(f"Job {self.job_id}: Error processing scan results for {host}: {str(e)}")
-                    else:
-                        self.app.logger.warning(f"Job {self.job_id}: No scan results for host {host}")
-                        
-                except Exception as e:
-                    self.app.logger.error(f"Job {self.job_id}: Port scan failed for host {host}: {str(e)}")
-                    continue
-                finally:
+
+                    self.app.logger.info(f"Job {self.job_id}: Starting port scan for host {i}/{self.total_hosts}: {host}")
                     try:
-                        # 更新已扫描主机数
-                        self.scanned_hosts += 1
-                        self.app.logger.info(f"Job {self.job_id}: Completed scanning host {i}/{self.total_hosts}: {host}")
+                        # 使用配置的扫描参数
+                        self.app.logger.info(f"Job {self.job_id}: Executing nmap scan for {host}")
+                        scan_arguments = scan_args
+                        if scan_ports:
+                            scan_arguments += f' -p {scan_ports}'
+                        
+                        self.current_scan_process = self.nm.scan(
+                            hosts=host,
+                            arguments=scan_arguments
+                        )
+                        
+                        # 检查是否被取消
+                        if self.cancelled:
+                            self.app.logger.info(f"Job {self.job_id}: Scan cancelled during port scan phase")
+                            return False
+                        
+                        self.app.logger.info(f"Job {self.job_id}: Port scan results for {host}: {self.current_scan_process}")
+                        
+                        if host in self.current_scan_process['scan']:
+                            open_ports = []
+                            try:
+                                for port in self.current_scan_process['scan'][host].get('tcp', {}):
+                                    if self.current_scan_process['scan'][host]['tcp'][port]['state'] == 'open':
+                                        open_ports.append(port)
+                                
+                                if open_ports:
+                                    self.machines_found += 1
+                                    self._save_result(host, open_ports)
+                                    self.app.logger.info(f"Job {self.job_id}: Found {len(open_ports)} open ports on {host}")
+                                else:
+                                    self.app.logger.info(f"Job {self.job_id}: No open ports found on {host}")
+                            except Exception as e:
+                                self.app.logger.error(f"Job {self.job_id}: Error processing scan results for {host}: {str(e)}")
+                        else:
+                            self.app.logger.warning(f"Job {self.job_id}: No scan results for host {host}")
+                            
                     except Exception as e:
-                        self.app.logger.error(f"Job {self.job_id}: Error updating scan progress: {str(e)}")
+                        self.app.logger.error(f"Job {self.job_id}: Port scan failed for host {host}: {str(e)}")
+                        continue
+                    finally:
+                        try:
+                            # 更新已扫描主机数
+                            self.scanned_hosts += 1
+                            self.app.logger.info(f"Job {self.job_id}: Completed scanning host {i}/{self.total_hosts}: {host}")
+                        except Exception as e:
+                            self.app.logger.error(f"Job {self.job_id}: Error updating scan progress: {str(e)}")
+                    
+                    # 添加短暂延迟，让进度更新更平滑
+                    time.sleep(0.5)
                 
-                # 添加短暂延迟，让进度更新更平滑
-                time.sleep(0.5)
-            
-            # 扫描完成
-            self.app.logger.info(f"Job {self.job_id}: All hosts scanned, updating final status")
-            self.scanning = False
-            
-            # 清理资源
-            self.cleanup()
-            
-            # 更新最终进度
-            try:
-                self._update_progress(100)
-            except Exception as e:
-                self.app.logger.error(f"Job {self.job_id}: Error updating final progress: {str(e)}")
-            
-            # 更新任务状态为完成
-            try:
-                job = ScanJob.query.get(self.job_id)
-                if job:
-                    job.status = 'completed'
-                    job.end_time = datetime.utcnow()
-                    db.session.commit()
-                    self.app.logger.info(f"Job {self.job_id}: Status updated to completed")
-                else:
-                    self.app.logger.error(f"Job {self.job_id}: Failed to update status - job not found")
-            except Exception as e:
-                self.app.logger.error(f"Job {self.job_id}: Error updating final status: {str(e)}")
-                db.session.rollback()
-            
-            self.app.logger.info(f"Job {self.job_id}: Scan completed successfully")
-            return True
-            
+                # 扫描完成
+                self.app.logger.info(f"Job {self.job_id}: All hosts scanned, updating final status")
+                self.scanning = False
+                
+                # 清理资源
+                self.cleanup()
+                
+                # 更新最终进度
+                try:
+                    self._update_progress(100)
+                except Exception as e:
+                    self.app.logger.error(f"Job {self.job_id}: Error updating final progress: {str(e)}")
+                
+                # 更新任务状态为完成
+                try:
+                    job = ScanJob.query.get(self.job_id)
+                    if job:
+                        job.status = 'completed'
+                        job.end_time = datetime.utcnow()
+                        db.session.commit()
+                        self.app.logger.info(f"Job {self.job_id}: Status updated to completed")
+                    else:
+                        self.app.logger.error(f"Job {self.job_id}: Failed to update status - job not found")
+                except Exception as e:
+                    self.app.logger.error(f"Job {self.job_id}: Error updating final status: {str(e)}")
+                    db.session.rollback()
+                
+                self.app.logger.info(f"Job {self.job_id}: Scan completed successfully")
+                return True
+                
         except Exception as e:
             self.scanning = False
             self.app.logger.error(f"Job {self.job_id}: Scan execution error: {str(e)}")
@@ -382,13 +394,14 @@ class ScanExecutor:
             self.cleanup()
             
             # 更新任务状态为失败
-            with self.lock:
-                job = ScanJob.query.get(self.job_id)
-                if job:
-                    job.status = 'failed'
-                    job.error_message = str(e)
-                    job.end_time = datetime.utcnow()
-                    db.session.commit()
+            with self.app.app_context():
+                with self.lock:
+                    job = ScanJob.query.get(self.job_id)
+                    if job:
+                        job.status = 'failed'
+                        job.error_message = str(e)
+                        job.end_time = datetime.utcnow()
+                        db.session.commit()
             
             return False
                 
@@ -442,6 +455,16 @@ class ScanExecutor:
                         ip.last_scanned = datetime.utcnow()
                         if ip.status == 'inactive':
                             ip.status = 'unclaimed'
+                            # 发送IP地址状态变更通知
+                            if self.job_user_id:
+                                self.notification_manager.create_notification(
+                                    user_id=self.job_user_id,
+                                    title="IP地址状态变更",
+                                    content=f"IP地址 {ip_address} 的状态已从 'inactive' 变为 'unclaimed'。",
+                                    type="ip",
+                                    commit=True
+                                )
+                                self.app.logger.info(f"Sent notification for IP status change {ip_address} to user {self.job_user_id}")
                     else:
                         ip = IP(
                             ip_address=ip_address,
@@ -449,6 +472,16 @@ class ScanExecutor:
                             last_scanned=datetime.utcnow()
                         )
                         db.session.add(ip)
+                        # 发送新IP地址发现通知
+                        if self.job_user_id:
+                            self.notification_manager.create_notification(
+                                user_id=self.job_user_id,
+                                title="新IP地址发现",
+                                content=f"在扫描 {self.subnet} 时发现了新的IP地址: {ip_address}",
+                                type="ip",
+                                commit=True
+                            )
+                            self.app.logger.info(f"Sent notification for new IP {ip_address} to user {self.job_user_id}")
                 
                 # 标记未响应的 IP 为 inactive
                 IP.query.filter(
@@ -483,7 +516,7 @@ class ScanExecutor:
                             event=NotificationEvent.SCAN_COMPLETED,
                             user=job.user,
                             template_data={
-                                'job_name': job.name,
+                                'job_name': job.policy.name,
                                 'subnet': self.subnet,
                                 'machines_found': self.machines_found
                             }
@@ -493,7 +526,7 @@ class ScanExecutor:
                             event=NotificationEvent.SCAN_FAILED,
                             user=job.user,
                             template_data={
-                                'job_name': job.name,
+                                'job_name': job.policy.name,
                                 'subnet': self.subnet,
                                 'error': job.error_message
                             }
@@ -501,7 +534,7 @@ class ScanExecutor:
                 else:
                     self.app.logger.error(f"Job {self.job_id}: Failed to update status - job not found")
 
-            return result
+                return result
         except Exception as e:
             self.app.logger.error(f"Error executing scan for job {self.job_id}: {str(e)}")
             return False 

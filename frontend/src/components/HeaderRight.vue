@@ -1,5 +1,10 @@
 <template>
   <div class="header-right">
+    <!-- 通知铃铛图标 -->
+    <el-badge :value="unreadNotificationCount" :max="99" class="notification-badge" @click="goToNotifications">
+      <el-icon :size="20"><Bell /></el-icon>
+    </el-badge>
+
     <el-button
       circle
       @click="goHome"
@@ -38,16 +43,18 @@
 </template>
   
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useI18n } from 'vue-i18n';
 import UserMenu from './UserMenu.vue';
 import { useSettingsStore } from '../stores/settings';
-import { Moon, Sunny, ArrowDown, HomeFilled } from '@element-plus/icons-vue';
+import { useNotificationStore } from '../stores/notification';
+import { Moon, Sunny, ArrowDown, HomeFilled, Bell } from '@element-plus/icons-vue';
 import { ElMessage } from 'element-plus';
 import { useRouter } from 'vue-router';
 
 const { t, locale } = useI18n();
 const settingsStore = useSettingsStore();
+const notificationStore = useNotificationStore();
 const router = useRouter();
 
 // 主题状态
@@ -58,9 +65,17 @@ const currentLanguageLabel = computed(() => {
   return settingsStore.language === 'zh' ? '中文' : 'English';
 });
 
+// 未读通知数量
+const unreadNotificationCount = computed(() => notificationStore.unreadCount);
+
 // 返回首页
 const goHome = () => {
   router.push('/dashboard');
+};
+
+// 跳转到通知历史页面
+const goToNotifications = () => {
+  router.push('/notifications');
 };
 
 // 切换语言
@@ -77,6 +92,10 @@ const toggleTheme = () => {
   document.documentElement.setAttribute('data-theme', newTheme);
   settingsStore.setTheme(newTheme);
 };
+
+onMounted(() => {
+  notificationStore.fetchUnreadCount();
+});
 </script>
 
 <style scoped>
@@ -88,6 +107,11 @@ const toggleTheme = () => {
 
 .theme-toggle, .home-button {
   font-size: 18px;
+}
+
+.notification-badge {
+  margin-right: 15px;
+  cursor: pointer;
 }
 
 .language-dropdown {

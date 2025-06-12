@@ -320,13 +320,17 @@ class SystemConfig(db.Model):
     """系统配置模型"""
     __tablename__ = 'system_configs'
     
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = db.Column(db.String(36), db.ForeignKey('users.id'), nullable=False)
     key = db.Column(db.String(64), unique=True, nullable=False)
-    value = db.Column(db.Text, nullable=False)
+    value = db.Column(db.JSON, nullable=False)
     description = db.Column(db.String(256))
     is_public = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # 关联关系
+    user = db.relationship('User', backref=db.backref('system_configs', lazy=True))
     
     def to_dict(self):
         return {
@@ -338,3 +342,74 @@ class SystemConfig(db.Model):
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None
         }
+
+class Notification(db.Model):
+    """通知模型"""
+    __tablename__ = 'notifications'
+
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = db.Column(db.String(36), db.ForeignKey('users.id'), nullable=False)
+    title = db.Column(db.String(255), nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    type = db.Column(db.String(50), nullable=False)  # scan, ip, policy
+    read = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    deleted = db.Column(db.Boolean, default=False)
+
+    # 关联关系
+    user = db.relationship('User', backref=db.backref('notifications', lazy=True))
+
+    def to_dict(self):
+        """转换为字典"""
+        return {
+            'id': self.id,
+            'title': self.title,
+            'content': self.content,
+            'type': self.type,
+            'read': self.read,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
+
+class NotificationTemplate(db.Model):
+    """通知模板模型"""
+    __tablename__ = 'notification_templates'
+
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    name = db.Column(db.String(50), nullable=False, unique=True)
+    title_template = db.Column(db.String(255), nullable=False)
+    content_template = db.Column(db.Text, nullable=False)
+    type = db.Column(db.String(50), nullable=False)  # scan, ip, policy
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def to_dict(self):
+        """转换为字典"""
+        return {
+            'id': self.id,
+            'name': self.name,
+            'title_template': self.title_template,
+            'content_template': self.content_template,
+            'type': self.type,
+            'is_active': self.is_active,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
+
+    @classmethod
+    def get_template(cls, name):
+        """获取模板"""
+        return cls.query.filter_by(name=name, is_active=True).first()
+
+    def render(self, **kwargs):
+        """渲染模板"""
+        try:
+            title = self.title_template.format(**kwargs)
+            content = self.content_template.format(**kwargs)
+            return title, content
+        except KeyError as e:
+            raise ValueError(f"模板渲染失败，缺少参数: {str(e)}")
+        except Exception as e:
+            raise ValueError(f"模板渲染失败: {str(e)}") 

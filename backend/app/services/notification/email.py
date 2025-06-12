@@ -24,6 +24,7 @@ class EmailNotifier:
                     smtp_config.get('password', '')
                 )
                 server.send_message(msg)
-                
+            return True
         except Exception as e:
-            self.app.logger.error(f"Failed to send email notification: {str(e)}") 
+            self.app.logger.error(f"Failed to send email notification: {str(e)}")
+            raise
