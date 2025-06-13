@@ -148,7 +148,25 @@ def create_app(config=None):
 
     @app.route('/uploads/<path:filename>')
     def uploaded_file(filename):
-        return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+        try:
+            # 确保上传目录存在
+            upload_folder = app.config['UPLOAD_FOLDER']
+            os.makedirs(upload_folder, exist_ok=True)
+            
+            # 记录请求信息
+            app.logger.info(f"Attempting to access file: {filename}")
+            app.logger.info(f"Upload folder: {upload_folder}")
+            
+            # 检查文件是否存在
+            file_path = os.path.join(upload_folder, filename)
+            if not os.path.exists(file_path):
+                app.logger.error(f"File not found: {file_path}")
+                return "File not found", 404
+                
+            return send_from_directory(upload_folder, filename)
+        except Exception as e:
+            app.logger.error(f"Error serving file {filename}: {str(e)}")
+            return str(e), 500
     
     # 初始化扩展
     init_extensions(app)

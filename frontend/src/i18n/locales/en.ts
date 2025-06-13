@@ -940,7 +940,16 @@ export default {
       progress: 'Progress',
       startTime: 'Start Time',
       endTime: 'End Time',
-      actions: 'Actions'
+      actions: 'Actions',
+      machines_found: 'Discovery Hosts',
+      error_message: 'Task Results',
+      policy: {
+        name: 'Policy Name',
+        strategies: 'Scan Strategies',
+        description: 'Policy Description',
+        type: 'Policy Type',
+        createTime: 'Create Time'
+      }
     },
     types: {
       scan: 'Scan Task',
@@ -960,7 +969,8 @@ export default {
       success: 'Success',
       failed: 'Failed',
       warning: 'Warning',
-      info: 'Info'
+      info: 'Info',
+      up: 'UP',
     },
     details: {
       title: 'Task Details',
@@ -974,8 +984,7 @@ export default {
       ip: 'IP Address',
       resultStatus: 'Status',
       details: 'Details',
-      scanTime: 'Scan Time',
-      logs: 'Task Logs'
+      scanTime: 'Scan Time'
     },
     actions: {
       create: 'Create Task'

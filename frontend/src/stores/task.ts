@@ -46,9 +46,19 @@ export const useTaskStore = defineStore('Task', {
   }),
 
   actions: {
-    async fetchAllTasks() {
+    async fetchAllTasks(params?: { page?: number; pageSize?: number; status?: string[] }) {
       try {
-        const { data } = await axios.get(`${API_CONFIG.BASE_API_URL}${API_CONFIG.ENDPOINTS.TASK.LIST}`);
+        const queryParams = new URLSearchParams();
+        queryParams.append('page', String(params?.page || 1));
+        queryParams.append('page_size', String(params?.pageSize || 10));
+        
+        if (params?.status) {
+          params.status.forEach(status => {
+            queryParams.append('status', status);
+          });
+        }
+
+        const { data } = await axios.get(`${API_CONFIG.BASE_API_URL}${API_CONFIG.ENDPOINTS.TASK.LIST}?${queryParams.toString()}`);
         return data;
       } catch (error) {
         console.error('Failed to fetch all jobs:', error);
@@ -57,11 +67,15 @@ export const useTaskStore = defineStore('Task', {
     },
 
     // 获取运行中的任务
-    async fetchRunningJobs() {
+    async fetchRunningJobs(params?: { page?: number; pageSize?: number }) {
       try {
-        const { data } = await axios.get(`${API_CONFIG.BASE_API_URL}${API_CONFIG.ENDPOINTS.TASK.LIST}`, {
-          params: { status: "running" }
-        });
+        const queryParams = new URLSearchParams();
+        queryParams.append('page', String(params?.page || 1));
+        queryParams.append('page_size', String(params?.pageSize || 10));
+        queryParams.append('status', 'pending');
+        queryParams.append('status', 'running');
+
+        const { data } = await axios.get(`${API_CONFIG.BASE_API_URL}${API_CONFIG.ENDPOINTS.TASK.LIST}?${queryParams.toString()}`);
         return data;
       } catch (error) {
         console.error('Failed to fetch running jobs:', error);

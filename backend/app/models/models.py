@@ -21,6 +21,7 @@ class User(db.Model):
     wechat_id = db.Column(db.String(255), unique=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     is_admin = db.Column(db.Boolean, default=False)
+    status = db. Column(db.Boolean, default=False)
     deleted = db.Column(db.Boolean, default=False)
 
     # 添加关系
@@ -39,11 +40,13 @@ class User(db.Model):
         return {
             'id': self.id,
             'username': self.username,
+            'status': self.status,
             'email': self.email,
             'avatar': self.avatar,
             'wechat_id': self.wechat_id,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'is_admin': self.is_admin,
+            'status': self.status,
             'deleted': self.deleted
         }
 
@@ -255,7 +258,21 @@ class ScanJob(db.Model):
             "id": self.id,
             "user_id": self.user_id,
             "subnet_id": self.subnet_id,
-            "policy_id": self.policy_id,
+            "policy": {
+                "id": self.policy.id,
+                "name": self.policy.name,
+                "description": self.policy.description,
+                "strategies": json.loads(self.policy.strategies) if isinstance(self.policy.strategies, str) else self.policy.strategies,
+                "status": self.policy.status,
+                "created_at": self.policy.created_at.isoformat() if self.policy.created_at else None,
+                "updated_at": self.policy.updated_at.isoformat() if self.policy.updated_at else None
+            } if self.policy else None,
+            "subnet": {
+                "id": self.subnet.id,
+                "name": self.subnet.name,
+                "subnet": self.subnet.subnet,
+            },
+            "results": [result.to_dict() for result in self.scan_results],
             "status": self.status,
             "progress": self.progress,
             "start_time": self.start_time.isoformat() if self.start_time else None,

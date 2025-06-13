@@ -24,7 +24,7 @@ class Config:
     REDIS_CAPTCHA_EXPIRE = int(os.getenv('REDIS_CAPTCHA_EXPIRE', 300))  # 5 minutes
 
     # 文件上传配置
-    UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'uploads')
+    UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))), 'uploads')
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 限制上传文件大小为16MB
 
 class DevelopmentConfig(Config):

@@ -80,7 +80,7 @@
           @selection-change="handleSelectionChange">
           <el-table-column
             type="selection"
-            width="55"
+            width="40"
           />
           <el-table-column
             v-for="column in tableColumns"
@@ -89,7 +89,8 @@
             :label="$t(`ip.columns.${column.translationKey}`)"
             :sortable="column.sortable ? 'custom' : false"
             :width="column.width"
-            :min-width="column.minWidth">
+            :min-width="column.minWidth"
+            :align="column.align || 'center'">
             <template v-if="column.slotName" #default="{ row }">
               <el-tooltip :content="$t(`ip.status.description.${row.status}`)" placement="top">
                 <el-tag :type="getStatusType(row.status)" effect="light">
@@ -198,17 +199,17 @@ const updateSelectedIP = ref<IP | null>(null); // 当前选中的 IP 信息
 const isAuthenticated = computed(() => !!authStore.user);
 
 const tableColumns = ref([
-  { prop: 'id', translationKey: 'hostUUID', minWidth: 110 },
-  { prop: 'ip_address', translationKey: 'ipAddress', minWidth: 120, sortable: true },
-  { prop: 'os_type', translationKey: 'osVersion', minWidth: 150, sortable: true },
-  { prop: 'status', translationKey: 'status', width: 120, slotName: 'status', sortable: true},
-  { prop: 'device_name', translationKey: 'deviceName', minWidth: 150, sortable: true },
-  { prop: 'device_type', translationKey: 'deviceType', minWidth: 150, sortable: true },
-  { prop: 'manufacturer', translationKey: 'architecture', minWidth: 150, sortable: true },
-  { prop: 'model', translationKey: 'model', minWidth: 150, sortable: true },
-  { prop: 'assigned_user.username', translationKey: 'owningUser', slotName: 'owningUser', minWidth: 150, sortable: true },
-  { prop: 'purpose', translationKey: 'purpose', minWidth: 180 },
-  { prop: 'last_scanned', translationKey: 'lastScanned', minWidth: 180, sortable: true },
+  // { prop: 'id', translationKey: 'hostUUID', minWidth: 330 },
+  { prop: 'ip_address', translationKey: 'ipAddress', minWidth: 120, sortable: true, align: 'center' },
+  { prop: 'os_type', translationKey: 'osVersion', minWidth: 150, sortable: true, align: 'center' },
+  { prop: 'status', translationKey: 'status', width: 120, slotName: 'status', sortable: true, align: 'center' },
+  { prop: 'device_name', translationKey: 'deviceName', minWidth: 150, sortable: true, align: 'center' },
+  { prop: 'device_type', translationKey: 'deviceType', minWidth: 150, sortable: true, align: 'center' },
+  { prop: 'manufacturer', translationKey: 'architecture', minWidth: 150, sortable: true, align: 'center' },
+  { prop: 'model', translationKey: 'model', minWidth: 150, sortable: true, align: 'center' },
+  { prop: 'assigned_user.username', translationKey: 'owningUser', slotName: 'owningUser', minWidth: 150, sortable: true, align: 'center' },
+  { prop: 'purpose', translationKey: 'purpose', minWidth: 180, align: 'center' },
+  { prop: 'last_scanned', translationKey: 'lastScanned', minWidth: 180, sortable: true, align: 'center' },
 ]);
 
 const tableHeight = ref(window.innerHeight - 394);

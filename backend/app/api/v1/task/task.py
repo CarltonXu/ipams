@@ -14,7 +14,9 @@ def get_jobs(current_user):
     """Get all scan jobs for current user"""
     try:
         # 获取查询参数
-        status = request.args.get('status')
+        status = request.args.getlist('status')  # 支持多个状态
+        page = request.args.get('page', 1, type=int)
+        page_size = request.args.get('page_size', 10, type=int)
         
         # 构建基础查询
         query = ScanJob.query.filter_by(
@@ -24,16 +26,22 @@ def get_jobs(current_user):
         
         # 如果指定了状态，添加状态过滤
         if status:
-            if status == 'running':
-                query = query.filter(ScanJob.status.in_(['pending', 'running']))
-            else:
-                query = query.filter(ScanJob.status == status)
+            query = query.filter(ScanJob.status.in_(status))
         
-        # 获取任务列表
-        jobs = query.all()
+        # 计算总数
+        total = query.count()
+        
+        # 添加分页
+        jobs = query.order_by(ScanJob.start_time.desc()) \
+                   .offset((page - 1) * page_size) \
+                   .limit(page_size) \
+                   .all()
         
         return jsonify({
-            'jobs': [job.to_dict() for job in jobs]
+            'jobs': [job.to_dict() for job in jobs],
+            'total': total,
+            'page': page,
+            'page_size': page_size
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -140,15 +148,7 @@ def get_job_status(current_user, job_id):
         return jsonify({
             'job_id': job_id,
             'status': serializable_status,
-            'job': {
-                'id': job.id,
-                'status': job.status,
-                'progress': job.progress,
-                'machines_found': job.machines_found,
-                'start_time': job.start_time.isoformat() if job.start_time else None,
-                'end_time': job.end_time.isoformat() if job.end_time else None,
-                'error_message': job.error_message
-            }
+            'job': job.to_dict()
         }), 200
         
     except Exception as e:

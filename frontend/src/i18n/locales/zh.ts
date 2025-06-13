@@ -1021,7 +1021,16 @@ export default {
       progress: '进度',
       startTime: '开始时间',
       endTime: '结束时间',
-      actions: '操作'
+      actions: '操作',
+      machines_found: '发现主机数',
+      error_message: '任务执行结果',
+      policy: {
+        name: '策略名称',
+        strategies: '扫描策略',
+        description: '策略描述',
+        type: '策略类型',
+        createTime: '创建时间'
+      }
     },
     types: {
       scan: '扫描任务',
@@ -1041,7 +1050,8 @@ export default {
       success: '成功',
       failed: '失败',
       warning: '警告',
-      info: '信息'
+      info: '信息',
+      up: '开启',
     },
     details: {
       title: '任务详情',
@@ -1055,8 +1065,7 @@ export default {
       ip: 'IP 地址',
       resultStatus: '状态',
       details: '详细信息',
-      scanTime: '扫描时间',
-      logs: '任务日志'
+      scanTime: '扫描时间'
     },
     actions: {
       create: '创建任务'

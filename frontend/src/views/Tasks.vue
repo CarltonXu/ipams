@@ -43,8 +43,33 @@
                 <template #default="{ row }">
                   <div class="task-name">
                     <el-icon><Document /></el-icon>
-                    <span>{{ row.name }}</span>
+                    <span>{{ row.subnet.name }}</span>
                   </div>
+                </template>
+              </el-table-column>
+              <el-table-column :label="t('tasks.table.policy.name')" prop="name" min-width="150">
+                <template #default="{ row }">
+                  <span class="policy-name">{{ row.policy?.name || '-' }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column :label="t('tasks.table.policy.strategies')" prop="strategies" min-width="200">
+                <template #default="{ row }">
+                  <div class="strategy-tags">
+                    <template v-if="row.policy?.strategies">
+                      <span class="strategy-field">{{ t('scan.policy.cronExpression') }}:</span>
+                      <el-tag v-for="strategy in row.policy?.strategies" class="strategy-tag">
+                        {{ strategy.cron }}
+                      </el-tag>
+                    </template>
+                    <span v-else class="no-strategy">-</span>
+                  </div>
+                </template>
+              </el-table-column>
+              <el-table-column :label="t('tasks.table.machines_found')" prop="machines_found" width="160">
+                <template #default="{ row }">
+                  <el-tag>
+                    {{ row.machines_found }}
+                  </el-tag>
                 </template>
               </el-table-column>
               <el-table-column :label="t('tasks.table.type')" prop="type" width="120">
@@ -99,18 +124,58 @@
                 </template>
               </el-table-column>
             </el-table>
+            <div class="pagination-container">
+              <el-pagination
+                v-model:current-page="currentPage"
+                v-model:page-size="pageSize"
+                :page-sizes="[10, 20, 50, 100]"
+                :total="totalTasks"
+                layout="total, sizes, prev, pager, next, jumper"
+                @size-change="handleSizeChange"
+                @current-change="handleCurrentChange"
+              />
+            </div>
           </div>
         </el-tab-pane>
 
         <el-tab-pane :label="t('tasks.tabs.history')" name="history">
           <div class="task-list">
-            <el-table :data="historyTasks" style="width: 100%" v-loading="loading">
-              <el-table-column :label="t('tasks.table.name')" prop="name" min-width="150">
+            <el-table
+              v-loading="loading"
+              :data="historyTasks"
+              style="width: 100%"
+            >
+              <el-table-column :label="t('tasks.table.name')" :resizable="true" prop="name" min-width="150">
                 <template #default="{ row }">
                   <div class="task-name">
                     <el-icon><Document /></el-icon>
-                    <span>{{ row.name }}</span>
+                    <span>{{ row.subnet.name }}</span>
                   </div>
+                </template>
+              </el-table-column>
+              <el-table-column :label="t('tasks.table.policy.name')" prop="name" min-width="150">
+                <template #default="{ row }">
+                  <span class="policy-name">{{ row.policy?.name || '-' }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column :label="t('tasks.table.policy.strategies')" prop="strategies" min-width="120">
+                <template #default="{ row }">
+                  <div class="strategy-tags">
+                    <template v-if="row.policy?.strategies">
+                      <span class="strategy-field">{{ t('scan.policy.cronExpression') }}:</span>
+                      <el-tag v-for="strategy in row.policy?.strategies" class="strategy-tag">
+                        {{ strategy.cron }}
+                      </el-tag>
+                    </template>
+                    <span v-else class="no-strategy">-</span>
+                  </div>
+                </template>
+              </el-table-column>
+              <el-table-column :label="t('tasks.table.machines_found')" prop="machines_found" width="160">
+                <template #default="{ row }">
+                  <el-tag>
+                    {{ row.machines_found }}
+                  </el-tag>
                 </template>
               </el-table-column>
               <el-table-column :label="t('tasks.table.type')" prop="type" width="120">
@@ -125,6 +190,20 @@
                   <el-tag :type="getStatusType(row.status)">
                     {{ t(`tasks.status.${row.status}`) }}
                   </el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column :label="t('tasks.table.error_message')" prop="error_message" min-width="120" max-width="220">
+                <template #default="{ row }">
+                  <el-tooltip
+                    v-if="row.error_message"
+                    effect="dark"
+                    :content="row.error_message"
+                    placement="top">
+                    <el-tag :type="getStatusType(row.status)" class="ellipsis-tag">
+                      {{ row.error_message }}
+                    </el-tag>
+                  </el-tooltip>
+                  <el-tag v-else :type="getStatusType(row.status)" class="ellipsis-tag">-</el-tag>
                 </template>
               </el-table-column>
               <el-table-column :label="t('tasks.table.startTime')" prop="startTime" width="180">
@@ -149,6 +228,17 @@
                 </template>
               </el-table-column>
             </el-table>
+            <div class="pagination-container">
+              <el-pagination
+                v-model:current-page="historyCurrentPage"
+                v-model:page-size="historyPageSize"
+                :page-sizes="[10, 20, 50, 100]"
+                :total="totalHistoryTasks"
+                layout="total, sizes, prev, pager, next, jumper"
+                @size-change="handleHistorySizeChange"
+                @current-change="handleHistoryCurrentChange"
+              />
+            </div>
           </div>
         </el-tab-pane>
       </el-tabs>
@@ -164,7 +254,7 @@
       <div v-if="currentTask" class="task-details">
         <el-descriptions :column="2" border>
           <el-descriptions-item :label="t('tasks.details.name')">
-            {{ currentTask.name }}
+            {{ currentTask.subnet.name }}
           </el-descriptions-item>
           <el-descriptions-item :label="t('tasks.details.type')">
             <el-tag :type="getTaskTypeTag(currentTask.type)">
@@ -191,10 +281,18 @@
         </el-descriptions>
 
         <!-- 扫描结果展示 -->
-        <div v-if="currentTask.type === 'scan'" class="scan-results">
+        <div v-if="currentTask" class="scan-results">
           <h3>{{ t('tasks.details.scanResults') }}</h3>
-          <el-table :data="currentTask.results" style="width: 100%">
-            <el-table-column :label="t('tasks.details.ip')" prop="ip" width="150" />
+          <el-table 
+            :data="currentTask.results"
+            highlight-current-row
+            @current-change="handleScanResultCurrentChange"
+            style="width: 100%">
+            <el-table-column :label="t('tasks.details.ip')" prop="ip" width="150">
+              <template #default="{ row }">
+                <span>{{ row.ip_address }}</span>
+              </template>
+            </el-table-column>
             <el-table-column :label="t('tasks.details.resultStatus')" prop="status" width="120">
               <template #default="{ row }">
                 <el-tag :type="getScanResultStatus(row.status)">
@@ -202,20 +300,24 @@
                 </el-tag>
               </template>
             </el-table-column>
-            <el-table-column :label="t('tasks.details.details')" prop="details" />
+            <el-table-column :label="t('tasks.details.details')" prop="details">
+              <template #default="{ row }">
+                {{ row.open_ports }}
+              </template>
+            </el-table-column>
             <el-table-column :label="t('tasks.details.scanTime')" prop="scanTime" width="180">
               <template #default="{ row }">
-                {{ formatDate(row.scanTime) }}
+                {{ formatDate(row.created_at) }}
               </template>
             </el-table-column>
           </el-table>
         </div>
 
-        <!-- 任务日志 -->
+        <!-- 任务详情 -->
         <div class="task-logs">
-          <h3>{{ t('tasks.details.logs') }}</h3>
-          <el-scrollbar height="200px">
-            <pre class="log-content">{{ currentTask.logs }}</pre>
+          <h3>{{ t('tasks.details.details') }}</h3>
+          <el-scrollbar>
+            <pre class="log-content">{{ selectedLogContent }}</pre>
           </el-scrollbar>
         </div>
       </div>
@@ -224,7 +326,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, computed, onMounted, onUnmounted } from 'vue';
+import { ref, watch, onMounted, onUnmounted } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { Plus, Document, Refresh } from '@element-plus/icons-vue';
@@ -234,6 +336,20 @@ import { useTaskStore } from '../stores/task';
 const { t } = useI18n();
 const taskStore = useTaskStore();
 
+interface Policy {
+  id: string;
+  name: string;
+  description?: string;
+  strategies: {
+    id: string;
+    name: string;
+    type: string;
+    parameters: Record<string, any>;
+  }[];
+  created_at: Date;
+  updated_at: Date;
+}
+
 interface Task {
   id: string;
   name: string;
@@ -242,15 +358,22 @@ interface Task {
   progress: number;
   start_time: Date;
   end_time: Date | null;
+  policy: Policy;
+  subnet: Subnet;
   results?: ScanResult[];
   logs?: string;
+}
+
+interface Subnet { 
+  id: string;
+  name: string;
 }
 
 interface ScanResult {
   ip: string;
   status: 'success' | 'failed' | 'warning' | 'info';
-  details: string;
   scanTime: Date;
+  raw_data: string;
 }
 
 // 状态变量
@@ -261,6 +384,13 @@ const currentTask = ref<Task | null>(null);
 const runningTasks = ref<Task[]>([]);
 const historyTasks = ref<Task[]>([]);
 const cancellingTasks = ref<Record<string, boolean>>({});
+const currentPage = ref(1);
+const pageSize = ref(10);
+const totalTasks = ref(0);
+const historyCurrentPage = ref(1);
+const historyPageSize = ref(10);
+const totalHistoryTasks = ref(0);
+const selectedLogContent = ref('');
 
 // 刷新选项
 const refreshOptions = [
@@ -395,12 +525,25 @@ const createNewTask = () => {
 const fetchTasks = async () => {
   try {
     loading.value = true;
-    const response = await taskStore.fetchAllTasks();
-    const tasks = response.jobs || [];
+    const params = {
+      page: activeTab.value === 'running' ? currentPage.value : historyCurrentPage.value,
+      pageSize: activeTab.value === 'running' ? pageSize.value : historyPageSize.value,
+      status: activeTab.value === 'running' 
+        ? ['pending', 'running'] 
+        : ['completed', 'failed', 'stopped', 'cancelled']
+    };
     
-    // 分离运行中和历史任务
-    runningTasks.value = tasks.filter(task => ['pending', 'running'].includes(task.status));
-    historyTasks.value = tasks.filter(task => !['pending', 'running'].includes(task.status));
+    const response = await taskStore.fetchAllTasks(params);
+    const tasks = response.jobs || [];
+    const total = response.total || 0;
+    
+    if (activeTab.value === 'running') {
+      runningTasks.value = tasks;
+      totalTasks.value = total;
+    } else {
+      historyTasks.value = tasks;
+      totalHistoryTasks.value = total;
+    }
   } catch (error: any) {
     ElMessage.error(error.message || t('tasks.messages.loadFailed'));
   } finally {
@@ -408,78 +551,51 @@ const fetchTasks = async () => {
   }
 };
 
-// 添加后台刷新逻辑
-const backgroundRefreshTimer = ref<ReturnType<typeof setInterval> | null>(null);
-const hasRunningTasks = computed(() => {
-  return runningTasks.value.some(task => ['pending', 'running'].includes(task.status));
-});
-
-// 后台刷新运行中的任务
-const refreshRunningTasks = async () => {
-  try {
-    const response = await taskStore.fetchRunningJobs();
-    const runningTasksData = response.jobs || [];
-    
-    // 更新现有任务的状态
-    runningTasks.value = runningTasks.value.map(task => {
-      const updatedTask = runningTasksData.find((rt: Task) => rt.id === task.id);
-      if (updatedTask) {
-        return {
-          ...task,
-          status: updatedTask.status,
-          progress: updatedTask.progress,
-        };
-      }
-      return task;
-    });
-    
-    // 如果没有任何运行中的任务，停止后台刷新
-    if (!hasRunningTasks.value) {
-      clearBackgroundRefresh();
-    }
-  } catch (error) {
-    console.error('Failed to refresh running tasks:', error);
-  }
-};
-
-// 清除后台刷新定时器
-const clearBackgroundRefresh = () => {
-  if (backgroundRefreshTimer.value) {
-    clearInterval(backgroundRefreshTimer.value);
-    backgroundRefreshTimer.value = null;
-  }
-};
-
-// 启动后台刷新
-const startBackgroundRefresh = () => {
-  clearBackgroundRefresh();
-  if (hasRunningTasks.value) {
-    backgroundRefreshTimer.value = setInterval(refreshRunningTasks, 3000);
-  }
-};
-
-// 监听任务列表变化
-watch(runningTasks, (newTasks) => {
-  if (hasRunningTasks.value) {
-    startBackgroundRefresh();
-  } else {
-    clearBackgroundRefresh();
-  }
-}, { deep: true });
-
 // 初始化
 onMounted(() => {
   fetchTasks();
-  if (hasRunningTasks.value) {
-    startBackgroundRefresh();
-  }
 });
 
-// 组件卸载时清理所有定时器
+// 组件卸载时清理定时器
 onUnmounted(() => {
   clearRefreshTimer();
-  clearBackgroundRefresh();
 });
+
+// 处理运行中任务的分页
+const handleSizeChange = (val: number) => {
+  pageSize.value = val;
+  fetchTasks();
+};
+
+const handleCurrentChange = (val: number) => {
+  currentPage.value = val;
+  fetchTasks();
+};
+
+// 处理历史任务的分页
+const handleHistorySizeChange = (val: number) => {
+  historyPageSize.value = val;
+  fetchTasks();
+};
+
+const handleHistoryCurrentChange = (val: number) => {
+  historyCurrentPage.value = val;
+  fetchTasks();
+};
+
+// 监听标签页切换
+watch(activeTab, () => {
+  if (activeTab.value === 'running') {
+    currentPage.value = 1;
+  } else {
+    historyCurrentPage.value = 1;
+  }
+  fetchTasks();
+});
+
+const handleScanResultCurrentChange = (row: ScanResult) => {
+  selectedLogContent.value = row.raw_data || '';
+};
 </script>
 
 <style scoped>
@@ -527,11 +643,48 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 8px;
+  font-weight: 500;
 }
 
 .task-name .el-icon {
   color: var(--el-text-color-secondary);
 }
+
+.policy-name {
+  color: var(--el-text-color-primary);
+}
+
+.strategy-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.strategy-tag {
+  margin-right: 4px;
+}
+
+.no-strategy {
+  color: var(--el-text-color-secondary);
+  font-size: 0.9em;
+}
+
+.strategy-field {
+  min-width: 50px;
+  color: var(--el-text-color-secondary);
+  font-size: 13px;
+}
+
+.ellipsis-tag {
+  display: contents;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+
 
 .progress-cell {
   padding: 5px 0;
@@ -589,5 +742,11 @@ onUnmounted(() => {
 
 :deep(.el-table) {
   --el-table-border-color: var(--el-border-color-lighter);
+}
+
+.pagination-container {
+  margin-top: 20px;
+  display: flex;
+  justify-content: flex-end;
 }
 </style> 
