@@ -32,6 +32,7 @@ build/
 .next/
 .nuxt/
 .tmp/
+.vite/
 
 # Temporary files
 *.swp
