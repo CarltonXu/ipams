@@ -13,7 +13,7 @@ import threading
 import os
 import time
 from app.core.config.settings import Config
-from app.core.errors import DatabaseError
+from app.core.error.errors import DatabaseError
 
 # 配置日志
 logging.basicConfig(level=logging.INFO)

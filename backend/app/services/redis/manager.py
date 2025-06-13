@@ -2,7 +2,7 @@ from typing import Optional, Any
 from redis import Redis
 from flask import current_app
 import logging
-from app.core.errors import DatabaseError, DatabaseConnectionError
+from app.core.error.errors import DatabaseError, DatabaseConnectionError
 
 class RedisManager:
     """Redis 服务管理器"""

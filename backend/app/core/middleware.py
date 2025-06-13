@@ -1,7 +1,7 @@
 from flask import jsonify
 from sqlalchemy.exc import OperationalError, IntegrityError
 from werkzeug.exceptions import HTTPException
-from .errors import (
+from .error.errors import (
     AppError, DatabaseConnectionError, ValidationError,
     AuthenticationError, AuthorizationError, ResourceNotFoundError,
     BusinessError

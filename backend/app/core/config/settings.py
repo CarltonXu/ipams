@@ -5,14 +5,9 @@ load_dotenv()
 
 class Config:
     # Database configuration
-    SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL', 'mysql+pymysql://root:root123.@127.0.0.1:13306/ipams')
+    SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URI', 'mysql+pymysql://root:root123.@127.0.0.1:13306/ipams')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
-    # Scanner configuration
-    NETWORK_RANGE = os.getenv('NETWORK_RANGE', '192.168.0.0/20')
-    SCAN_INTERVAL = int(os.getenv('SCAN_INTERVAL', 3600))  # Default: 1 hour
-    SCAN_PORTS = os.getenv('SCAN_PORTS', '22,3389,443,80')
-
     # JWT配置
     JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', 'your-secret-key-here')
     JWT_ACCESS_TOKEN_EXPIRES = int(os.getenv('JWT_ACCESS_TOKEN_EXPIRES', 3600))  # 1 hour
@@ -36,7 +31,7 @@ class TestingConfig(Config):
     """测试环境配置"""
     DEBUG = False
     TESTING = True
-    SQLALCHEMY_DATABASE_URI = os.getenv('TEST_DATABASE_URL', 'mysql+pymysql://root:password@127.0.0.1/ipams_test')
+    SQLALCHEMY_DATABASE_URI = os.getenv('TEST_DATABASE_URI', 'mysql+pymysql://root:password@127.0.0.1/ipams_test')
 
 class ProductionConfig(Config):
     """生产环境配置"""

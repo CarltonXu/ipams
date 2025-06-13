@@ -16,7 +16,7 @@ from app.api.v1 import v1_bp
 from app.tasks.task_manager import task_manager
 from app.services.scan.scheduler import PolicyScheduler
 from app.core.middleware import register_error_handlers
-from app.core.errors import DatabaseError
+from app.core.error.errors import DatabaseError
 from app.services.notification import NotificationManager
 from app.scripts.init_notification_templates import init_notification_templates
 

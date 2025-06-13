@@ -6,18 +6,43 @@ IPAMS 是一个基于 Web 的 IP 地址管理系统，旨在解决手动配置 I
 
 ### 核心功能
 
-- **网络扫描**：定期扫描网络，发现新设备和未使用的 IP 地址
-- **IP 地址标注**：用户可以标注 IP 地址的用途及设备信息
-- **所有者管理**：允许用户认领 IP 地址并关联设备用途
-- **权限控制**：支持普通用户和管理员角色的分离，确保数据安全
-- **多语言支持**：内置中英文界面，方便不同语言用户使用
+- **用户认证与授权**
+  - 用户注册与登录
+  - 基于角色的权限控制
+  - 用户管理界面
+
+- **IP 地址管理**
+  - 子网划分与管理
+  - IP 地址分配与追踪
+  - 使用状态监控
+
+- **网络扫描**
+  - 定时自动扫描
+  - 设备发现与识别
+  - 扫描结果管理
+
+- **任务调度**
+  - 定时任务管理
+  - 任务执行监控
+  - 历史记录追踪
+
+- **通知系统**
+  - 系统通知管理
+  - 通知模板配置
+  - 通知历史记录
+
+- **系统配置**
+  - 基础参数配置
+  - 扫描策略设置
+  - 通知规则配置
 
 ### 技术架构
 
 - **前端**：Vue 3 + TypeScript + Vite + Element Plus
 - **后端**：Python 3 + Flask + SQLAlchemy
 - **数据库**：MySQL
-- **任务队列**：Celery（用于异步网络扫描任务）
+- **缓存**：Redis
+- **部署**：Docker + Docker Compose
 
 ---
 
@@ -25,75 +50,152 @@ IPAMS 是一个基于 Web 的 IP 地址管理系统，旨在解决手动配置 I
 
 ```plaintext
 IPAMS/
-├── src/                # 前端代码（Vue 3 项目）
-│   ├── assets/         # 静态资源
-│   ├── components/     # 复用组件
-│   ├── composables/    # 组合式函数
-│   ├── i18n/           # 国际化配置
-│   ├── locales/        # 语言文件
-│   ├── routers/        # 路由配置
-│   ├── stores/         # Pinia 状态管理
-│   ├── types/          # TypeScript 类型定义
-│   ├── utils/          # 工具函数
-│   ├── views/          # 页面视图
-│   ├── App.vue         # 根组件
-│   ├── main.ts         # 入口文件
-│   └── style.css       # 全局样式
-├── backend/            # 后端代码（Flask 项目）
-│   ├── app/            # 应用主目录
-│   │   ├── models/     # 数据库模型
-│   │   ├── routes/     # 路由定义
-│   │   ├── services/   # 核心业务逻辑
-│   │   └── utils/      # 工具模块
-│   ├── migrations/     # 数据库迁移文件
-│   ├── uploads/        # 上传文件存储
-│   ├── .env            # 环境变量配置
-│   ├── celery_worker.py # Celery 工作进程
-│   ├── create_user.py  # 用户创建脚本
-│   ├── requirements.txt # Python 依赖
-│   └── run.py          # 应用入口
-├── .vscode/            # VS Code 配置
-├── .venv/              # Python 虚拟环境
-├── node_modules/       # Node.js 依赖
-├── .gitignore          # Git 忽略文件
-├── index.html          # HTML 入口
-├── package.json        # 前端依赖配置
-├── tsconfig.json       # TypeScript 配置
-├── vite.config.ts      # Vite 配置
-└── README.md           # 项目说明文档
+├── frontend/                # 前端代码（Vue 3 项目）
+│   ├── src/                # 源代码
+│   │   ├── assets/        # 静态资源
+│   │   ├── components/    # 通用组件
+│   │   ├── composables/   # 组合式函数
+│   │   ├── config/        # 配置文件
+│   │   ├── i18n/          # 国际化配置
+│   │   ├── routers/       # 路由配置
+│   │   ├── stores/        # Pinia 状态管理
+│   │   ├── types/         # TypeScript 类型定义
+│   │   ├── utils/         # 工具函数
+│   │   ├── views/         # 页面视图
+│   │   ├── App.vue        # 根组件
+│   │   ├── main.ts        # 入口文件
+│   │   └── style.css      # 全局样式
+│   └── public/            # 公共资源
+├── backend/               # 后端代码（Flask 项目）
+│   ├── app/              # 应用主目录
+│   │   ├── api/         # API 路由
+│   │   ├── core/        # 核心功能
+│   │   │   ├── config/  # 配置管理
+│   │   │   ├── errors/  # 错误处理
+│   │   │   └── middleware/ # 中间件
+│   │   ├── models/      # 数据库模型
+│   │   ├── scripts/     # 脚本工具
+│   │   ├── services/    # 业务服务
+│   │   │   ├── redis/   # Redis 服务
+│   │   │   └── scan/    # 网络扫描服务
+│   │   └── tasks/       # 定时任务
+│   └── uploads/         # 上传文件存储
+├── deploy/              # 部署相关配置
+│   ├── docker/         # Docker 相关配置
+│   │   ├── frontend/   # 前端 Docker 配置
+│   │   │   ├── Dockerfile
+│   │   │   └── nginx.conf
+│   │   └── backend/    # 后端 Docker 配置
+│   │       └── Dockerfile
+│   ├── docker-compose/ # Docker Compose 配置
+│   │   ├── docker-compose.yml        # 基础配置
+│   │   ├── docker-compose.dev.yml    # 开发环境
+│   │   └── docker-compose.prod.yml   # 生产环境
+│   └── scripts/        # 部署脚本
+│       ├── init.sh     # 初始化脚本
+│       └── backup.sh   # 备份脚本
+├── docs/               # 项目文档
+│   ├── api/           # API 文档
+│   ├── deployment/    # 部署文档
+│   └── development/   # 开发文档
+└── README.md          # 项目说明文档
 ```
 
 ## 环境要求
 
-- 前端
+### 开发环境
 
-  - Node.js 16+
-  - npm 或 yarn
+- Node.js 16+
+- Python 3.8+
+- MySQL 8.0+
+- Redis 6.0+
 
-- 后端
+### 生产环境
 
-  - Python 3.8+
-  - Flask 2.0+
-  - MySQL 8.0+
-  - Redis 6.0+（用于 Celery 和缓存）
-
-- 系统
-  - Linux/Mac/Windows
+- Docker 20.10.0+
+- Docker Compose 2.0.0+
+- 至少 4GB RAM
+- 至少 20GB 可用磁盘空间
 
 ---
 
-## 安装与运行
+## 快速开始
 
-### 1. 克隆代码库
+### 使用 Docker 部署（推荐）
 
+1. 克隆代码库
 ```bash
-git clone https://github.com/your-username/ipams.git
+git clone https://github.com/CarltonXu/ipams.git
 cd ipams
 ```
 
-### 2. 前端设置
-
+2. 配置环境变量
 ```bash
+# 复制并修改环境变量配置
+cp backend/.env.example backend/.env
+```
+
+3. 选择部署环境
+
+#### 开发环境
+```bash
+# 启动开发环境
+docker-compose -f deploy/docker-compose/docker-compose.dev.yml up -d
+
+# 查看服务状态
+docker-compose -f deploy/docker-compose/docker-compose.dev.yml ps
+
+# 查看服务日志
+docker-compose -f deploy/docker-compose/docker-compose.dev.yml logs -f
+```
+
+#### 生产环境
+```bash
+# 进入部署脚本目录
+cd deploy/scripts
+
+# 添加执行权限
+chmod +x init.sh backup.sh
+
+# 初始化环境
+./init.sh
+```
+
+4. 访问服务
+- 前端：http://localhost
+- 后端 API：http://localhost:5000
+
+### 维护操作
+
+#### 数据备份
+```bash
+cd deploy/scripts
+./backup.sh
+```
+
+#### 服务管理
+```bash
+# 开发环境
+# 重启服务
+docker-compose -f deploy/docker-compose/docker-compose.dev.yml restart
+
+# 停止服务
+docker-compose -f deploy/docker-compose/docker-compose.dev.yml down
+
+# 生产环境
+# 重启服务
+docker-compose -f deploy/docker-compose/docker-compose.prod.yml restart
+
+# 停止服务
+docker-compose -f deploy/docker-compose/docker-compose.prod.yml down
+```
+
+### 手动部署
+
+#### 前端设置
+```bash
+cd frontend
+
 # 安装依赖
 npm install
 
@@ -104,98 +206,96 @@ npm run dev
 npm run build
 ```
 
-前端服务将在 http://localhost:5173 运行（开发模式）。
-
-### 3. 后端设置
-
-- 创建并激活虚拟环境
-
+#### 后端设置
 ```bash
 cd backend
+
+# 创建虚拟环境
 python3 -m venv .venv
-source .venv/bin/activate   # Windows 用户执行 .venv\Scripts\activate
-```
+source .venv/bin/activate  # Windows: .venv\Scripts\activate
 
-- 安装依赖
-
-```bash
+# 安装依赖
 pip install -r requirements.txt
-```
 
-- 配置环境变量
-
-复制 `.env.example` 到 `.env` 并修改配置：
-
-```bash
+# 配置环境变量
 cp .env.example .env
-# 编辑 .env 文件，设置数据库连接等信息
-```
+# 编辑 .env 文件
 
-- 安装并启动 Redis
-
-```bash
-# macOS (使用 Homebrew)
-brew install redis
-brew services start redis
-
-# Ubuntu/Debian
-sudo apt-get install redis-server
-sudo systemctl start redis-server
-sudo systemctl enable redis-server
-
-# Windows
-# 下载 Redis for Windows: https://github.com/microsoftarchive/redis/releases
-# 安装并启动 Redis 服务
-```
-
-- 初始化数据库
-
-```bash
+# 初始化数据库
 flask db upgrade
-```
 
-- 创建管理员用户
-
-```bash
+# 创建管理员用户
 python create_user.py
-```
 
-- 启动服务
-
-```bash
-# 启动 Flask 应用
+# 启动服务
 python run.py
-
-# 启动 Celery 工作进程（新终端）
-python start_celery.py
 ```
 
-后端服务默认将在 http://127.0.0.1:5000 运行。
-
 ---
 
-## 使用指南
+## 项目文档
 
-1. 打开浏览器访问 http://localhost:5173（开发模式）
-2. 登录系统：
+详细的文档可以在 `docs` 目录下找到：
 
-   - 使用管理员账户登录（通过 create_user.py 创建）
-   - 普通用户可通过管理员在系统中创建
-
-3. 开始添加、标注和管理 IP 地址资源
-
----
+- `docs/api/` - API 接口文档
+- `docs/deployment/` - 部署相关文档
+- `docs/development/` - 开发指南
 
 ## 开发计划
 
-- [x] IP 地址扫描功能
-- [x] IP 地址认领和标注
-- [x] 用户权限管理
-- [x] 多语言支持
-- [x] 高级搜索和过滤功能
-- [ ] 支持导入/导出 IP 地址数据
-- [ ] 网络流量监控和可视化
-- [ ] API 文档自动生成
+### 已完成功能
+- [x] 用户认证与授权
+  - 用户注册登录
+  - 角色权限管理
+  - 用户管理界面
+- [x] IP 地址管理
+  - 子网管理
+  - IP 地址分配
+  - 使用状态追踪
+- [x] 网络扫描
+  - 定时扫描任务
+  - 扫描结果管理
+  - 设备发现
+- [x] 系统配置
+  - 基础配置管理
+  - 扫描策略配置
+  - 通知设置
+- [x] 任务管理
+  - 任务创建与调度
+  - 任务执行状态
+  - 任务历史记录
+- [x] 通知系统
+  - 通知历史记录
+  - 通知配置
+  - 通知模板
+
+### 开发中功能
+- [ ] 仪表盘
+  - 资源使用统计
+  - 网络状态概览
+  - 告警信息展示
+- [ ] 策略管理
+  - 访问控制策略
+  - 扫描策略
+  - 通知策略
+- [ ] 高级搜索
+  - 多条件组合查询
+  - 结果导出
+  - 自定义过滤
+
+### 计划功能
+- [ ] 数据可视化
+  - 网络拓扑图
+  - 资源使用趋势
+  - 性能监控图表
+- [ ] 批量操作
+  - 批量导入导出
+  - 批量配置下发
+  - 模板管理
+- [ ] API 文档
+  - Swagger 集成
+  - 接口测试工具
+  - 使用示例
 
 ## 贡献指南
 
@@ -207,22 +307,10 @@ python start_celery.py
 4. 推送到分支：`git push origin feature/your-feature-name`
 5. 提交 Pull Request
 
-提交 Pull Request 前，请确保：
-
-- 代码通过 Lint 检查
-- 包含充分的单元测试
-- 更新相关文档
-
----
-
 ## 联系我们
-
-如果在使用中遇到问题，欢迎通过以下方式联系我们：
 
 - 提交 Issue：GitHub Issues
 - 邮件：support@yourcompany.com
-
----
 
 ## 开源协议
 
