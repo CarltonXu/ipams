@@ -76,7 +76,7 @@ const resetForm = () => {
 
 // 提交认领操作
 const handleClaim = async () => {
-  if (!validateForm()) return;
+  if (!validateForm() || !props.ip) return;
 
   loading.value = true;
   try {

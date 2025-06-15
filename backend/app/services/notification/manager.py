@@ -44,7 +44,7 @@ class NotificationManager:
     def notify_user(self, user, message):
         """Send notification to user through available channels"""
         # 检查邮件通知是否启用
-        if user.email and self._get_config('emailConfig').get('enabled') == 'true':
+        if user.email and self._get_config('emailConfig').get('enabled'):
             smtp_config = {
                 'server': self._get_config('emailConfig').get('smtpServer'),
                 'username': self._get_config('emailConfig').get('smtpUsername'),
@@ -55,7 +55,7 @@ class NotificationManager:
                 self.email_notifier.send(user.email, message, smtp_config=smtp_config)
         
         # 检查微信通知是否启用
-        if user.wechat_id and self._get_config('wechatConfig').get('enabled') == 'true':
+        if user.wechat_id and self._get_config('wechatConfig').get('enabled'):
             webhook_url = self._get_config('wechatConfig').get('webhookUrl')
             if webhook_url:
                 self.wechat_notifier.send(user.wechat_id, message, webhook_url)

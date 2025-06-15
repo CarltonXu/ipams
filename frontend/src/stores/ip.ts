@@ -111,7 +111,7 @@ export const useIPStore = defineStore('ip', {
       assigned_user_id?: string;
     }) {
       try {
-        await axios.post(`${API_CONFIG.BASE_API_URL}${API_CONFIG.ENDPOINTS.IP.UPDATE()}`, data);
+        await axios.post(`${API_CONFIG.BASE_API_URL}${API_CONFIG.ENDPOINTS.IP.CLAIM(ipId)}`, data);
         await this.fetchAllIPs(); // 更新列表
       } catch (err: any) {
         this.error = err.message;
