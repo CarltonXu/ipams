@@ -108,9 +108,19 @@ export const useTaskStore = defineStore('Task', {
     },
 
     // 获取任务状态
-    async getJobStatus(jobId: string) {
+    async getJobStatus(jobId: string, params?: { page?: number; pageSize?: number }) {
       try {
-        const { data } = await axios.get(`${API_CONFIG.BASE_API_URL}${API_CONFIG.ENDPOINTS.TASK.JOBS(jobId)}`);
+        const queryParams = new URLSearchParams();
+        if (params?.page) {
+          queryParams.append('page', String(params.page));
+        }
+        if (params?.pageSize) {
+          queryParams.append('page_size', String(params.pageSize));
+        }
+
+        const { data } = await axios.get(
+          `${API_CONFIG.BASE_API_URL}${API_CONFIG.ENDPOINTS.TASK.JOBS(jobId)}${queryParams.toString() ? '?' + queryParams.toString() : ''}`
+        );
         this.currentJob = data;
         return data;
       } catch (error: any) {

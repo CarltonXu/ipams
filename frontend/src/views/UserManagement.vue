@@ -73,7 +73,14 @@
             <el-switch v-model="scope.row.is_admin" disabled />
           </template>
         </el-table-column>
-        <el-table-column :label="$t('user.management.table.columns.actions')" width="220">
+        <el-table-column prop="is_active" :label="$t('user.management.table.columns.isActive')" width="120">
+          <template v-slot="scope">
+            <el-tag :type="scope.row.is_active ? 'success' : 'danger'">
+              {{ scope.row.is_active ? t('user.management.status.active') : t('user.management.status.disable') }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column :label="$t('user.management.table.columns.actions')" width="280">
           <template v-slot="scope">
             <el-button
               @click="openUserDialog(scope.row)"
@@ -83,10 +90,19 @@
               <el-icon><Edit /></el-icon> {{ $t('user.management.buttons.edit') }}
             </el-button>
             <el-button
+              @click="toggleUserStatus(scope.row)"
+              size="small"
+              :type="scope.row.is_active ? 'warning' : 'success'"
+              :disabled="scope.row.id === authStore.user?.id"
+            >
+              <el-icon><Switch /></el-icon>
+              {{ scope.row.is_active ? t('user.management.buttons.deactivate') : t('user.management.buttons.activate') }}
+            </el-button>
+            <el-button
               @click="deleteUser(scope.row)"
               size="small"
               type="danger"
-              :disabled="scope.row.id === authStore.user.id"
+              :disabled="scope.row.id === authStore.user?.id"
             >
               <el-icon><Delete /></el-icon> {{ $t('user.management.buttons.delete') }}
             </el-button>
@@ -153,6 +169,9 @@
         </el-form-item>
         <el-form-item :label="$t('user.management.dialog.labels.isAdmin')" prop="is_admin">
           <el-switch v-model="currentUser.is_admin" />
+        </el-form-item>
+        <el-form-item :label="$t('user.management.dialog.labels.isActive')" prop="is_active">
+          <el-switch v-model="currentUser.is_active" />
         </el-form-item>
       </el-form>
       <div slot="footer" class="dialog-footer">
@@ -225,7 +244,7 @@ import { reactive, computed, onMounted, ref, watch, h } from 'vue';
 import { useUserStore } from '../stores/user';
 import { useAuthStore } from '../stores/auth';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { Edit, Delete, Search } from '@element-plus/icons-vue';
+import { Edit, Delete, Search, Switch } from '@element-plus/icons-vue';
 import { useI18n } from 'vue-i18n';
 import { debounce } from 'lodash';
 
@@ -250,6 +269,7 @@ const currentUser = reactive({
   password: '',
   wechat_id: '',
   is_admin: false,
+  is_active: true
 });
 
 // 表单验证规则
@@ -260,6 +280,7 @@ const formRules = {
     { type: 'email', message: t('user.management.validation.email.invalid'), trigger: 'blur' },
   ],
   password: [{ required: true, message: t('user.management.validation.password'), trigger: 'blur', min: 6 }],
+  is_active: [{ required: true, message: t('user.management.validation.status'), trigger: 'change' }]
 };
 
 // 分页相关状态
@@ -272,6 +293,21 @@ const pagination = ref({
 
 // 表格数据
 const tableData = ref([]);
+
+// 定义接口
+interface User {
+  id: string;
+  username: string;
+  email: string;
+  wechat_id?: string;
+  is_admin: boolean;
+  is_active: boolean;
+}
+
+interface IP {
+  id: string;
+  ip_address: string;
+}
 
 // 加载用户数据
 const loadUsersData = async () => {
@@ -342,6 +378,7 @@ const resetUserForm = (user?: any) => {
     password: '',
     wechat_id: '',
     is_admin: false,
+    is_active: true
   });
 };
 
@@ -365,6 +402,32 @@ const saveUser = async () => {
   } catch (error: any) {
     ElMessage.error(error.message || t('user.management.messages.saveError'));
   }
+};
+
+// 批量删除相关状态
+const selectedUsers = ref<User[]>([]);
+const batchDeleteDialogVisible = ref(false);
+const batchDeleteLoading = ref(false);
+const usersWithIPs = ref<Array<{ id: string; username: string; ips: IP[] }>>([]);
+
+// 处理表格选择变化
+const handleSelectionChange = (selection: User[]) => {
+  selectedUsers.value = selection;
+};
+
+// 判断是否可以批量删除
+const canBatchDelete = computed(() => {
+  return selectedUsers.value.length > 0 && 
+         !selectedUsers.value.some(user => user.id === authStore.user?.id); // 不能删除自己
+});
+
+// 单个删除用户
+const deleteUser = async (user: User) => {
+  if (user.id === authStore.user?.id) {
+    ElMessage.error(t('user.management.messages.deleteSelfError'));
+    return;
+  }
+  await deleteUsers([user], false);
 };
 
 // 抽象删除用户的公共逻辑
@@ -463,15 +526,6 @@ const deleteUsers = async (users: User[], isBatch: boolean = false) => {
   }
 };
 
-// 单个删除用户
-const deleteUser = async (user: User) => {
-  if (user.id === authStore.user.id) {
-    ElMessage.error(t('user.management.messages.deleteSelfError'));
-    return;
-  }
-  await deleteUsers([user], false);
-};
-
 // 批量删除用户
 const handleBatchDelete = async () => {
   if (!canBatchDelete.value) return;
@@ -495,22 +549,33 @@ const confirmBatchDelete = async () => {
   }
 };
 
-// 批量删除相关状态
-const selectedUsers = ref<User[]>([]);
-const batchDeleteDialogVisible = ref(false);
-const batchDeleteLoading = ref(false);
-const usersWithIPs = ref<Array<{ id: string; username: string; ips: IP[] }>>([]);
+// 切换用户状态
+const toggleUserStatus = async (user: any) => {
+  try {
+    const newStatus = !user.is_active;
+    const confirmMessage = newStatus 
+      ? t('user.management.messages.confirmActivate', { username: user.username })
+      : t('user.management.messages.confirmDeactivate', { username: user.username });
 
-// 处理表格选择变化
-const handleSelectionChange = (selection: User[]) => {
-  selectedUsers.value = selection;
+    await ElMessageBox.confirm(
+      confirmMessage,
+      t('common.warning'),
+      {
+        confirmButtonText: t('common.confirm'),
+        cancelButtonText: t('common.cancel'),
+        type: 'warning'
+      }
+    );
+
+    await userStore.updateUserStatus(user.id, newStatus);
+    ElMessage.success(t('user.management.messages.statusUpdateSuccess'));
+    await loadUsersData();
+  } catch (error: any) {
+    if (error !== 'cancel') {
+      ElMessage.error(error.message || t('user.management.messages.statusUpdateError'));
+    }
+  }
 };
-
-// 判断是否可以批量删除
-const canBatchDelete = computed(() => {
-  return selectedUsers.value.length > 0 && 
-         !selectedUsers.value.some(user => user.id === authStore.user.id); // 不能删除自己
-});
 </script>
 
 <style scoped>
@@ -680,5 +745,9 @@ const canBatchDelete = computed(() => {
   flex-wrap: wrap;
   gap: 0.5rem;
   margin-top: 0.5rem;
+}
+
+.el-tag {
+  text-transform: capitalize;
 }
 </style>

@@ -1,6 +1,26 @@
 export default {
   dashboard: {
-    title: 'Dashboard',
+    title: '概览',
+    subtitle: '系统概览',
+    viewAll: '查看更多',
+    autoRefresh: '自动刷新',
+    systemInfo: {
+      title: '系统信息',
+      platform: '操作系统',
+      platform_version: '系统版本',
+      processor: '处理器',
+      python_version: 'Python版本',
+      uptime: '运行时间',
+      days: '天',
+      hours: '小时',
+      minutes: '分钟'
+    },
+    charts: {
+      resourceUsage: "资源使用趋势",
+      jobStatus: "任务状态分布",
+      line: "折线图",
+      bar: "柱状图"
+    },
     stats: {
       total_ips: '总IP地址',
       claimed_ips: '已认领IP地址',
@@ -32,6 +52,13 @@ export default {
         result: '结果',
         created_at: '创建时间',
         machines_found: '扫描主机数量'
+      },
+      status: {
+        running: '运行中',
+        completed: '已完成',
+        failed: '失败',
+        pending: '等待中',
+        cancelled: '已取消',
       }
     },
     refresh: {
@@ -89,7 +116,8 @@ export default {
     loginError: '登录失败',
     invalidUsernameOrPassword: '用户名或密码错误',
     tokenExpired: '登录过期，请重新登录',
-    invalidCaptcha: '验证码错误或过期',
+    invalidCaptcha: '验证码错误或已过期',
+    accountDisabled: '账号已被禁用，请联系管理员',
     title: 'IPAM系统平台',
     subtitle: '轻松监控和管理您的网络',
     registerSubtitle: '创建一个账户来管理您的网络',
@@ -100,18 +128,16 @@ export default {
     registerSuccess: '注册成功',
     registerError: '注册失败',
     validation: {
-      username: '请输入用户名',
-      usernameLength: '用户名长度至少为3个字符',
-      email: {
-        required: '请输入邮箱',
-        invalid: '请输入有效的邮箱地址'
-      },
-      password: '请输入密码',
-      passwordLength: '密码长度至少为6个字符',
-      confirmPassword: '请确认密码',
-      passwordMismatch: '两次输入的密码不一致',
+      missingFields: '请填写所有必填字段',
       captchaRequired: '请输入验证码',
-      captchaInvalid: '验证码错误'
+      usernameRequired: '请输入用户名',
+      usernameLength: '用户名长度至少3位',
+      passwordRequired: '请输入密码',
+      emailRequired: '请输入邮箱',
+      emailInvalid: '请输入有效的邮箱地址',
+      passwordMismatch: '两次输入的密码不一致',
+      passwordLength: '密码长度至少为6位',
+      PasswordConfirm: '请再次输入密码',
     },
     captcha: '验证码',
     captchaPlaceholder: '请输入验证码',
@@ -133,6 +159,10 @@ export default {
       button: {
         add: '添加用户'
       },
+      status: {
+        active: '活跃',
+        disable: '禁用',
+      },
       table: {
         columns: {
           uuid: 'UUID',
@@ -140,6 +170,7 @@ export default {
           email: '邮箱',
           createdAt: '创建时间',
           isAdmin: '管理员',
+          isActive: '状态',
           actions: '操作'
         },
         noData: '暂无用户数据'
@@ -151,7 +182,8 @@ export default {
           email: '邮箱',
           password: '密码',
           wechatId: '微信 ID',
-          isAdmin: '管理员'
+          isAdmin: '管理员',
+          isActive: '活跃',
         },
         placeholders: {
           username: '请输入用户名',
@@ -174,6 +206,8 @@ export default {
         save: '保存',
         cancel: '取消',
         add: '添加用户',
+        deactivate: '禁用',
+        activate: '激活',
         batchDelete: '批量删除 {count} 用户',
         batchDeleteConfirm: '确定删除 {count} 用户吗？'
       },
@@ -187,6 +221,10 @@ export default {
         batchDeleteConfirm: '确定删除 {count} 用户吗？',
         batchDeleteSuccess: '用户删除成功',
         deleteSelfError: '不能删除自己',
+        confirmActivate: '确定激活用户 {username} 吗?',
+        confirmDeactivate: '确定禁用用户 {username} 吗?',
+        statusUpdateSuccess: '用户更新状态成功',
+        statusUpdatefailed: '用户更新状态失败'
       },
       validation: {
         username: '请输入用户名',
@@ -401,6 +439,7 @@ export default {
       typeRequired: '请选择策略类型',
       subnets: '网段',
       startTimePlaceholder: '请输入计划开始时间',
+      details: '策略详情',
       scanParams: {
         title: "扫描参数配置",
         help: "配置扫描策略，不同的扫描类型适用于不同的场景：<br>- 默认扫描：适合日常网络监控<br>- 快速扫描：适合快速了解网络状态<br>- 深度扫描：适合详细分析网络情况<br>- 漏洞扫描：适合安全审计",

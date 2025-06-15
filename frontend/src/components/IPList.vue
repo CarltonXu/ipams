@@ -70,7 +70,7 @@
           v-loading="ipStore.loading"
           :data="tableData"
           style="width: 100%"
-          :height="tableHeight"
+          :max-height="tableHeight"
           :empty-text="$t('ip.noData')"
           class="ip-table"
           stripe
@@ -126,20 +126,22 @@
             </template>
           </el-table-column>
         </el-table>
-      </div>
 
-      <!-- 分页 -->
-      <el-pagination
-        v-model:current-page="pagination.currentPage"
-        v-model:page-size="pagination.pageSize"
-        :total="pagination.total"
-        :page-sizes="[10, 20, 50, 100]"
-        background
-        layout="total, sizes, prev, pager, next, jumper"
-        @size-change="handleSizeChange"
-        @current-change="handlePageChange"
-        class="pagination"
-      />
+        <!-- 分页 -->
+        <div class="pagination-wrapper">
+          <el-pagination
+            v-model:current-page="pagination.currentPage"
+            v-model:page-size="pagination.pageSize"
+            :total="pagination.total"
+            :page-sizes="[10, 20, 50, 100]"
+            background
+            layout="total, sizes, prev, pager, next, jumper"
+            @size-change="handleSizeChange"
+            @current-change="handlePageChange"
+            class="pagination"
+          />
+        </div>
+      </div>
 
       <!-- Claim IP Dialog -->
       <ClaimIPDialog
@@ -212,11 +214,17 @@ const tableColumns = ref([
   { prop: 'last_scanned', translationKey: 'lastScanned', minWidth: 180, sortable: true, align: 'center' },
 ]);
 
-const tableHeight = ref(window.innerHeight - 394);
-
-const updateTableHeight = () => {
-  tableHeight.value = window.innerHeight - 394;
-};
+// 修改表格高度计算逻辑
+const tableHeight = computed(() => {
+  // 根据数据量动态计算表格高度
+  const rowHeight = 53; // 每行的高度（包含边框）
+  const headerHeight = 40; // 表头高度
+  const minHeight = 200; // 最小高度
+  const maxHeight = window.innerHeight - 390; // 最大高度（减去其他元素的高度）
+  
+  const contentHeight = tableData.value.length * rowHeight + headerHeight;
+  return Math.min(Math.max(contentHeight, minHeight), maxHeight);
+});
 
 // 可搜索的列
 const searchableColumns = computed(() => tableColumns.value.filter(col => 
@@ -233,14 +241,9 @@ const getColumnTranslationKey = (prop: string) => {
 onMounted(() => {
   if (isAuthenticated.value) {
     loadIPsData();
-    window.addEventListener('resize', updateTableHeight);
   } else {
     router.push('/login');
   }
-});
-
-onUnmounted(() => {
-  window.removeEventListener('resize', updateTableHeight);
 });
 
 // 映射状态到标签类型
@@ -465,10 +468,27 @@ const handleSizeChange = async (size: number) => {
 
 .table-container {
   position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
 }
 
 .ip-table {
-  margin-top: 20px;
+  flex: 1;
+  margin-bottom: 16px;
+}
+
+.pagination-wrapper {
+  display: flex;
+  justify-content: flex-end;
+  padding: 8px 0;
+  background-color: var(--el-bg-color);
+  border-top: 1px solid var(--el-border-color-lighter);
+}
+
+.pagination {
+  margin: 0;
 }
 
 @media (max-width: 768px) {
@@ -480,10 +500,5 @@ const handleSizeChange = async (size: number) => {
   .search-input, .status-filter {
     width: 100%;
   }
-}
-
-.pagination {
-  margin-top: 20px;
-  text-align: right;
 }
 </style>

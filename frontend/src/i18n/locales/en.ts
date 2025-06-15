@@ -1,6 +1,26 @@
 export default {
   dashboard: {
     title: 'Dashboard',
+    subtitle: 'System Overview',
+    viewAll: 'View All',
+    autoRefresh: 'Auto Refresh',
+    systemInfo: {
+      title: 'System Information',
+      platform: 'Operating platform',
+      platform_version: 'System Version',
+      processor: 'Processor',
+      python_version: 'Python Version',
+      uptime: 'Uptime',
+      days: 'days',
+      hours: 'hours',
+      minutes: 'minutes'
+    },
+    charts: {
+      resourceUsage: "Resource usage trend",
+      jobStatus: "Task status distribution",
+      line: "Line chart",
+      bar: "Bar chart"
+    },
     stats: {
       total_ips: 'Total IPs',
       claimed_ips: 'Claimed IPs',
@@ -32,6 +52,13 @@ export default {
         result: 'Result',
         created_at: 'Created At',
         machines_found: 'Machines Found',
+      },
+      status: {
+        running: 'Running',
+        completed: 'Completed',
+        failed: 'Failed',
+        pending: 'Pending',
+        cancelled: 'Cancelled',
       }
     },
     refresh: {
@@ -81,35 +108,36 @@ export default {
   auth: {
     login: 'Login',
     logout: 'Logout',
-    register: 'Register',
+    register: 'Register Now',
     username: 'Username',
     password: 'Password',
     email: 'Email',
-    loginSuccess: 'Login Successful',
-    loginError: 'Login Failed',
+    loginSuccess: 'Login successful',
+    loginError: 'Login failed',
     invalidUsernameOrPassword: 'Invalid username or password',
     tokenExpired: 'Login expired, please login again',
     invalidCaptcha: 'Invalid or expired captcha',
+    accountDisabled: 'Account has been disabled, please contact administrator',
     title: 'IPAM System Platform',
-    subtitle: 'Monitor and manage your network with ease',
+    subtitle: 'Easily monitor and manage your network',
     registerSubtitle: 'Create an account to manage your network',
-    noAccount: 'No account yet?',
+    noAccount: 'No account?',
     hasAccount: 'Already have an account?',
     confirmPassword: 'Confirm Password',
     confirmPasswordPlaceholder: 'Please enter password again',
-    registerSuccess: 'Register Successful',
-    registerError: 'Register Failed',
+    registerSuccess: 'Registration successful',
+    registerError: 'Registration failed',
     validation: {
-      username: 'Please enter username',
-      usernameLength: 'Username must be at least 3 characters long',
-      email: {
-        required: 'Please enter email',
-        invalid: 'Please enter a valid email address'
-      },
-      password: 'Please enter password',
-      passwordLength: 'Password must be at least 6 characters long',
-      confirmPassword: 'Please confirm password',
-      passwordMismatch: 'Passwords do not match'
+      missingFields: 'Please fill in all required fields',
+      captchaRequired: 'Please enter the captcha',
+      usernameRequired: 'Please enter username',
+      usernameLength: 'Username must be at least 3 characters',
+      passwordRequired: 'Please enter password',
+      emailRequired: 'Please enter email',
+      emailInvalid: 'Please enter a valid email address',
+      passwordMismatch: 'Passwords do not match',
+      passwordLength: 'Password must be at least 6 characters',
+      PasswordConfirm: 'Password input again',
     },
     captcha: 'Captcha',
     captchaPlaceholder: 'Please enter captcha',
@@ -131,6 +159,10 @@ export default {
       button: {
         add: 'Add User'
       },
+      status: {
+        active: 'active',
+        disable: 'disabled',
+      },
       table: {
         columns: {
           uuid: 'UUID',
@@ -138,6 +170,7 @@ export default {
           email: 'Email',
           createdAt: 'Created At',
           isAdmin: 'Admin',
+          isActive: 'Status',
           actions: 'Actions'
         },
         noData: 'No user data'
@@ -149,7 +182,8 @@ export default {
           email: 'Email',
           password: 'Password',
           wechatId: 'WeChat ID',
-          isAdmin: 'Admin'
+          isAdmin: 'Admin',
+          isActive: 'Active',
         },
         placeholders: {
           username: 'Enter username',
@@ -172,6 +206,8 @@ export default {
         save: 'Save',
         cancel: 'Cancel',
         add: 'Add User',
+        deactivate: 'disable',
+        activate: 'active',
         batchDelete: 'Batch Delete {count} Users',
         batchDeleteConfirm: 'Are you sure to delete {count} users?'
       },
@@ -184,7 +220,11 @@ export default {
         hasAssociatedIPs: 'Users are still associated with IP addresses, please reclaim the IP addresses first, and then delete the users.',
         batchDeleteConfirm: 'Are you sure to delete {count} users?',
         batchDeleteSuccess: 'Users deleted successfully',
-        deleteSelfError: 'Cannot delete yourself'
+        deleteSelfError: 'Cannot delete yourself',
+        confirmActivate: 'Are you sure to acitve user {username}?',
+        confirmDeactivate: 'Are you sure to disable user {username}?',
+        statusUpdateSuccess: 'User status updated successfully',
+        statusUpdatefailed: 'User status update failed'
       },
       validation: {
         username: 'Username is required',
@@ -476,6 +516,7 @@ export default {
       typeRequired: 'Please select policy type',
       subnets: 'Subnets',
       startTimePlaceholder: 'Please select the start time for schedule task',
+      details: 'Policy Details',
       scanParams: {
         title: "Scan Parameters",
         help: "Configure scan strategy, different scan types are suitable for different scenarios:<br>- Default Scan: Suitable for daily network monitoring<br>- Quick Scan: Suitable for quick network status overview<br>- Intense Scan: Suitable for detailed network analysis<br>- Vulnerability Scan: Suitable for security auditing",

@@ -124,6 +124,10 @@ def create_job(current_user):
 def get_job_status(current_user, job_id):
     """Get scan job status"""
     try:
+        # 获取分页参数
+        page = request.args.get('page', 1, type=int)
+        page_size = request.args.get('page_size', 10, type=int)
+        
         # 验证任务是否存在且属于当前用户
         job = ScanJob.query.filter_by(
             id=job_id,
@@ -145,10 +149,22 @@ def get_job_status(current_user, job_id):
             'error': task_status.get('error')
         }
         
+        # 获取扫描结果并分页
+        results_query = ScanResult.query.filter_by(job_id=job_id)
+        total = results_query.count()
+        results = results_query.order_by(ScanResult.created_at.desc()) \
+                             .offset((page - 1) * page_size) \
+                             .limit(page_size) \
+                             .all()
+        
         return jsonify({
             'job_id': job_id,
             'status': serializable_status,
-            'job': job.to_dict()
+            'job': job.to_dict(),
+            'results': [result.to_dict() for result in results],
+            'total': total,
+            'page': page,
+            'page_size': page_size
         }), 200
         
     except Exception as e:

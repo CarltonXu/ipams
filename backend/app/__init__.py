@@ -19,6 +19,7 @@ from app.core.middleware import register_error_handlers
 from app.core.error.errors import DatabaseError
 from app.services.notification import NotificationManager
 from app.scripts.init_notification_templates import init_notification_templates
+from app.tasks.system_metrics import metrics_scheduler
 
 # 配置日志
 logging.basicConfig(
@@ -111,6 +112,9 @@ def init_extensions(app):
         # 初始化调度器
         scheduler.init_app(app)
         logger.info("Scheduler initialized successfully")
+
+        # 初始化系统监控调度器
+        metrics_scheduler.init_app(app)
         
         # 初始化通知管理器
         notification_manager.init_app(app)
@@ -179,8 +183,5 @@ def create_app(config=None):
         # 初始化通知模板
         init_notification_templates()
         logger.info("Notification templates initialized successfully")
-    
-    # 在应用退出时关闭任务管理器
-    atexit.register(task_manager.shutdown)
     
     return app

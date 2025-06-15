@@ -21,7 +21,7 @@ class User(db.Model):
     wechat_id = db.Column(db.String(255), unique=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     is_admin = db.Column(db.Boolean, default=False)
-    status = db. Column(db.Boolean, default=False)
+    is_active = db. Column(db.Boolean, default=True)
     deleted = db.Column(db.Boolean, default=False)
 
     # 添加关系
@@ -40,13 +40,12 @@ class User(db.Model):
         return {
             'id': self.id,
             'username': self.username,
-            'status': self.status,
             'email': self.email,
             'avatar': self.avatar,
             'wechat_id': self.wechat_id,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'is_admin': self.is_admin,
-            'status': self.status,
+            'is_active': self.is_active,
             'deleted': self.deleted
         }
 
@@ -87,6 +86,43 @@ class IP(db.Model):
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,
             'assigned_user': self.assigned_user.to_dict() if self.assigned_user else None
         }
+
+class SystemMetrics(db.Model):
+    __tablename__ = 'system_metrics'
+
+    id = db.Column(db.Integer, primary_key=True)
+    timestamp = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    cpu_usage = db.Column(db.Float, nullable=False)
+    memory_usage = db.Column(db.Float, nullable=False)
+    disk_usage = db.Column(db.Float, nullable=False)
+    memory_total = db.Column(db.BigInteger, nullable=False)  # 总内存（字节）
+    memory_used = db.Column(db.BigInteger, nullable=False)   # 已用内存（字节）
+    disk_total = db.Column(db.BigInteger, nullable=False)    # 总磁盘空间（字节）
+    disk_used = db.Column(db.BigInteger, nullable=False)     # 已用磁盘空间（字节）
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'timestamp': self.timestamp.isoformat(),
+            'cpu_usage': self.cpu_usage,
+            'memory_usage': self.memory_usage,
+            'disk_usage': self.disk_usage,
+            'memory_total': self.memory_total,
+            'memory_used': self.memory_used,
+            'disk_total': self.disk_total,
+            'disk_used': self.disk_used
+        }
+
+    @classmethod
+    def get_latest_metrics(cls):
+        return cls.query.order_by(cls.timestamp.desc()).first()
+
+    @classmethod
+    def get_metrics_history(cls, hours=24):
+        """获取指定小时数内的监控数据"""
+        from datetime import datetime, timedelta
+        start_time = datetime.utcnow() - timedelta(hours=hours)
+        return cls.query.filter(cls.timestamp >= start_time).order_by(cls.timestamp.asc()).all() 
 
 class ActionLog(db.Model):
     __tablename__ = 'action_logs'

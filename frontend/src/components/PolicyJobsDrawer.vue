@@ -34,7 +34,7 @@
     </template>
 
     <el-tabs v-model="activeTab" class="policy-tabs">
-      <el-tab-pane :label="t('scan.policy.details.title')" name="details">
+      <el-tab-pane :label="t('scan.policy.details')" name="details">
         <div v-loading="loading" class="policy-details">
           <el-descriptions :column="1" border>
             <el-descriptions-item :label="t('scan.policy.show.columns.name')">
@@ -131,6 +131,7 @@
           <el-table
             :data="jobs"
             border
+            height="670px"
             style="width: 100%"
           >
             <el-table-column
@@ -254,6 +255,19 @@
               </template>
             </el-table-column>
           </el-table>
+          
+          <!-- 添加分页组件 -->
+          <div class="pagination-container">
+            <el-pagination
+              v-model:current-page="currentPage"
+              v-model:page-size="pageSize"
+              :page-sizes="[10, 20, 50, 100]"
+              :total="total"
+              layout="total, sizes, prev, pager, next, jumper"
+              @size-change="handleSizeChange"
+              @current-change="handleCurrentChange"
+            />
+          </div>
         </div>
       </el-tab-pane>
     </el-tabs>
@@ -333,6 +347,11 @@ const visible = computed({
   set: (value) => emit('update:modelValue', value)
 })
 
+// 添加分页相关的响应式变量
+const currentPage = ref(1)
+const pageSize = ref(10)
+const total = ref(0)
+
 // 获取策略详情
 const fetchPolicyDetails = async () => {
   try {
@@ -362,11 +381,16 @@ const fetchPolicyDetails = async () => {
 const fetchJobs = async () => {
   try {
     loading.value = true
-    const response = await policyStore.fetchPolicyJobs(props.policyId)
+    const response = await policyStore.fetchPolicyJobs(props.policyId, {
+      page: currentPage.value,
+      page_size: pageSize.value
+    })
     jobs.value = response.jobs || []
+    total.value = response.pagination?.total || 0
   } catch (error) {
     ElMessage.error(t('scan.policy.jobs.fetchError'))
     jobs.value = []
+    total.value = 0
   } finally {
     loading.value = false
   }
@@ -539,7 +563,7 @@ const setupAutoRefresh = () => {
   if (refreshInterval.value > 0) {
     refreshTimer = setInterval(() => {
       fetchJobs()
-    }, refreshInterval.value * 3000)
+    }, refreshInterval.value * 1000)
   }
 }
 
@@ -632,6 +656,19 @@ onUnmounted(() => {
   clearRefreshTimer()
   clearBackgroundRefresh()
 })
+
+// 处理页码变化
+const handleCurrentChange = (page: number) => {
+  currentPage.value = page
+  fetchJobs()
+}
+
+// 处理每页条数变化
+const handleSizeChange = (size: number) => {
+  pageSize.value = size
+  currentPage.value = 1
+  fetchJobs()
+}
 </script>
 
 <style scoped>
@@ -788,5 +825,11 @@ onUnmounted(() => {
 :deep(.el-drawer.ltr, .el-drawer.rtl) {
   top: 65px !important;
   height: calc(100% - 65px) !important;
+}
+
+.pagination-container {
+  margin-top: 20px;
+  display: flex;
+  justify-content: flex-end;
 }
 </style>

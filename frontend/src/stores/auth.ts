@@ -20,8 +20,8 @@ export const useAuthStore = defineStore('auth', {
     async login(credentials: LoginCredentials) {
       try {
         const response = await axios.post(`${API_CONFIG.BASE_API_URL}${API_CONFIG.ENDPOINTS.AUTH.LOGIN}`, credentials);
-        const { token, user } = response.data;
-
+        const { token, user } = response.data.data;
+        
         this.token = token;
         this.user = user;
         localStorage.setItem('token', token);
@@ -30,12 +30,14 @@ export const useAuthStore = defineStore('auth', {
         // Set token for all subsequent requests
         axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 
-        return user;
+        return response.data;
       } catch (error: any) {
-        if (error.response?.data?.message == 'Invalid username or password') {
-          throw new Error(t('auth.invalidUsernameOrPassword'));
+        if (error.response?.data) {
+          // 直接返回后端错误信息
+          throw error;
         } else {
-          throw new Error(t('auth.invalidCaptcha'));
+          // 网络错误等其他错误
+          throw new Error(t('auth.loginError'));
         }
       }
     },

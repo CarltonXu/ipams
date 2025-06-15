@@ -30,10 +30,11 @@ export const API_CONFIG = {
       AVATAR: '/user/avatar',
       PROFILE: '/user/profile',
       CHANGE_PASSWORD: '/user/change-password',
-      LIST_IPS: '/users/check-ips',
+      LIST_IPS: '/user/check-ips',
       LIST_BY_ID: (id: string) => `/user/${id}`,
       UPDATE: (id: string) => `/user/${id}`,
       DELETE: (id: string) => `/user/${id}`,
+      UPDATE_STATUS: (id: string) => `/user/${id}/status`,
     },
     DASHBOARD: {
       LIST: '/dashboard',

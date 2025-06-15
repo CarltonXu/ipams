@@ -25,6 +25,7 @@ export interface User {
   wechat_id?: string;
   created_at: string;
   is_admin: boolean;
+  status: 'active' | 'inactive' | 'suspended';
 }
 
 export interface AuthState {
@@ -49,4 +50,11 @@ export interface UpdateUser {
 export interface UpdateUserAvatar {
   id: string;
   avatar: File;
+}
+
+export interface UserResponse {
+  users: User[];
+  total: number;
+  page: number;
+  pages: number;
 }

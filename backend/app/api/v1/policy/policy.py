@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 from app.models.models import db, ScanPolicy, ScanSubnet, ScanJob
 from app.core.security.auth import token_required
 from sqlalchemy.exc import IntegrityError
@@ -381,38 +381,71 @@ def delete_policy(current_user, policy_id):
 @policy_bp.route('/policy/<policy_id>/jobs', methods=['GET'])
 @token_required
 def get_policy_jobs(current_user, policy_id):
+    """获取策略的任务列表"""
     try:
-        # 验证策略是否属于当前用户
-        policy = ScanPolicy.query.filter_by(
-            id=policy_id,
-            user_id=current_user.id,
-            deleted=False
-        ).first()
+        # 获取分页参数
+        page = request.args.get('page', 1, type=int)
+        page_size = request.args.get('page_size', 10, type=int)
         
+        # 获取排序参数
+        sort_by = request.args.get('sort_by', 'start_time')
+        sort_order = request.args.get('sort_order', 'desc')
+        
+        # 验证策略是否存在
+        policy = ScanPolicy.query.get(policy_id)
         if not policy:
-            return jsonify({'error': '策略不存在或无权访问'}), 404
-            
-        # 获取该策略的所有任务
-        jobs = ScanJob.query.filter_by(
-            policy_id=policy_id,
-            user_id=current_user.id
-        ).order_by(ScanJob.created_at.desc()).all()
+            return jsonify({
+                'code': 404,
+                'message': 'Policy not found',
+                'data': None
+            }), 404
+
+        # 构建查询
+        query = ScanJob.query.filter_by(policy_id=policy_id)
+        
+        # 应用排序
+        if sort_order == 'desc':
+            query = query.order_by(getattr(ScanJob, sort_by).desc())
+        else:
+            query = query.order_by(getattr(ScanJob, sort_by).asc())
+        
+        # 执行分页查询
+        pagination = query.paginate(page=page, per_page=page_size, error_out=False)
+        
+        # 准备返回数据
+        jobs = []
+        for job in pagination.items:
+            job_data = job.to_dict()
+            # 获取子网信息
+            subnet = ScanSubnet.query.get(job.subnet_id)
+            if subnet:
+                job_data['subnets'] = {
+                    'name': subnet.name,
+                    'subnet': subnet.subnet
+                }
+            jobs.append(job_data)
 
         return jsonify({
-            'jobs': [{
-                'id': job.id,
-                'status': job.status,
-                'progress': job.progress,
-                'machines_found': job.machines_found,
-                'start_time': job.start_time.isoformat() if job.start_time else None,
-                'end_time': job.end_time.isoformat() if job.end_time else None,
-                'error_message': job.error_message,
-                'subnets': job.subnet.to_dict() if job.subnet else None
-            } for job in jobs]
+            'code': 200,
+            'message': 'Success',
+            'data': {
+                'jobs': jobs,
+                'pagination': {
+                    'total': pagination.total,
+                    'page': page,
+                    'page_size': page_size,
+                    'pages': pagination.pages
+                }
+            }
         })
-        
+
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        current_app.logger.error(f"Error fetching policy jobs: {str(e)}")
+        return jsonify({
+            'code': 500,
+            'message': 'Internal server error',
+            'data': None
+        }), 500 
 
 # 获取所有定时任务信息
 @policy_bp.route('/policy/scheduler/jobs', methods=['GET'])
@@ -491,6 +524,7 @@ def update_policy_status(current_user, policy_id):
         )
         
         # 发送通知
+        import pdb;pdb.set_trace()
         send_notification(
             event=NotificationEvent.POLICY_STATUS_UPDATED,
             user=current_user,

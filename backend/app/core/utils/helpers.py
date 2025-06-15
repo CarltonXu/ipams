@@ -1,6 +1,6 @@
 from flask import request
 from PIL import Image, ImageDraw, ImageFont
-from app.models.models import db, ActionLog
+from app.models.models import db, ActionLog, SystemMetrics
 import re
 import uuid
 import random
@@ -8,6 +8,8 @@ import string
 import io
 import base64
 import psutil
+import platform
+import datetime
 
 def is_valid_email(email):
     email_regex = r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$'
@@ -34,14 +36,14 @@ def create_captcha_image(text):
     """创建验证码图片"""
     # 图片大小
     width = 120
-    height = 40
+    height = 30
     # 创建图片
     image = Image.new('RGB', (width, height), color='white')
     draw = ImageDraw.Draw(image)
     
     # 使用自定义字体
     try:
-        font = ImageFont.truetype('arial.ttf', 20)
+        font = ImageFont.truetype('arial.ttf', 30)
     except:
         font = ImageFont.load_default()
 
@@ -54,13 +56,13 @@ def create_captcha_image(text):
         draw.text(position, char, font=font, fill=color)
 
     # 添加干扰线
-    for _ in range(10):
+    for _ in range(5):
         start = (random.randint(0, width), random.randint(0, height))
         end = (random.randint(0, width), random.randint(0, height))
         draw.line([start, end], fill=(169, 169, 169), width=1)
 
     # 添加噪点
-    for _ in range(50):
+    for _ in range(30):
         position = (random.randint(0, width), random.randint(0, height))
         draw.point(position, fill=(169, 169, 169))
 
@@ -108,7 +110,74 @@ def get_system_metrics():
     disk_info = psutil.disk_usage('/')
 
     return {
-        'cpu_usage': cpu_usage,
-        'memory_usage': memory_info.percent,
-        'disk_usage': disk_info.percent
+        'cpu': cpu_usage,
+        'memory': memory_info.percent,
+        'disk': disk_info.percent
     }
+
+def get_system_metrics():
+    """获取系统资源使用情况"""
+    try:
+        # CPU 使用率
+        cpu_usage = psutil.cpu_percent(interval=1)
+        
+        # 内存使用情况
+        memory = psutil.virtual_memory()
+        memory_usage = memory.percent
+        memory_total = memory.total
+        memory_used = memory.used
+        
+        # 磁盘使用情况
+        disk = psutil.disk_usage('/')
+        disk_usage = disk.percent
+        disk_total = disk.total
+        disk_used = disk.used
+        
+        # 创建新的监控记录
+        metrics = SystemMetrics(
+            cpu_usage=cpu_usage,
+            memory_usage=memory_usage,
+            disk_usage=disk_usage,
+            memory_total=memory_total,
+            memory_used=memory_used,
+            disk_total=disk_total,
+            disk_used=disk_used
+        )
+        
+        db.session.add(metrics)
+        db.session.commit()
+        
+        return metrics.to_dict()
+    except Exception as e:
+        db.session.rollback()
+        raise e
+
+def get_system_info():
+    """获取系统基本信息"""
+    # 获取系统启动时间
+    boot_time = datetime.datetime.fromtimestamp(psutil.boot_time())
+    uptime = datetime.datetime.now() - boot_time
+    
+    # 返回原始数据
+    return {
+        'platform': platform.system(),
+        'platform_version': platform.version(),
+        'processor': platform.processor(),
+        'python_version': platform.python_version(),
+        'uptime': {
+            'days': uptime.days,
+            'hours': uptime.seconds // 3600,
+            'minutes': (uptime.seconds % 3600) // 60
+        }
+    }
+
+def cleanup_old_metrics(days=7):
+    """清理旧的监控数据"""
+    from datetime import datetime, timedelta
+    try:
+        cutoff_date = datetime.utcnow() - timedelta(days=days)
+        SystemMetrics.query.filter(SystemMetrics.timestamp < cutoff_date).delete()
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        raise e 

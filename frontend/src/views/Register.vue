@@ -131,19 +131,19 @@ const form = ref<RegisterCredentials>({
 
 const rules = {
   username: [
-    { required: true, message: t('auth.validation.username'), trigger: 'blur' },
+    { required: true, message: t('auth.validation.usernameRequired'), trigger: 'blur' },
     { min: 3, message: t('auth.validation.usernameLength'), trigger: 'blur' }
   ],
   email: [
-    { required: true, message: t('auth.validation.email.required'), trigger: 'blur' },
-    { type: 'email', message: t('auth.validation.email.invalid'), trigger: 'blur' }
+    { required: true, message: t('auth.validation.emailRequired'), trigger: 'blur' },
+    { type: 'email', message: t('auth.validation.emailInvalid'), trigger: 'blur' }
   ],
   password: [
-    { required: true, message: t('auth.validation.password'), trigger: 'blur' },
+    { required: true, message: t('auth.validation.passwordRequired'), trigger: 'blur' },
     { min: 6, message: t('auth.validation.passwordLength'), trigger: 'blur' }
   ],
   confirmPassword: [
-    { required: true, message: t('auth.validation.confirmPassword'), trigger: 'blur' },
+    { required: true, message: t('auth.validation.PasswordConfirm'), trigger: 'blur' },
     {
       validator: (rule: any, value: string, callback: Function) => {
         if (value !== form.value.password) {

@@ -30,6 +30,21 @@ export interface SchedulerJob {
   is_start_job: boolean;
 }
 
+interface PaginationParams {
+  page: number;
+  page_size: number;
+}
+
+interface PolicyJobsResponse {
+  jobs: any[];
+  pagination: {
+    total: number;
+    page: number;
+    page_size: number;
+    pages: number;
+  };
+}
+
 export const useScanPolicyStore = defineStore('scanPolicy', {
   state: () => ({
     policies: ref<Policy[]>([]),
@@ -113,12 +128,19 @@ export const useScanPolicyStore = defineStore('scanPolicy', {
       }
     },
 
-    async fetchPolicyJobs(policyId: string) {
+    async fetchPolicyJobs(policyId: string, params?: PaginationParams): Promise<PolicyJobsResponse> {
       try {
-        const response = await axios.get(`${API_CONFIG.BASE_API_URL}${API_CONFIG.ENDPOINTS.POLICY.JOBS(policyId)}`);
-        return response.data;
-      } catch (error: any) {
-        this.error = error.response?.data?.error || '获取策略任务失败';
+        const response = await axios.get(
+          `${API_CONFIG.BASE_API_URL}${API_CONFIG.ENDPOINTS.POLICY.JOBS(policyId)}`,
+          {
+            params: {
+              page: params?.page || 1,
+              page_size: params?.page_size || 10
+            }
+          }
+        );
+        return response.data.data;
+      } catch (error) {
         throw error;
       }
     },

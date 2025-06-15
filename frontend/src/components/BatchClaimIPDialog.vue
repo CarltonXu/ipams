@@ -67,7 +67,12 @@
       <!-- IP 列表配置 -->
       <div class="ip-configs">
         <h3>{{ $t('ip.dialog.batchClaim.individualConfig') }}</h3>
-        <el-table :data="ipConfigs" border stripe>
+        <el-table
+          :data="ipConfigs"
+          max-height="430"
+          style="width: 100%"
+          border
+          stripe>
           <el-table-column prop="ip_address" :label="$t('ip.columns.ipAddress')" width="140" />
           <el-table-column :label="$t('ip.dialog.claim.deviceName')" width="200">
             <template #default="{ row }">

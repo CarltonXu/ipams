@@ -251,5 +251,15 @@ export const useUserStore = defineStore('user', {
         this.loading = false;
       }
     },
+
+    // 更新用户状态
+    async updateUserStatus(userId: string, isActive: boolean) {
+      try {
+        const response = await axios.put(`${API_CONFIG.BASE_API_URL}${API_CONFIG.ENDPOINTS.USER.UPDATE_STATUS(userId)}`, { is_active: isActive });
+        return response.data;
+      } catch (error) {
+        throw error;
+      }
+    }
   },
 });

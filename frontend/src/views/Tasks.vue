@@ -249,7 +249,9 @@
       v-model="detailsVisible"
       :title="t('tasks.details.title')"
       width="80%"
-      destroy-on-close
+      :close-on-click-modal="false"
+      @close="handleCloseDetails"
+      class="task-details-dialog"
     >
       <div v-if="currentTask" class="task-details">
         <el-descriptions :column="2" border>
@@ -283,42 +285,57 @@
         <!-- 扫描结果展示 -->
         <div v-if="currentTask" class="scan-results">
           <h3>{{ t('tasks.details.scanResults') }}</h3>
-          <el-table 
-            :data="currentTask.results"
-            highlight-current-row
-            @current-change="handleScanResultCurrentChange"
-            style="width: 100%">
-            <el-table-column :label="t('tasks.details.ip')" prop="ip" width="150">
-              <template #default="{ row }">
-                <span>{{ row.ip_address }}</span>
-              </template>
-            </el-table-column>
-            <el-table-column :label="t('tasks.details.resultStatus')" prop="status" width="120">
-              <template #default="{ row }">
-                <el-tag :type="getScanResultStatus(row.status)">
-                  {{ t(`tasks.scanStatus.${row.status}`) }}
-                </el-tag>
-              </template>
-            </el-table-column>
-            <el-table-column :label="t('tasks.details.details')" prop="details">
-              <template #default="{ row }">
-                {{ row.open_ports }}
-              </template>
-            </el-table-column>
-            <el-table-column :label="t('tasks.details.scanTime')" prop="scanTime" width="180">
-              <template #default="{ row }">
-                {{ formatDate(row.created_at) }}
-              </template>
-            </el-table-column>
-          </el-table>
+          <div class="table-container">
+            <el-table 
+              :data="currentTask.results"
+              highlight-current-row
+              @current-change="handleScanResultCurrentChange"
+              v-loading="detailLoading"
+              style="width: 100%">
+              <el-table-column :label="t('tasks.details.ip')" prop="ip" width="150">
+                <template #default="{ row }">
+                  <span>{{ row.ip_address }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column :label="t('tasks.details.resultStatus')" prop="status" width="120">
+                <template #default="{ row }">
+                  <el-tag :type="getScanResultStatus(row.status)">
+                    {{ t(`tasks.scanStatus.${row.status}`) }}
+                  </el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column :label="t('tasks.details.details')" prop="details">
+                <template #default="{ row }">
+                  {{ row.open_ports }}
+                </template>
+              </el-table-column>
+              <el-table-column :label="t('tasks.details.scanTime')" prop="scanTime" width="180">
+                <template #default="{ row }">
+                  {{ formatDate(row.created_at) }}
+                </template>
+              </el-table-column>
+            </el-table>
+          </div>
+          
+          <div class="pagination-container">
+            <el-pagination
+              v-model:current-page="resultPage"
+              v-model:page-size="resultPageSize"
+              :page-sizes="[10, 20, 50, 100]"
+              :total="resultTotal"
+              layout="total, sizes, prev, pager, next, jumper"
+              @size-change="handleResultSizeChange"
+              @current-change="handleResultCurrentChange"
+            />
+          </div>
         </div>
 
         <!-- 任务详情 -->
         <div class="task-logs">
           <h3>{{ t('tasks.details.details') }}</h3>
-          <el-scrollbar>
+          <div class="log-container">
             <pre class="log-content">{{ selectedLogContent }}</pre>
-          </el-scrollbar>
+          </div>
         </div>
       </div>
     </el-dialog>
@@ -332,9 +349,11 @@ import { ElMessage, ElMessageBox } from 'element-plus';
 import { Plus, Document, Refresh } from '@element-plus/icons-vue';
 import { formatDate } from '../utils/date';
 import { useTaskStore } from '../stores/task';
+import { useRouter } from 'vue-router';
 
 const { t } = useI18n();
 const taskStore = useTaskStore();
+const router = useRouter();
 
 interface Policy {
   id: string;
@@ -391,6 +410,10 @@ const historyCurrentPage = ref(1);
 const historyPageSize = ref(10);
 const totalHistoryTasks = ref(0);
 const selectedLogContent = ref('');
+const resultPage = ref(1);
+const resultPageSize = ref(10);
+const resultTotal = ref(0);
+const detailLoading = ref(false);
 
 // 刷新选项
 const refreshOptions = [
@@ -476,18 +499,58 @@ const getScanResultStatus = (status: ScanResult['status']) => {
   return types[status];
 };
 
+// 获取任务详情
+const fetchTaskDetail = async (taskId: string, page = 1, pageSize = 10) => {
+  try {
+    detailLoading.value = true;
+    const response = await taskStore.getJobStatus(taskId, {
+      page,
+      pageSize
+    });
+    // 使用新对象来更新状态，避免引用问题
+    if (currentTask.value) {
+      currentTask.value = {
+        ...currentTask.value,
+        results: response.results
+      };
+    }
+    resultTotal.value = response.total;
+  } catch (error: any) {
+    console.error('Failed to fetch task detail:', error);
+    ElMessage.error(t('tasks.errors.fetchDetailFailed'));
+  } finally {
+    detailLoading.value = false;
+  }
+};
+
 // 查看任务详情
 const viewTaskDetails = async (task: Task) => {
   try {
-    loading.value = true;
-    const response = await taskStore.getJobStatus(task.id);
-    currentTask.value = response.job;
+    resultPage.value = 1;
+    resultPageSize.value = 10;
+    // 先设置基本信息
+    currentTask.value = task;
     detailsVisible.value = true;
+    // 然后获取详细数据
+    await fetchTaskDetail(task.id, 1, 10);
   } catch (error: any) {
-    ElMessage.error(error.message || t('tasks.messages.loadDetailsFailed'));
-  } finally {
-    loading.value = false;
+    console.error('Failed to view task details:', error);
+    ElMessage.error(t('tasks.errors.viewDetailsFailed'));
   }
+};
+
+// 处理任务详情结果的分页
+const handleResultSizeChange = async (val: number) => {
+  if (!currentTask.value) return;
+  resultPageSize.value = val;
+  resultPage.value = 1;
+  await fetchTaskDetail(currentTask.value.id, 1, val);
+};
+
+const handleResultCurrentChange = async (val: number) => {
+  if (!currentTask.value) return;
+  resultPage.value = val;
+  await fetchTaskDetail(currentTask.value.id, val, resultPageSize.value);
 };
 
 // 停止任务
@@ -518,7 +581,7 @@ const stopTask = async (task: Task) => {
 
 // 创建新任务
 const createNewTask = () => {
-  // TODO: 实现创建新任务的逻辑
+  router.push('/scans');
 };
 
 // 加载任务数据
@@ -552,8 +615,9 @@ const fetchTasks = async () => {
 };
 
 // 初始化
-onMounted(() => {
-  fetchTasks();
+onMounted(async () => {
+  await fetchTasks();
+  setupAutoRefresh();
 });
 
 // 组件卸载时清理定时器
@@ -564,6 +628,7 @@ onUnmounted(() => {
 // 处理运行中任务的分页
 const handleSizeChange = (val: number) => {
   pageSize.value = val;
+  currentPage.value = 1;
   fetchTasks();
 };
 
@@ -593,8 +658,21 @@ watch(activeTab, () => {
   fetchTasks();
 });
 
-const handleScanResultCurrentChange = (row: ScanResult) => {
+const handleScanResultCurrentChange = (row: ScanResult | null) => {
+  if (!row) {
+    selectedLogContent.value = '';
+    return;
+  }
   selectedLogContent.value = row.raw_data || '';
+};
+
+// 关闭详情对话框
+const handleCloseDetails = () => {
+  detailsVisible.value = false;
+  currentTask.value = null;
+  resultPage.value = 1;
+  resultPageSize.value = 10;
+  resultTotal.value = 0;
 };
 </script>
 
@@ -684,8 +762,6 @@ const handleScanResultCurrentChange = (row: ScanResult) => {
   vertical-align: middle;
 }
 
-
-
 .progress-cell {
   padding: 5px 0;
 }
@@ -694,58 +770,82 @@ const handleScanResultCurrentChange = (row: ScanResult) => {
   transition: width 0.3s ease;
 }
 
+:deep(.el-overlay-dialog) {
+  bottom: 0;
+  left: 0;
+  overflow: hidden;
+  position: fixed;
+  right: 0;
+  top: -50px;
+}
+
+:deep(.el-dialog) {
+  --el-dialog-width: 50% !important;
+}
+
+.task-details-dialog :deep(.el-dialog__body) {
+  padding: 0;
+  height: 80vh;
+  overflow: hidden;
+}
+
 .task-details {
+  height: 75%;
+  display: flex;
+  flex-direction: column;
   padding: 20px;
 }
 
 .scan-results {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
   margin-top: 20px;
 }
 
-.scan-results h3 {
-  font-size: 16px;
-  font-weight: 600;
-  margin-bottom: 15px;
-  color: var(--el-text-color-primary);
+.table-container {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.table-container :deep(.el-table) {
+  height: 100%;
+}
+
+.table-container :deep(.el-table__body-wrapper) {
+  overflow-y: auto;
 }
 
 .task-logs {
   margin-top: 20px;
+  height: 300px;
+  display: flex;
+  flex-direction: column;
 }
 
-.task-logs h3 {
-  font-size: 16px;
-  font-weight: 600;
-  margin-bottom: 15px;
-  color: var(--el-text-color-primary);
+.log-container {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  background-color: var(--el-fill-color-light);
+  border-radius: var(--el-border-radius-base);
 }
 
 .log-content {
+  height: 100%;
+  margin: 0;
+  padding: 10px;
+  overflow-y: auto;
   font-family: monospace;
   font-size: 14px;
   line-height: 1.5;
   color: var(--el-text-color-regular);
-  background-color: var(--el-fill-color-light);
-  padding: 10px;
-  border-radius: var(--el-border-radius-base);
-  margin: 0;
-}
-
-:deep(.el-descriptions) {
-  margin-bottom: 20px;
-}
-
-:deep(.el-descriptions__label) {
-  width: 120px;
-  justify-content: flex-end;
-}
-
-:deep(.el-table) {
-  --el-table-border-color: var(--el-border-color-lighter);
 }
 
 .pagination-container {
-  margin-top: 20px;
+  margin-top: 10px;
   display: flex;
   justify-content: flex-end;
 }

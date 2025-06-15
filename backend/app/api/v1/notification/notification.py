@@ -88,7 +88,9 @@ def get_history(current_user):
         type = request.args.get('type')
         status = request.args.get('status')
         
-        query = Notification.query.filter_by(user_id=current_user.id)
+        query = Notification.query.filter_by(
+            user_id=current_user.id,
+            deleted=False)
         
         if type:
             query = query.filter_by(type=type)
@@ -149,15 +151,21 @@ def delete_notification(current_user, id):
 
 @notification_bp.route('/notification/clear-all', methods=['DELETE'])
 @token_required
-def clear_all(current_user):
+def clear_all_notifications(current_user):
     """清空所有通知"""
     try:
-        notification = Notification.query.filter_by(user_id=current_user.id).all()
-        notification.deleted = True
+        notifications = Notification.query.filter_by(user_id=current_user.id).all()
+        for notification in notifications:
+            notification.deleted = True
         db.session.commit()
-        return jsonify({'message': '清空成功'})
+        return jsonify({
+            'message': 'All notifications cleared successfully'
+        }), 200
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        db.session.rollback()
+        return jsonify({
+            'error': str(e)
+        }), 500
 
 @notification_bp.route('/notification/unread-count', methods=['GET'])
 @token_required

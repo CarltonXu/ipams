@@ -22,7 +22,6 @@ const getElementPlusLocale = (locale: string) => {
 
 app.use(ElementPlus, {
   locale: getElementPlusLocale(i18n.global.locale.value), // 动态设置 Element Plus 的语言
-  i18n: i18n.global.t, // 将 i18n 翻译函数传递给 Element Plus
 });
 app.use(i18n);
 app.use(pinia);

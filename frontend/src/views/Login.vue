@@ -11,8 +11,10 @@
         @submit.prevent="handleSubmit"
         label-position="top"
         class="login-form"
+        :rules="rules"
+        ref="formRef"
       >
-        <el-form-item :label="t('auth.username')" required>
+        <el-form-item :label="t('auth.username')" prop="username" required>
           <el-input 
             v-model="form.username"
             :placeholder="t('user.management.dialog.placeholders.username')"
@@ -24,7 +26,7 @@
           </el-input>
         </el-form-item>
         
-        <el-form-item :label="t('auth.password')" required>
+        <el-form-item :label="t('auth.password')" prop="password" required>
           <el-input 
             v-model="form.password"
             type="password"
@@ -38,24 +40,24 @@
           </el-input>
         </el-form-item>
 
-        <el-form-item :label="t('auth.captcha')" required>
+        <el-form-item :label="t('auth.captcha')" prop="captcha" required>
           <div class="captcha-container">
             <el-input 
-            v-model="form.captcha"
-            :placeholder="t('auth.captchaPlaceholder')"
-            class="captcha-input">
-            <template #prefix>
-              <el-icon><Picture /></el-icon>
-            </template>
-          </el-input>
-          <img 
-            :src="captchaUrl" 
-            alt="验证码"
-            class="captcha-image"
-            @click="refreshCaptcha"
-          />
-        </div>
-      </el-form-item>
+              v-model="form.captcha"
+              :placeholder="t('auth.captchaPlaceholder')"
+              class="captcha-input">
+              <template #prefix>
+                <el-icon><Picture /></el-icon>
+              </template>
+            </el-input>
+            <img 
+              :src="captchaUrl" 
+              alt="验证码"
+              class="captcha-image"
+              @click="refreshCaptcha"
+            />
+          </div>
+        </el-form-item>
        
         <el-button 
           type="primary" 
@@ -103,12 +105,14 @@ import { useI18n } from 'vue-i18n';
 import { User, Lock } from '@element-plus/icons-vue';
 import { useSettingsStore } from '../stores/settings';
 import type { LoginCredentials } from '../types/user';
+import type { FormInstance } from 'element-plus';
 import { Picture } from '@element-plus/icons-vue';
 
 const { t, locale } = useI18n();
 const router = useRouter();
 const authStore = useAuthStore();
 const settingsStore = useSettingsStore();
+const formRef = ref<FormInstance>();
 const loading = ref(false);
 
 const currentLanguage = computed(() => locale.value);
@@ -124,6 +128,20 @@ const form = ref<LoginCredentials>({
   captcha: '',
   captchaKey: '',
 });
+
+const rules = {
+  username: [
+    { required: true, message: t('auth.validation.usernameRequired'), trigger: ['blur', 'change'] },
+    { min: 3, message: t('auth.validation.usernameLength'), trigger: ['blur', 'change'] }
+  ],
+  password: [
+    { required: true, message: t('auth.validation.passwordRequired'), trigger: ['blur', 'change'] },
+    { min: 6, message: t('auth.validation.passwordLength'), trigger: ['blur', 'change'] }
+  ],
+  captcha: [
+    { required: true, message: t('auth.validation.captchaRequired'), trigger: ['blur', 'change'] }
+  ]
+};
 
 // 获取验证码
 const getCaptcha = async () => {
@@ -148,25 +166,50 @@ const changeLanguage = (lang: string) => {
 
 // 修改登录处理函数
 const handleSubmit = async () => {
-  if (!form.value.captcha) {
-    ElMessage.error(t('auth.validation.captchaRequired'));
-    return;
-  }
+  if (!formRef.value) return;
 
-  loading.value = true;
   try {
-    await authStore.login({
-      ...form.value,
-      captchaKey: captchaKey.value
-    });
-    ElMessage.success(t('auth.loginSuccess'));
-    router.push('/dashboard');
-  } catch (error: any) {
-    ElMessage.error(error.message || t('auth.loginError'));
-    // 登录失败刷新验证码
-    refreshCaptcha();
-  } finally {
-    loading.value = false;
+    await formRef.value.validate();
+    loading.value = true;
+    try {
+      await authStore.login({
+        ...form.value,
+        captchaKey: captchaKey.value
+      });
+      ElMessage.success(t('auth.loginSuccess'));
+      router.push('/dashboard');
+    } catch (error: any) {
+      // 根据错误类型显示不同的错误信息
+      if (error.response) {
+        const { status, data } = error.response;
+        switch (status) {
+          case 400:
+            if (data.message == "Invalid or expired captcha") {
+              ElMessage.error(t('auth.invalidCaptcha'));
+            } else {
+              ElMessage.error(t('auth.validation.missingFields'));
+            }
+            break;
+          case 401:
+            ElMessage.error(t('auth.invalidUsernameOrPassword'));
+            break;
+          case 403:
+            ElMessage.error(t('auth.accountDisabled'));
+            break;
+          default:
+            ElMessage.error(t('auth.loginError'));
+        }
+      } else {
+        ElMessage.error(t('auth.loginError'));
+      }
+      // 登录失败刷新验证码
+      refreshCaptcha();
+    } finally {
+      loading.value = false;
+    }
+  } catch (error) {
+    // 表单验证失败
+    console.log('表单验证失败:', error);
   }
 };
 

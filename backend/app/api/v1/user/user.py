@@ -288,7 +288,7 @@ def update_user(current_user, user_id):
         return jsonify({'error': 'No data provided'}), 400
 
     # 允许更新的字段
-    allowed_fields = ['username', 'email', 'is_admin', "wechat_id"]
+    allowed_fields = ['username', 'email', 'is_admin', 'is_active', 'wechat_id']
     updates = {}
 
     for field in allowed_fields:
@@ -435,6 +435,52 @@ def batch_delete_users(current_user):
             'message': f'Successfully deleted {deleted_count} users',
             'deleted_count': deleted_count
         })
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+@user_bp.route('/user/<string:user_id>/status', methods=['PUT'])
+@token_required
+def update_user_status(current_user, user_id):
+    """更新用户状态"""
+    try:
+        # 检查权限
+        if not current_user.is_admin:
+            return jsonify({'error': '权限不足'}), 403
+
+        # 获取请求数据
+        data = request.get_json()
+        if not data or 'is_active' not in data:
+            return jsonify({'error': '缺少状态参数'}), 400
+
+        is_active = data['is_active']
+        if not isinstance(is_active, bool):
+            return jsonify({'error': '无效的状态值'}), 400
+
+        # 查找用户
+        user = User.query.get(user_id)
+        if not user:
+            return jsonify({'error': '用户不存在'}), 404
+
+        # 不能修改自己的状态
+        if user.id == current_user.id:
+            return jsonify({'error': '不能修改自己的状态'}), 400
+
+        # 更新状态
+        user.is_active = is_active
+        db.session.commit()
+
+        return jsonify({
+            'message': '状态更新成功',
+            'user': {
+                'id': user.id,
+                'username': user.username,
+                'email': user.email,
+                'is_active': user.is_active,
+                'is_admin': user.is_admin
+            }
+        }), 200
 
     except Exception as e:
         db.session.rollback()
