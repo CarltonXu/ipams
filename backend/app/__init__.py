@@ -20,13 +20,7 @@ from app.core.error.errors import DatabaseError
 from app.services.notification import NotificationManager
 from app.scripts.init_notification_templates import init_notification_templates
 from app.tasks.system_metrics import metrics_scheduler
-
-# 配置日志
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
+from app.core.utils.logger import app_logger as logger
 
 # 创建 db 实例
 migrate = Migrate()
@@ -158,8 +152,8 @@ def create_app(config=None):
             os.makedirs(upload_folder, exist_ok=True)
             
             # 记录请求信息
-            app.logger.info(f"Attempting to access file: {filename}")
-            app.logger.info(f"Upload folder: {upload_folder}")
+            logger.info(f"Attempting to access file: {filename}")
+            logger.info(f"Upload folder: {upload_folder}")
             
             # 检查文件是否存在
             file_path = os.path.join(upload_folder, filename)
@@ -169,7 +163,7 @@ def create_app(config=None):
                 
             return send_from_directory(upload_folder, filename)
         except Exception as e:
-            app.logger.error(f"Error serving file {filename}: {str(e)}")
+            logger.error(f"Error serving file {filename}: {str(e)}")
             return str(e), 500
     
     # 初始化扩展
