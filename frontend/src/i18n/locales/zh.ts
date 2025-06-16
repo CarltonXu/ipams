@@ -29,6 +29,7 @@ export default {
       unclaimed_ips: '未认领IP地址',
       user_claimed_ips: '用户已认领IP地址',
       total_policies: '总策略',
+      total_jobs: '总任务',
       running_jobs: '运行中的任务',
       failed_jobs: '失败的任务',
       successful_jobs: '成功的任务',

@@ -29,6 +29,7 @@ export default {
       unclaimed_ips: 'Unclaimed IPs',
       user_claimed_ips: 'User Claimed IPs',
       total_policies: 'Total Policies',
+      total_jobs: 'Total Jobs',
       running_jobs: 'Running Jobs',
       failed_jobs: 'Failed Jobs',
       successful_jobs: 'Successful Jobs',

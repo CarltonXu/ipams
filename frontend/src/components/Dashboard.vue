@@ -240,7 +240,8 @@ import {
   SuccessFilled,
   Platform,
   InfoFilled,
-  Timer
+  Timer,
+  Clock
 } from '@element-plus/icons-vue'
 import dayjs from 'dayjs'
 
@@ -252,6 +253,7 @@ const stats = ref<DashboardStats>({
   claimed_ips: 0,
   unclaimed_ips: 0,
   total_policies: 0,
+  total_jobs: 0,
   running_jobs: 0,
   failed_jobs: 0,
   successful_jobs: 0,
@@ -278,8 +280,6 @@ let refreshTimer: NodeJS.Timeout | null = null
 
 const refreshContainer = ref<HTMLElement | null>(null)
 
-const resourceChartType = ref('line')
-const resourceChartRef = ref<HTMLElement | null>(null)
 const jobStatusChartRef = ref<HTMLElement | null>(null)
 let jobStatusChart: echarts.ECharts | null = null
 
@@ -297,6 +297,7 @@ const fetchData = async () => {
       claimed_ips: dashboardStore.stats.claimed_ips,
       unclaimed_ips: dashboardStore.stats.unclaimed_ips,
       total_policies: dashboardStore.stats.total_policies,
+      total_jobs: dashboardStore.stats.total_jobs,
       running_jobs: dashboardStore.stats.running_jobs,
       failed_jobs: dashboardStore.stats.failed_jobs,
       successful_jobs: dashboardStore.stats.successful_jobs,
@@ -376,6 +377,7 @@ const getStatIcon = (key: string) => {
     claimed_ips: Connection,
     unclaimed_ips: Warning,
     total_policies: Histogram,
+    total_jobs: Clock,
     running_jobs: TrendCharts,
     failed_jobs: Warning,
     successful_jobs: SuccessFilled,
@@ -391,6 +393,7 @@ const getStatColor = (key: string) => {
     unclaimed_ips: '#E6A23C',
     user_claimed_ips: '#909399',
     total_policies: '#F56C6C',
+    total_jobs: '#396CEF',
     running_jobs: '#409EFF',
     failed_jobs: '#F56C6C',
     successful_jobs: '#67C23A',

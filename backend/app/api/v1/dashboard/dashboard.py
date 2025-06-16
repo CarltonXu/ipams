@@ -13,15 +13,16 @@ def get_dashboard_data(current_user):
     try:
         # 获取IP统计
         total_ips = IP.query.count()
-        claimed_ips = IP.query.filter_by(status='active').count()
+        claimed_ips = IP.query.filter_by(status='active', deleted=False).count()
         unclaimed_ips = total_ips - claimed_ips
         # 获取策略统计
-        total_policies = ScanPolicy.query.count()
+        total_policies = ScanPolicy.query.filter_by(deleted=False).count()
         
         # 获取任务统计
-        running_jobs = ScanJob.query.filter_by(status='running').count()
-        failed_jobs = ScanJob.query.filter_by(status='failed').count()
-        successful_jobs = ScanJob.query.filter_by(status='completed').count()
+        total_jobs = ScanJob.query.filter_by(deleted=False).count()
+        running_jobs = ScanJob.query.filter_by(status='running', deleted=False).count()
+        failed_jobs = ScanJob.query.filter_by(status='failed', deleted=False).count()
+        successful_jobs = ScanJob.query.filter_by(status='completed', deleted=False).count()
         
         # 获取最近的审计日志
         recent_audits = ActionLog.query.order_by(ActionLog.created_at.desc()).limit(10).all()
@@ -41,6 +42,7 @@ def get_dashboard_data(current_user):
                     'claimed_ips': claimed_ips,
                     'unclaimed_ips': unclaimed_ips,
                     'total_policies': total_policies,
+                    'total_jobs': total_jobs,
                     'running_jobs': running_jobs,
                     'failed_jobs': failed_jobs,
                     'successful_jobs': successful_jobs,

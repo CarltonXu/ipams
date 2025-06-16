@@ -20,6 +20,7 @@ export interface DashboardStats {
     claimed_ips: number;
     unclaimed_ips: number;
     total_policies: number;
+    total_jobs: number;
     running_jobs: number;
     failed_jobs: number;
     successful_jobs: number;
@@ -54,6 +55,7 @@ export const useDashboardStore = defineStore('dashboard', {
             claimed_ips: 0,
             unclaimed_ips: 0,
             total_policies: 0,
+            total_jobs: 0,
             running_jobs: 0,
             failed_jobs: 0,
             successful_jobs: 0,
