@@ -74,19 +74,6 @@
         <el-card class="chart-card">
           <template #header>
             <div class="chart-header">
-              <h3>{{ t('dashboard.charts.resourceUsage') }}</h3>
-              <el-radio-group v-model="resourceChartType" size="small">
-                <el-radio-button :value="'line'">{{ t('dashboard.charts.line') }}</el-radio-button>
-                <el-radio-button :value="'bar'">{{ t('dashboard.charts.bar') }}</el-radio-button>
-              </el-radio-group>
-            </div>
-          </template>
-          <div ref="resourceChartRef" class="chart"></div>
-        </el-card>
-
-        <el-card class="chart-card">
-          <template #header>
-            <div class="chart-header">
               <h3>{{ t('dashboard.charts.jobStatus') }}</h3>
             </div>
           </template>
@@ -247,8 +234,6 @@ import {
   Refresh,
   Monitor,
   Connection,
-  Cpu,
-  DataLine,
   Histogram,
   TrendCharts,
   Warning,
@@ -270,18 +255,9 @@ const stats = ref<DashboardStats>({
   running_jobs: 0,
   failed_jobs: 0,
   successful_jobs: 0,
-  cpu_usage: 0,
-  memory_usage: 0,
-  disk_usage: 0
 })
 const resources = ref<DashboardResources>({
   audit_resources: [],
-  resource_history: {
-    timestamps: [],
-    cpu: [],
-    memory: [],
-    disk: []
-  },
   system_info: {
     platform: ''
   }
@@ -305,7 +281,6 @@ const refreshContainer = ref<HTMLElement | null>(null)
 const resourceChartType = ref('line')
 const resourceChartRef = ref<HTMLElement | null>(null)
 const jobStatusChartRef = ref<HTMLElement | null>(null)
-let resourceChart: echarts.ECharts | null = null
 let jobStatusChart: echarts.ECharts | null = null
 
 const fetchData = async () => {
@@ -325,13 +300,9 @@ const fetchData = async () => {
       running_jobs: dashboardStore.stats.running_jobs,
       failed_jobs: dashboardStore.stats.failed_jobs,
       successful_jobs: dashboardStore.stats.successful_jobs,
-      cpu_usage: dashboardStore.stats.cpu_usage,
-      memory_usage: dashboardStore.stats.memory_usage,
-      disk_usage: dashboardStore.stats.disk_usage,
     }
     resources.value = {
       audit_resources: dashboardStore.resources.audit_resources,
-      resource_history: dashboardStore.resources.resource_history,
       system_info: dashboardStore.resources.system_info,
     }
     recentJobs.value = dashboardStore.recent_jobs
@@ -362,7 +333,6 @@ onMounted(async () => {
     await userStore.fetchCurrentUser()
     await fetchData()
     setupAutoRefresh()
-    initResourceChart()
     initJobStatusChart()
     window.addEventListener('resize', handleResize)
   } catch (error) {
@@ -376,7 +346,6 @@ onUnmounted(() => {
     clearInterval(refreshTimer)
   }
   window.removeEventListener('resize', handleResize)
-  resourceChart?.dispose()
   jobStatusChart?.dispose()
 })
 
@@ -410,9 +379,6 @@ const getStatIcon = (key: string) => {
     running_jobs: TrendCharts,
     failed_jobs: Warning,
     successful_jobs: SuccessFilled,
-    cpu_usage: Cpu,
-    memory_usage: DataLine,
-    disk_usage: Monitor
   }
   return iconMap[key] || Monitor
 }
@@ -428,9 +394,6 @@ const getStatColor = (key: string) => {
     running_jobs: '#409EFF',
     failed_jobs: '#F56C6C',
     successful_jobs: '#67C23A',
-    cpu_usage: '#409EFF',
-    memory_usage: '#67C23A',
-    disk_usage: '#E6A23C'
   }
   return colorMap[key] || '#909399'
 }
@@ -470,87 +433,6 @@ const getAuditActionType = (action: string) => {
   return typeMap[action.toLowerCase()] || 'info'
 }
 
-// 初始化资源使用图表
-const initResourceChart = () => {
-  nextTick(() => {
-    if (!resourceChartRef.value) return
-
-    if (!resourceChart) {
-      resourceChart = echarts.init(resourceChartRef.value)
-    }
-
-    // 从后端数据中获取资源使用历史
-    const resourceHistory = dashboardStore.resourceHistory || {}
-    const timestamps = resourceHistory.timestamps || []
-    const cpuData = resourceHistory.cpu || []
-    const memoryData = resourceHistory.memory || []
-    const diskData = resourceHistory.disk || []
-
-    const option = {
-      tooltip: {
-        trigger: 'axis',
-        axisPointer: {
-          type: 'cross',
-          label: {
-            backgroundColor: '#6a7985'
-          }
-        }
-      },
-      legend: {
-        data: ['CPU', 'Memory', 'Disk']
-      },
-      grid: {
-        left: '3%',
-        right: '4%',
-        bottom: '3%',
-        containLabel: true
-      },
-      xAxis: {
-        type: 'category',
-        boundaryGap: false,
-        data: timestamps
-      },
-      yAxis: {
-        type: 'value',
-        max: 100,
-        axisLabel: {
-          formatter: '{value}%'
-        }
-      },
-      series: [
-        {
-          name: 'CPU',
-          type: resourceChartType.value,
-          data: cpuData,
-          smooth: true,
-          lineStyle: {
-            width: 3
-          }
-        },
-        {
-          name: 'Memory',
-          type: resourceChartType.value,
-          data: memoryData,
-          smooth: true,
-          lineStyle: {
-            width: 3
-          }
-        },
-        {
-          name: 'Disk',
-          type: resourceChartType.value,
-          data: diskData,
-          smooth: true,
-          lineStyle: {
-            width: 3
-          }
-        }
-      ]
-    }
-
-    resourceChart.setOption(option)
-  })
-}
 
 // 初始化任务状态图表
 const initJobStatusChart = () => {
@@ -607,21 +489,10 @@ const initJobStatusChart = () => {
   })
 }
 
-// 监听图表类型变化
-watch(resourceChartType, () => {
-  initResourceChart()
-})
-
 // 监听窗口大小变化
 const handleResize = () => {
-  resourceChart?.resize()
   jobStatusChart?.resize()
 }
-
-// 监听数据变化
-watch(() => dashboardStore.resourceHistory, () => {
-  initResourceChart()
-}, { deep: true })
 
 watch(() => stats.value, () => {
   initJobStatusChart()

@@ -71,6 +71,9 @@ export const API_CONFIG = {
       CLEAR_ALL: '/notification/clear-all',
       TEST: '/notification/test',
       UNREAD_COUNT: '/notification/unread-count'
+    },
+    MONITOR: {
+      LIST: '/monitor'
     }
   }
 } 

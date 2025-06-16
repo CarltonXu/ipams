@@ -88,29 +88,64 @@ class IP(db.Model):
         }
 
 class SystemMetrics(db.Model):
+    """系统基础资源监控"""
     __tablename__ = 'system_metrics'
 
     id = db.Column(db.Integer, primary_key=True)
     timestamp = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
-    cpu_usage = db.Column(db.Float, nullable=False)
-    memory_usage = db.Column(db.Float, nullable=False)
-    disk_usage = db.Column(db.Float, nullable=False)
+    
+    # CPU 使用率
+    cpu_usage = db.Column(db.Float, nullable=False)  # CPU 使用率百分比
+    cpu_count = db.Column(db.Integer, nullable=False)  # CPU 核心数
+    cpu_freq = db.Column(db.Float, nullable=False)  # CPU 频率 (MHz)
+    
+    # 内存使用情况
     memory_total = db.Column(db.BigInteger, nullable=False)  # 总内存（字节）
     memory_used = db.Column(db.BigInteger, nullable=False)   # 已用内存（字节）
-    disk_total = db.Column(db.BigInteger, nullable=False)    # 总磁盘空间（字节）
-    disk_used = db.Column(db.BigInteger, nullable=False)     # 已用磁盘空间（字节）
+    memory_free = db.Column(db.BigInteger, nullable=False)   # 空闲内存（字节）
+    memory_usage = db.Column(db.Float, nullable=False)      # 内存使用率百分比
+    swap_total = db.Column(db.BigInteger, nullable=False)    # 交换分区总大小
+    swap_used = db.Column(db.BigInteger, nullable=False)     # 交换分区已用大小
+    swap_free = db.Column(db.BigInteger, nullable=False)     # 交换分区空闲大小
+    
+    # 系统负载
+    load_avg_1min = db.Column(db.Float, nullable=False)     # 1分钟负载
+    load_avg_5min = db.Column(db.Float, nullable=False)     # 5分钟负载
+    load_avg_15min = db.Column(db.Float, nullable=False)    # 15分钟负载
+    
+    # 进程信息
+    process_count = db.Column(db.Integer, nullable=False)    # 进程总数
+    thread_count = db.Column(db.Integer, nullable=False)     # 线程总数
 
     def to_dict(self):
         return {
             'id': self.id,
             'timestamp': self.timestamp.isoformat(),
-            'cpu_usage': self.cpu_usage,
-            'memory_usage': self.memory_usage,
-            'disk_usage': self.disk_usage,
-            'memory_total': self.memory_total,
-            'memory_used': self.memory_used,
-            'disk_total': self.disk_total,
-            'disk_used': self.disk_used
+            'cpu': {
+                'usage': self.cpu_usage,
+                'count': self.cpu_count,
+                'frequency': self.cpu_freq
+            },
+            'memory': {
+                'total': self.memory_total,
+                'used': self.memory_used,
+                'free': self.memory_free,
+                'usage': self.memory_usage,
+                'swap': {
+                    'total': self.swap_total,
+                    'used': self.swap_used,
+                    'free': self.swap_free
+                }
+            },
+            'load': {
+                '1min': self.load_avg_1min,
+                '5min': self.load_avg_5min,
+                '15min': self.load_avg_15min
+            },
+            'process': {
+                'count': self.process_count,
+                'thread_count': self.thread_count
+            }
         }
 
     @classmethod
@@ -123,6 +158,157 @@ class SystemMetrics(db.Model):
         from datetime import datetime, timedelta
         start_time = datetime.utcnow() - timedelta(hours=hours)
         return cls.query.filter(cls.timestamp >= start_time).order_by(cls.timestamp.asc()).all() 
+
+class NetworkMetrics(db.Model):
+    """网络接口监控"""
+    __tablename__ = 'network_metrics'
+
+    id = db.Column(db.Integer, primary_key=True)
+    timestamp = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    interface = db.Column(db.String(50), nullable=False)  # 网卡名称
+    
+    # 网络流量
+    bytes_sent = db.Column(db.BigInteger, nullable=False)      # 发送的字节数
+    bytes_recv = db.Column(db.BigInteger, nullable=False)      # 接收的字节数
+    packets_sent = db.Column(db.BigInteger, nullable=False)    # 发送的数据包数
+    packets_recv = db.Column(db.BigInteger, nullable=False)    # 接收的数据包数
+    
+    # 网络错误
+    errin = db.Column(db.Integer, nullable=False)             # 接收错误数
+    errout = db.Column(db.Integer, nullable=False)            # 发送错误数
+    dropin = db.Column(db.Integer, nullable=False)            # 接收丢包数
+    dropout = db.Column(db.Integer, nullable=False)           # 发送丢包数
+    
+    # 网络状态
+    is_up = db.Column(db.Boolean, nullable=False)             # 网卡是否启用
+    speed = db.Column(db.Integer, nullable=True)              # 网卡速度 (Mbps)
+    mtu = db.Column(db.Integer, nullable=True)                # MTU 值
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'timestamp': self.timestamp.isoformat(),
+            'interface': self.interface,
+            'traffic': {
+                'bytes_sent': self.bytes_sent,
+                'bytes_recv': self.bytes_recv,
+                'packets_sent': self.packets_sent,
+                'packets_recv': self.packets_recv
+            },
+            'errors': {
+                'errin': self.errin,
+                'errout': self.errout,
+                'dropin': self.dropin,
+                'dropout': self.dropout
+            },
+            'status': {
+                'is_up': self.is_up,
+                'speed': self.speed,
+                'mtu': self.mtu
+            }
+        }
+
+class DiskMetrics(db.Model):
+    """磁盘分区监控"""
+    __tablename__ = 'disk_metrics'
+
+    id = db.Column(db.Integer, primary_key=True)
+    timestamp = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    device = db.Column(db.String(50), nullable=False)  # 设备名称
+    mountpoint = db.Column(db.String(255), nullable=False)  # 挂载点
+    
+    # 磁盘使用情况
+    total = db.Column(db.BigInteger, nullable=False)    # 总空间（字节）
+    used = db.Column(db.BigInteger, nullable=False)     # 已用空间（字节）
+    free = db.Column(db.BigInteger, nullable=False)     # 空闲空间（字节）
+    usage = db.Column(db.Float, nullable=False)         # 使用率百分比
+    
+    # 磁盘IO
+    read_bytes = db.Column(db.BigInteger, nullable=False)    # 读取字节数
+    write_bytes = db.Column(db.BigInteger, nullable=False)   # 写入字节数
+    read_count = db.Column(db.BigInteger, nullable=False)    # 读取次数
+    write_count = db.Column(db.BigInteger, nullable=False)   # 写入次数
+    read_time = db.Column(db.BigInteger, nullable=False)     # 读取时间（毫秒）
+    write_time = db.Column(db.BigInteger, nullable=False)    # 写入时间（毫秒）
+    
+    # 磁盘状态
+    is_removable = db.Column(db.Boolean, nullable=False)     # 是否可移动设备
+    fstype = db.Column(db.String(50), nullable=True)         # 文件系统类型
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'timestamp': self.timestamp.isoformat(),
+            'device': self.device,
+            'mountpoint': self.mountpoint,
+            'usage': {
+                'total': self.total,
+                'used': self.used,
+                'free': self.free,
+                'usage': self.usage
+            },
+            'io': {
+                'read_bytes': self.read_bytes,
+                'write_bytes': self.write_bytes,
+                'read_count': self.read_count,
+                'write_count': self.write_count,
+                'read_time': self.read_time,
+                'write_time': self.write_time
+            },
+            'status': {
+                'is_removable': self.is_removable,
+                'fstype': self.fstype
+            }
+        }
+
+class ProcessMetrics(db.Model):
+    """进程监控"""
+    __tablename__ = 'process_metrics'
+
+    id = db.Column(db.Integer, primary_key=True)
+    timestamp = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    pid = db.Column(db.Integer, nullable=False)  # 进程ID
+    name = db.Column(db.String(255), nullable=False)  # 进程名称
+    
+    # CPU 使用情况
+    cpu_percent = db.Column(db.Float, nullable=False)  # CPU 使用率
+    cpu_times_user = db.Column(db.Float, nullable=False)  # 用户态 CPU 时间
+    cpu_times_system = db.Column(db.Float, nullable=False)  # 系统态 CPU 时间
+    
+    # 内存使用情况
+    memory_percent = db.Column(db.Float, nullable=False)  # 内存使用率
+    memory_rss = db.Column(db.BigInteger, nullable=False)  # 物理内存使用量
+    memory_vms = db.Column(db.BigInteger, nullable=False)  # 虚拟内存使用量
+    
+    # 进程状态
+    status = db.Column(db.String(20), nullable=False)  # 进程状态
+    create_time = db.Column(db.DateTime, nullable=False)  # 创建时间
+    num_threads = db.Column(db.Integer, nullable=False)  # 线程数
+    num_fds = db.Column(db.Integer, nullable=True)  # 文件描述符数量
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'timestamp': self.timestamp.isoformat(),
+            'pid': self.pid,
+            'name': self.name,
+            'cpu': {
+                'percent': self.cpu_percent,
+                'times_user': self.cpu_times_user,
+                'times_system': self.cpu_times_system
+            },
+            'memory': {
+                'percent': self.memory_percent,
+                'rss': self.memory_rss,
+                'vms': self.memory_vms
+            },
+            'status': {
+                'state': self.status,
+                'create_time': self.create_time.isoformat(),
+                'num_threads': self.num_threads,
+                'num_fds': self.num_fds
+            }
+        }
 
 class ActionLog(db.Model):
     __tablename__ = 'action_logs'

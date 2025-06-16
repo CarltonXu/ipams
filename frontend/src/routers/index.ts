@@ -12,6 +12,7 @@ import JobResults from '../components/JobResults.vue';
 import Dashboard from '../components/Dashboard.vue';
 import NotificationHistory from '../views/NotificationHistory.vue';
 import Tasks from '../views/Tasks.vue';
+import Monitor from '../views/Monitor.vue';
 
 const routes: RouteRecordRaw[] = [
     {
@@ -26,6 +27,20 @@ const routes: RouteRecordRaw[] = [
           { path: 'profile', name: 'Profile', component: Profile, meta: { requiresAuth: true } },
           { path: 'jobs/:jobId/results', name: 'JobResults', component: JobResults, meta: { requiresAuth: true } },
           { path: 'dashboard', name: 'Dashboard', component: Dashboard, meta: { requiresAuth: true } },
+          {
+              path: 'monitor',
+              name: 'Monitor',
+              component: Monitor,
+              meta: { requiresAuth: true },
+              children: [
+                {
+                  path: '',
+                  name: 'Monitor',
+                  component: () => import('../stores/monitor'),
+                  meta: { title: '系统监控', icon: 'monitor' }
+                }
+              ]
+          },
           // 通知相关路由
           { 
             path: 'notifications', 

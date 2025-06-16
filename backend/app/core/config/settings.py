@@ -39,7 +39,7 @@ class ProductionConfig(Config):
     TESTING = False
 
     # 生产环境数据库配置
-    SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL')
+    SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URI')
 
 # 配置字典
 config = {

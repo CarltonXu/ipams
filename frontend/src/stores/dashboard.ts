@@ -23,9 +23,6 @@ export interface DashboardStats {
     running_jobs: number;
     failed_jobs: number;
     successful_jobs: number;
-    cpu_usage: number;
-    memory_usage: number;
-    disk_usage: number;
 }
 
 export interface AuditResource {
@@ -47,7 +44,6 @@ export interface RecentJob {
 
 export interface DashboardResources {
     audit_resources: AuditResource[];
-    resource_history: ResourceHistory;
     system_info: SystemInfo;
 }
 
@@ -61,18 +57,9 @@ export const useDashboardStore = defineStore('dashboard', {
             running_jobs: 0,
             failed_jobs: 0,
             successful_jobs: 0,
-            cpu_usage: 0,
-            memory_usage: 0,
-            disk_usage: 0
         }),
         resources: ref<DashboardResources>({
             audit_resources: [],
-            resource_history: {
-                timestamps: [],
-                cpu: [],
-                memory: [],
-                disk: []
-            },
             system_info: {
                 platform: ''
             }
@@ -86,7 +73,6 @@ export const useDashboardStore = defineStore('dashboard', {
         getResources: (state: any) => state.resources,
         getRecentJobs: (state: any) => state.recent_jobs,
         systemInfo: (state) => state.resources.system_info,
-        resourceHistory: (state) => state.resources.resource_history
     },
     actions: {
         async fetchDashboardData() {

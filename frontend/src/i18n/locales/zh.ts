@@ -6,6 +6,8 @@ export default {
     autoRefresh: '自动刷新',
     systemInfo: {
       title: '系统信息',
+      hostname: '主机名',
+      ipaddress: 'IP地址',
       platform: '操作系统',
       platform_version: '系统版本',
       processor: '处理器',

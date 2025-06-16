@@ -524,7 +524,6 @@ def update_policy_status(current_user, policy_id):
         )
         
         # 发送通知
-        import pdb;pdb.set_trace()
         send_notification(
             event=NotificationEvent.POLICY_STATUS_UPDATED,
             user=current_user,

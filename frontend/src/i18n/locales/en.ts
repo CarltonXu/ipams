@@ -6,6 +6,8 @@ export default {
     autoRefresh: 'Auto Refresh',
     systemInfo: {
       title: 'System Information',
+      hostname: 'hostname',
+      ipaddress: 'IP Address',
       platform: 'Operating platform',
       platform_version: 'System Version',
       processor: 'Processor',
