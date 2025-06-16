@@ -11,9 +11,8 @@ from datetime import datetime
 
 from flask import current_app
 from app.models.models import db, ScanJob, ScanResult, IP
+from app.core.utils.logger import app_logger as logger
 from app.services.notification.events import NotificationEvent, send_notification
-
-logger = logging.getLogger(__name__)
 
 class ScanExecutor:
     def __init__(self, job_id: str, subnet: str, threads: int = 5, scan_params: Optional[Dict] = None):
@@ -32,7 +31,7 @@ class ScanExecutor:
         self.current_scan_process = None
         self.monitor_thread = None
         self.job_user_id = None
-        self.app.logger.info(f"Initializing scan executor for job {job_id} on subnet {subnet}")
+        logger.info(f"Initializing scan executor for job {job_id} on subnet {subnet}")
         
     def _load_job_user_id(self):
         """加载任务的user_id"""
@@ -63,14 +62,14 @@ class ScanExecutor:
                             current_progress = 30 + int(host_percentage)
                     
                     if current_progress != last_progress:
-                        self.app.logger.info(f"Job {self.job_id}: {self.current_phase} progress: {current_progress}%")
+                        logger.info(f"Job {self.job_id}: {self.current_phase} progress: {current_progress}%")
                         self._update_progress(current_progress)
                         last_progress = current_progress
                         
                     time.sleep(0.5)  # 更频繁地更新进度
                     
                 except Exception as e:
-                    self.app.logger.error(f"Progress monitoring error: {str(e)}")
+                    logger.error(f"Progress monitoring error: {str(e)}")
         
     def _update_progress(self, progress: int):
         """更新扫描进度"""
@@ -82,27 +81,27 @@ class ScanExecutor:
                         job.progress = min(progress, 100)
                         job.machines_found = self.machines_found
                         db.session.commit()
-                        self.app.logger.info(f"Job {self.job_id}: Updated progress to {progress}%")
+                        logger.info(f"Job {self.job_id}: Updated progress to {progress}%")
                     else:
-                        self.app.logger.error(f"Job {self.job_id}: Job not found in database")
+                        logger.error(f"Job {self.job_id}: Job not found in database")
                 except Exception as e:
                     db.session.rollback()
-                    self.app.logger.error(f"Job {self.job_id}: Database error updating progress: {str(e)}")
+                    logger.error(f"Job {self.job_id}: Database error updating progress: {str(e)}")
         except Exception as e:
-            self.app.logger.error(f"Job {self.job_id}: Error updating progress: {str(e)}")
+            logger.error(f"Job {self.job_id}: Error updating progress: {str(e)}")
             
     def cancel(self):
         """取消扫描任务"""
         self.cancelled = True
         self.scanning = False
         
-        self.app.logger.info(f"Job {self.job_id}: Starting cancellation process")
-        self.app.logger.info(f"Job {self.job_id}: current_scan_process status: {self.current_scan_process is not None}")
+        logger.info(f"Job {self.job_id}: Starting cancellation process")
+        logger.info(f"Job {self.job_id}: current_scan_process status: {self.current_scan_process is not None}")
         
         # 停止当前的 nmap 进程
         if self.current_scan_process:
             try:
-                self.app.logger.info(f"Job {self.job_id}: Stopping current nmap process")
+                logger.info(f"Job {self.job_id}: Stopping current nmap process")
                 # 获取 nmap 进程的 PID
                 if hasattr(self.nm, 'get_nmap_pid'):
                     pid = self.nm.get_nmap_pid()
@@ -110,11 +109,11 @@ class ScanExecutor:
                         import signal
                         try:
                             os.kill(pid, signal.SIGTERM)
-                            self.app.logger.info(f"Job {self.job_id}: Sent SIGTERM to nmap process {pid}")
+                            logger.info(f"Job {self.job_id}: Sent SIGTERM to nmap process {pid}")
                         except ProcessLookupError:
-                            self.app.logger.warning(f"Job {self.job_id}: Nmap process {pid} not found")
+                            logger.warning(f"Job {self.job_id}: Nmap process {pid} not found")
                         except Exception as e:
-                            self.app.logger.error(f"Job {self.job_id}: Error killing nmap process: {str(e)}")
+                            logger.error(f"Job {self.job_id}: Error killing nmap process: {str(e)}")
                 
                 # 尝试终止所有相关的 nmap 进程
                 try:
@@ -124,19 +123,19 @@ class ScanExecutor:
                                 cmdline = ' '.join(proc.info['cmdline'] or [])
                                 if self.subnet in cmdline:
                                     proc.terminate()
-                                    self.app.logger.info(f"Job {self.job_id}: Terminated nmap process {proc.info['pid']}")
+                                    logger.info(f"Job {self.job_id}: Terminated nmap process {proc.info['pid']}")
                         except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
                             pass
                 except Exception as e:
-                    self.app.logger.error(f"Job {self.job_id}: Error terminating nmap processes: {str(e)}")
+                    logger.error(f"Job {self.job_id}: Error terminating nmap processes: {str(e)}")
                 
                 self.current_scan_process = None
             except Exception as e:
-                self.app.logger.error(f"Job {self.job_id}: Error stopping nmap process: {str(e)}")
+                logger.error(f"Job {self.job_id}: Error stopping nmap process: {str(e)}")
         else:
-            self.app.logger.info(f"Job {self.job_id}: No active nmap process to stop")
+            logger.info(f"Job {self.job_id}: No active nmap process to stop")
         
-        self.app.logger.info(f"Job {self.job_id}: Scan cancelled")
+        logger.info(f"Job {self.job_id}: Scan cancelled")
         
         # 更新任务状态为已取消
         try:
@@ -146,9 +145,9 @@ class ScanExecutor:
                     job.status = 'cancelled'
                     job.end_time = datetime.utcnow()
                     db.session.commit()
-                    self.app.logger.info(f"Job {self.job_id}: Status updated to cancelled")
+                    logger.info(f"Job {self.job_id}: Status updated to cancelled")
         except Exception as e:
-            self.app.logger.error(f"Job {self.job_id}: Error updating status to cancelled: {str(e)}")
+            logger.error(f"Job {self.job_id}: Error updating status to cancelled: {str(e)}")
             db.session.rollback()
 
     def cleanup(self):
@@ -160,7 +159,7 @@ class ScanExecutor:
             # 停止当前的 nmap 进程
             if self.current_scan_process:
                 try:
-                    self.app.logger.info(f"Job {self.job_id}: Stopping current nmap process")
+                    logger.info(f"Job {self.job_id}: Stopping current nmap process")
                     # 获取 nmap 进程的 PID
                     if hasattr(self.nm, 'get_nmap_pid'):
                         pid = self.nm.get_nmap_pid()
@@ -168,11 +167,11 @@ class ScanExecutor:
                             import signal
                             try:
                                 os.kill(pid, signal.SIGTERM)
-                                self.app.logger.info(f"Job {self.job_id}: Sent SIGTERM to nmap process {pid}")
+                                logger.info(f"Job {self.job_id}: Sent SIGTERM to nmap process {pid}")
                             except ProcessLookupError:
-                                self.app.logger.warning(f"Job {self.job_id}: Nmap process {pid} not found")
+                                logger.warning(f"Job {self.job_id}: Nmap process {pid} not found")
                             except Exception as e:
-                                self.app.logger.error(f"Job {self.job_id}: Error killing nmap process: {str(e)}")
+                                logger.error(f"Job {self.job_id}: Error killing nmap process: {str(e)}")
                     
                     # 尝试终止所有相关的 nmap 进程
                     try:
@@ -182,26 +181,26 @@ class ScanExecutor:
                                     cmdline = ' '.join(proc.info['cmdline'] or [])
                                     if self.subnet in cmdline:
                                         proc.terminate()
-                                        self.app.logger.info(f"Job {self.job_id}: Terminated nmap process {proc.info['pid']}")
+                                        logger.info(f"Job {self.job_id}: Terminated nmap process {proc.info['pid']}")
                             except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
                                 pass
                     except Exception as e:
-                        self.app.logger.error(f"Job {self.job_id}: Error terminating nmap processes: {str(e)}")
+                        logger.error(f"Job {self.job_id}: Error terminating nmap processes: {str(e)}")
                     
                     self.current_scan_process = None
                 except Exception as e:
-                    self.app.logger.error(f"Job {self.job_id}: Error stopping nmap process: {str(e)}")
+                    logger.error(f"Job {self.job_id}: Error stopping nmap process: {str(e)}")
             
             # 等待监控线程结束
             if self.monitor_thread and self.monitor_thread.is_alive():
-                self.app.logger.info(f"Job {self.job_id}: Waiting for monitor thread to finish")
+                logger.info(f"Job {self.job_id}: Waiting for monitor thread to finish")
                 self.monitor_thread.join(timeout=5)
                 if self.monitor_thread.is_alive():
-                    self.app.logger.warning(f"Job {self.job_id}: Monitor thread did not terminate within timeout")
+                    logger.warning(f"Job {self.job_id}: Monitor thread did not terminate within timeout")
             
-            self.app.logger.info(f"Job {self.job_id}: Cleanup completed")
+            logger.info(f"Job {self.job_id}: Cleanup completed")
         except Exception as e:
-            self.app.logger.error(f"Job {self.job_id}: Error during cleanup: {str(e)}")
+            logger.error(f"Job {self.job_id}: Error during cleanup: {str(e)}")
 
     def scan_network(self):
         try:
@@ -209,12 +208,12 @@ class ScanExecutor:
                 self.scanning = True
                 self.current_phase = "discovery"
                 self.scanned_hosts = 0
-                self.app.logger.info(f"Job {self.job_id}: Starting host discovery on subnet {self.subnet}")
-                self.app.logger.info(f"Job {self.job_id}: Initial current_scan_process status: {self.current_scan_process is not None}")
+                logger.info(f"Job {self.job_id}: Starting host discovery on subnet {self.subnet}")
+                logger.info(f"Job {self.job_id}: Initial current_scan_process status: {self.current_scan_process is not None}")
 
                 # 检查是否已取消
                 if self.cancelled:
-                    self.app.logger.info(f"Job {self.job_id}: Scan cancelled before starting")
+                    logger.info(f"Job {self.job_id}: Scan cancelled before starting")
                     return False
 
                 self._load_job_user_id()
@@ -225,9 +224,9 @@ class ScanExecutor:
                     if job:
                         job.status = 'running'
                         db.session.commit()
-                        self.app.logger.info(f"Job {self.job_id}: Status updated to running")
+                        logger.info(f"Job {self.job_id}: Status updated to running")
                 except Exception as e:
-                    self.app.logger.error(f"Job {self.job_id}: Error updating initial status: {str(e)}")
+                    logger.error(f"Job {self.job_id}: Error updating initial status: {str(e)}")
                     db.session.rollback()
                 
                 # 启动监控线程
@@ -239,22 +238,22 @@ class ScanExecutor:
                 try:
                     # 检查是否已取消
                     if self.cancelled:
-                        self.app.logger.info(f"Job {self.job_id}: Scan cancelled before host discovery")
+                        logger.info(f"Job {self.job_id}: Scan cancelled before host discovery")
                         return False
 
-                    self.app.logger.info(f"Job {self.job_id}: Starting nmap scan for host discovery")
+                    logger.info(f"Job {self.job_id}: Starting nmap scan for host discovery")
                     self.current_scan_process = self.nm.scan(
                         hosts=self.subnet,
                         arguments='-sn -T5 --stats-every 1s'
                     )
-                    self.app.logger.info(f"Job {self.job_id}: Host discovery scan completed, current_scan_process status: {self.current_scan_process is not None}")
+                    logger.info(f"Job {self.job_id}: Host discovery scan completed, current_scan_process status: {self.current_scan_process is not None}")
                 except Exception as e:
-                    self.app.logger.error(f"Job {self.job_id}: Error during host discovery: {str(e)}")
+                    logger.error(f"Job {self.job_id}: Error during host discovery: {str(e)}")
                     return False
 
                 # 检查是否被取消
                 if self.cancelled:
-                    self.app.logger.info(f"Job {self.job_id}: Scan cancelled during discovery phase")
+                    logger.info(f"Job {self.job_id}: Scan cancelled during discovery phase")
                     return False
 
                 active_hosts = [
@@ -265,7 +264,7 @@ class ScanExecutor:
                 self._save_discovery_result(active_hosts)
                 
                 self.total_hosts = len(active_hosts)
-                self.app.logger.info(f"Job {self.job_id}: Found {self.total_hosts} active hosts")
+                logger.info(f"Job {self.job_id}: Found {self.total_hosts} active hosts")
                 
                 if self.total_hosts == 0:
                     self.scanning = False
@@ -287,63 +286,63 @@ class ScanExecutor:
                     if scan_type == 'quick':
                         scan_args = '-sT -T4 -F --host-timeout 10s --max-rtt-timeout 500ms --max-retries 1'
                         scan_ports = None
-                        self.app.logger.info(f"Job {self.job_id}: Using quick scan mode (top 100 ports)")
+                        logger.info(f"Job {self.job_id}: Using quick scan mode (top 100 ports)")
                     elif scan_type == 'intense':
                         scan_args = '-sT -T4 -A -v --host-timeout 10s --max-rtt-timeout 500ms --max-retries 1'
                         if self.scan_params.get('enable_custom_ports') and self.scan_params.get('ports'):
                             scan_ports = self.scan_params['ports']
-                            self.app.logger.info(f"Job {self.job_id}: Using intense scan mode with custom ports: {scan_ports}")
+                            logger.info(f"Job {self.job_id}: Using intense scan mode with custom ports: {scan_ports}")
                         else:
                             scan_ports = None
-                            self.app.logger.info(f"Job {self.job_id}: Using intense scan mode (all ports)")
+                            logger.info(f"Job {self.job_id}: Using intense scan mode (all ports)")
                     elif scan_type == 'vulnerability':
                         scan_args = '-sT -T4 -A -v --script vuln --host-timeout 10s --max-rtt-timeout 500ms --max-retries 1'
                         if self.scan_params.get('enable_custom_ports') and self.scan_params.get('ports'):
                             scan_ports = self.scan_params['ports']
-                            self.app.logger.info(f"Job {self.job_id}: Using vulnerability scan mode with custom ports: {scan_ports}")
+                            logger.info(f"Job {self.job_id}: Using vulnerability scan mode with custom ports: {scan_ports}")
                         else:
                             scan_ports = None
-                            self.app.logger.info(f"Job {self.job_id}: Using vulnerability scan mode (all ports)")
+                            logger.info(f"Job {self.job_id}: Using vulnerability scan mode (all ports)")
                 else:
                     if self.scan_params.get('enable_custom_ports') and self.scan_params.get('ports'):
                         scan_ports = self.scan_params['ports']
-                        self.app.logger.info(f"Job {self.job_id}: Using default scan mode with custom ports: {scan_ports}")
+                        logger.info(f"Job {self.job_id}: Using default scan mode with custom ports: {scan_ports}")
                     else:
-                        self.app.logger.info(f"Job {self.job_id}: Using default scan mode with default ports: {scan_ports}")
+                        logger.info(f"Job {self.job_id}: Using default scan mode with default ports: {scan_ports}")
 
                 # 端口扫描
                 for i, host in enumerate(active_hosts, 1):
                     # 检查是否被取消
                     if self.cancelled:
-                        self.app.logger.info(f"Job {self.job_id}: Scan cancelled during port scan phase")
+                        logger.info(f"Job {self.job_id}: Scan cancelled during port scan phase")
                         return False
 
-                    self.app.logger.info(f"Job {self.job_id}: Starting port scan for host {i}/{self.total_hosts}: {host}")
+                    logger.info(f"Job {self.job_id}: Starting port scan for host {i}/{self.total_hosts}: {host}")
                     try:
                         # 使用配置的扫描参数
-                        self.app.logger.info(f"Job {self.job_id}: Executing nmap scan for {host}")
+                        logger.info(f"Job {self.job_id}: Executing nmap scan for {host}")
                         scan_arguments = scan_args
                         if scan_ports:
                             scan_arguments += f' -p {scan_ports}'
                         
                         # 检查是否被取消
                         if self.cancelled:
-                            self.app.logger.info(f"Job {self.job_id}: Scan cancelled before starting port scan for {host}")
+                            logger.info(f"Job {self.job_id}: Scan cancelled before starting port scan for {host}")
                             return False
                         
-                        self.app.logger.info(f"Job {self.job_id}: Starting port scan for {host}, current_scan_process status before scan: {self.current_scan_process is not None}")
+                        logger.info(f"Job {self.job_id}: Starting port scan for {host}, current_scan_process status before scan: {self.current_scan_process is not None}")
                         self.current_scan_process = self.nm.scan(
                             hosts=host,
                             arguments=scan_arguments
                         )
-                        self.app.logger.info(f"Job {self.job_id}: Port scan completed for {host}, current_scan_process status after scan: {self.current_scan_process is not None}")
+                        logger.info(f"Job {self.job_id}: Port scan completed for {host}, current_scan_process status after scan: {self.current_scan_process is not None}")
                         
                         # 检查是否被取消
                         if self.cancelled:
-                            self.app.logger.info(f"Job {self.job_id}: Scan cancelled during port scan for {host}")
+                            logger.info(f"Job {self.job_id}: Scan cancelled during port scan for {host}")
                             return False
                         
-                        self.app.logger.info(f"Job {self.job_id}: Port scan results for {host}: {self.current_scan_process}")
+                        logger.info(f"Job {self.job_id}: Port scan results for {host}: {self.current_scan_process}")
                         
                         if host in self.current_scan_process['scan']:
                             open_ports = []
@@ -355,35 +354,35 @@ class ScanExecutor:
                                 if open_ports:
                                     self.machines_found += 1
                                     self._save_result(host, open_ports)
-                                    self.app.logger.info(f"Job {self.job_id}: Found {len(open_ports)} open ports on {host}")
+                                    logger.info(f"Job {self.job_id}: Found {len(open_ports)} open ports on {host}")
                                 else:
-                                    self.app.logger.info(f"Job {self.job_id}: No open ports found on {host}")
+                                    logger.info(f"Job {self.job_id}: No open ports found on {host}")
                             except Exception as e:
-                                self.app.logger.error(f"Job {self.job_id}: Error processing scan results for {host}: {str(e)}")
+                                logger.error(f"Job {self.job_id}: Error processing scan results for {host}: {str(e)}")
                         else:
-                            self.app.logger.warning(f"Job {self.job_id}: No scan results for host {host}")
+                            logger.warning(f"Job {self.job_id}: No scan results for host {host}")
                             
                     except Exception as e:
-                        self.app.logger.error(f"Job {self.job_id}: Port scan failed for host {host}: {str(e)}")
+                        logger.error(f"Job {self.job_id}: Port scan failed for host {host}: {str(e)}")
                         continue
                     finally:
                         try:
                             # 更新已扫描主机数
                             self.scanned_hosts += 1
-                            self.app.logger.info(f"Job {self.job_id}: Completed scanning host {i}/{self.total_hosts}: {host}")
+                            logger.info(f"Job {self.job_id}: Completed scanning host {i}/{self.total_hosts}: {host}")
                         except Exception as e:
-                            self.app.logger.error(f"Job {self.job_id}: Error updating scan progress: {str(e)}")
+                            logger.error(f"Job {self.job_id}: Error updating scan progress: {str(e)}")
                     
                     # 检查是否被取消
                     if self.cancelled:
-                        self.app.logger.info(f"Job {self.job_id}: Scan cancelled after scanning host {host}")
+                        logger.info(f"Job {self.job_id}: Scan cancelled after scanning host {host}")
                         return False
                     
                     # 添加短暂延迟，让进度更新更平滑
                     time.sleep(0.5)
                 
                 # 扫描完成
-                self.app.logger.info(f"Job {self.job_id}: All hosts scanned, updating final status")
+                logger.info(f"Job {self.job_id}: All hosts scanned, updating final status")
                 self.scanning = False
                 
                 # 清理资源
@@ -393,7 +392,7 @@ class ScanExecutor:
                 try:
                     self._update_progress(100)
                 except Exception as e:
-                    self.app.logger.error(f"Job {self.job_id}: Error updating final progress: {str(e)}")
+                    logger.error(f"Job {self.job_id}: Error updating final progress: {str(e)}")
                 
                 # 更新任务状态为完成
                 try:
@@ -402,19 +401,19 @@ class ScanExecutor:
                         job.status = 'completed'
                         job.end_time = datetime.utcnow()
                         db.session.commit()
-                        self.app.logger.info(f"Job {self.job_id}: Status updated to completed")
+                        logger.info(f"Job {self.job_id}: Status updated to completed")
                     else:
-                        self.app.logger.error(f"Job {self.job_id}: Failed to update status - job not found")
+                        logger.error(f"Job {self.job_id}: Failed to update status - job not found")
                 except Exception as e:
-                    self.app.logger.error(f"Job {self.job_id}: Error updating final status: {str(e)}")
+                    logger.error(f"Job {self.job_id}: Error updating final status: {str(e)}")
                     db.session.rollback()
                 
-                self.app.logger.info(f"Job {self.job_id}: Scan completed successfully")
+                logger.info(f"Job {self.job_id}: Scan completed successfully")
                 return True
                 
         except Exception as e:
             self.scanning = False
-            self.app.logger.error(f"Job {self.job_id}: Scan execution error: {str(e)}")
+            logger.error(f"Job {self.job_id}: Scan execution error: {str(e)}")
             
             # 清理资源
             self.cleanup()
@@ -436,7 +435,7 @@ class ScanExecutor:
             try:
                 job = ScanJob.query.get(self.job_id)
                 if not job:
-                    self.app.logger.error(f"Job {self.job_id} not found when saving result")
+                    logger.error(f"Job {self.job_id} not found when saving result")
                     return
                 
                 # 构建端口信息字典
@@ -460,12 +459,12 @@ class ScanExecutor:
                 )
                 db.session.add(result)
                 db.session.commit()
-                self.app.logger.info(f"Saved scan result for job {self.job_id}, IP {ip}")
+                logger.info(f"Saved scan result for job {self.job_id}, IP {ip}")
             except Exception as e:
                 db.session.rollback()
-                self.app.logger.error(f"Database error saving result for job {self.job_id}: {str(e)}")
+                logger.error(f"Database error saving result for job {self.job_id}: {str(e)}")
         except Exception as e:
-            self.app.logger.error(f"Error saving result for job {self.job_id}: {str(e)}")
+            logger.error(f"Error saving result for job {self.job_id}: {str(e)}")
     
     def _save_discovery_result(self, active_hosts):
         try:
@@ -490,7 +489,7 @@ class ScanExecutor:
                                     type="ip",
                                     commit=True
                                 )
-                                self.app.logger.info(f"Sent notification for IP status change {ip_address} to user {self.job_user_id}")
+                                logger.info(f"Sent notification for IP status change {ip_address} to user {self.job_user_id}")
                     else:
                         ip = IP(
                             ip_address=ip_address,
@@ -507,7 +506,7 @@ class ScanExecutor:
                                 type="ip",
                                 commit=True
                             )
-                            self.app.logger.info(f"Sent notification for new IP {ip_address} to user {self.job_user_id}")
+                            logger.info(f"Sent notification for new IP {ip_address} to user {self.job_user_id}")
                 
                 # 标记未响应的 IP 为 inactive
                 IP.query.filter(
@@ -519,20 +518,20 @@ class ScanExecutor:
                 }, synchronize_session=False)
                 
                 db.session.commit()
-                self.app.logger.info(f"Saved discovery results for job {self.job_id}")
+                logger.info(f"Saved discovery results for job {self.job_id}")
             except Exception as e:
                 db.session.rollback()
-                self.app.logger.error(f"Database error saving discovery results for job {self.job_id}: {str(e)}")
+                logger.error(f"Database error saving discovery results for job {self.job_id}: {str(e)}")
         except Exception as e:
-            self.app.logger.error(f"Error saving discovery results for job {self.job_id}: {str(e)}")
+            logger.error(f"Error saving discovery results for job {self.job_id}: {str(e)}")
     
     def execute(self):
         """执行扫描任务"""
         try:
             with self.app.app_context():
-                self.app.logger.info(f"Starting scan execution for job {self.job_id}")
+                logger.info(f"Starting scan execution for job {self.job_id}")
                 result = self.scan_network()
-                self.app.logger.info(f"Scan execution completed for job {self.job_id} with result: {result}")
+                logger.info(f"Scan execution completed for job {self.job_id} with result: {result}")
 
                 # 扫描完成后发送通知
                 job = ScanJob.query.get(self.job_id)
@@ -558,9 +557,9 @@ class ScanExecutor:
                             }
                         )
                 else:
-                    self.app.logger.error(f"Job {self.job_id}: Failed to update status - job not found")
+                    logger.error(f"Job {self.job_id}: Failed to update status - job not found")
 
                 return result
         except Exception as e:
-            self.app.logger.error(f"Error executing scan for job {self.job_id}: {str(e)}")
+            logger.error(f"Error executing scan for job {self.job_id}: {str(e)}")
             return False 

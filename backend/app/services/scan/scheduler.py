@@ -13,11 +13,8 @@ import threading
 import os
 import time
 from app.core.config.settings import Config
+from app.core.utils.logger import app_logger as logger
 from app.core.error.errors import DatabaseError
-
-# 配置日志
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 # 配置调度器
 executors = {

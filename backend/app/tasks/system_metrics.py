@@ -7,9 +7,7 @@ import atexit
 import psutil
 from datetime import datetime
 from app.models.models import db, SystemMetrics, NetworkMetrics, DiskMetrics, ProcessMetrics
-from app.core.utils.logger import app_logger
-
-logger = logging.getLogger(__name__)
+from app.core.utils.logger import app_logger as logger
 
 class MetricsScheduler:
     _instance = None
@@ -93,7 +91,7 @@ class MetricsScheduler:
     def collect_metrics(self):
         """收集系统指标"""
         if not self._app:
-            app_logger.error("Application not initialized")
+            logger.error("Application not initialized")
             return
 
         with self._app.app_context():
@@ -120,7 +118,7 @@ class MetricsScheduler:
                         except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
                             continue
                 except Exception as e:
-                    app_logger.error(f"获取线程数时发生错误: {str(e)}")
+                    logger.error(f"获取线程数时发生错误: {str(e)}")
 
                 # 创建系统指标记录
                 system_metrics = SystemMetrics(
@@ -162,7 +160,7 @@ class MetricsScheduler:
                             )
                             db.session.add(net_metrics)
                 except Exception as e:
-                    app_logger.error(f"获取网络指标时发生错误: {str(e)}")
+                    logger.error(f"获取网络指标时发生错误: {str(e)}")
 
                 # 收集磁盘指标
                 try:
@@ -190,10 +188,10 @@ class MetricsScheduler:
                                 )
                                 db.session.add(disk_metrics)
                             except (PermissionError, OSError) as e:
-                                app_logger.warning(f"无法访问磁盘 {partition.mountpoint}: {str(e)}")
+                                logger.warning(f"无法访问磁盘 {partition.mountpoint}: {str(e)}")
                                 continue
                 except Exception as e:
-                    app_logger.error(f"获取磁盘指标时发生错误: {str(e)}")
+                    logger.error(f"获取磁盘指标时发生错误: {str(e)}")
 
                 # 收集进程指标
                 try:
@@ -245,19 +243,19 @@ class MetricsScheduler:
                             )
                             db.session.add(process_metrics)
                         except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess) as e:
-                            app_logger.debug(f"无法获取进程信息: {str(e)}")
+                            logger.debug(f"无法获取进程信息: {str(e)}")
                             continue
                 except Exception as e:
-                    app_logger.error(f"获取进程指标时发生错误: {str(e)}")
+                    logger.error(f"获取进程指标时发生错误: {str(e)}")
 
                 # 保存所有指标
                 db.session.add(system_metrics)
                 db.session.commit()
-                app_logger.info("System metrics collected successfully")
+                logger.info("System metrics collected successfully")
 
             except Exception as e:
                 db.session.rollback()
-                app_logger.error(f"收集系统指标时发生错误: {str(e)}")
+                logger.error(f"收集系统指标时发生错误: {str(e)}")
                 raise
 
     def cleanup_metrics(self):

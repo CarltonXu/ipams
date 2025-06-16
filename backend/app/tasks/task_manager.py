@@ -7,6 +7,7 @@ import multiprocessing
 from app.models.models import db, ScanJob, ScanSubnet, ScanPolicy
 from app.services.scan.executor import ScanExecutor
 from app.tasks.task_state import task_state
+from app.core.utils.logger import app_logger as logger
 from flask import current_app
 import shutil
 from datetime import datetime
