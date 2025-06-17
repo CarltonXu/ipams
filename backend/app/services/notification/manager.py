@@ -1,7 +1,7 @@
-from flask import current_app
 from .email import EmailNotifier
 from .wechat import WeChatNotifier
 from app.models.models import db, SystemConfig, Notification
+from app.core.utils.logger import app_logger as logger
 import time
 
 class NotificationManager:
@@ -28,7 +28,7 @@ class NotificationManager:
             self._config_cache = {config.key: config.value for config in configs}
             self._config_cache_time = time.time()
         except Exception as e:
-            current_app.logger.error(f"Failed to load notification configs: {str(e)}")
+            logger.error(f"Failed to load notification configs: {str(e)}")
 
     def _get_config(self, key, default=None):
         """获取配置值，支持缓存"""
@@ -85,7 +85,7 @@ class NotificationManager:
                 
                 return True
         except Exception as e:
-            current_app.logger.error(f"Failed to update notification config: {str(e)}")
+            logger.error(f"Failed to update notification config: {str(e)}")
             return False
 
     def get_config(self, key, default=None):
@@ -111,7 +111,7 @@ class NotificationManager:
                     db.session.commit()
                 return notification
         except Exception as e:
-            current_app.logger.error(f"Failed to create notification: {str(e)}")
+            logger.error(f"Failed to create notification: {str(e)}")
             if commit:
                 db.session.rollback()
             return None 

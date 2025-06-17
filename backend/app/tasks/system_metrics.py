@@ -1,10 +1,9 @@
-from apscheduler.schedulers.background import BackgroundScheduler
-from apscheduler.triggers.interval import IntervalTrigger
-from app.core.utils.helpers import get_system_metrics, cleanup_old_metrics
-import logging
 import threading
 import atexit
 import psutil
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.interval import IntervalTrigger
+from app.core.utils.helpers import cleanup_old_metrics
 from datetime import datetime
 from app.models.models import db, SystemMetrics, NetworkMetrics, DiskMetrics, ProcessMetrics
 from app.core.utils.logger import app_logger as logger
@@ -33,7 +32,7 @@ class MetricsScheduler:
                             MetricsScheduler._scheduler = BackgroundScheduler()
                         self.scheduler = MetricsScheduler._scheduler
                         self._initialized = True
-                        logger.info("MetricsScheduler initialized")
+                        logger.debug("MetricsScheduler initialized")
                     except Exception as e:
                         logger.error(f"Failed to initialize scheduler: {str(e)}")
                         raise
@@ -46,7 +45,7 @@ class MetricsScheduler:
             self._app = app
             if not self.scheduler.running:
                 self.scheduler.start()
-                logger.info("Metrics scheduler started")
+                logger.debug("Metrics scheduler started")
                 self.init_scheduler()
                 
                 # 注册应用退出时的清理函数
@@ -84,7 +83,7 @@ class MetricsScheduler:
                     replace_existing=True
                 )
 
-                logger.info("Initialized metrics scheduler with collection and cleanup jobs")
+                logger.debug("Initialized metrics scheduler with collection and cleanup jobs")
         except Exception as e:
             logger.error(f"Error initializing scheduler: {str(e)}")
 
@@ -251,7 +250,7 @@ class MetricsScheduler:
                 # 保存所有指标
                 db.session.add(system_metrics)
                 db.session.commit()
-                logger.info("System metrics collected successfully")
+                logger.debug("System metrics collected successfully")
 
             except Exception as e:
                 db.session.rollback()
@@ -267,7 +266,7 @@ class MetricsScheduler:
         try:
             with self._app.app_context():
                 cleanup_old_metrics()
-                logger.info("Old metrics cleaned up successfully")
+                logger.debug("Old metrics cleaned up successfully")
         except Exception as e:
             logger.error(f"Failed to cleanup metrics: {str(e)}")
 
@@ -276,7 +275,7 @@ class MetricsScheduler:
         if self.scheduler.running:
             try:
                 self.scheduler.shutdown(wait=True)
-                logger.info("Metrics scheduler stopped")
+                logger.debug("Metrics scheduler stopped")
             except Exception as e:
                 logger.error(f"Error shutting down scheduler: {str(e)}")
 

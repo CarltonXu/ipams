@@ -1,18 +1,15 @@
+import json
+import shutil
+import threading
+import time
+import pytz
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.date import DateTrigger
 from apscheduler.executors.pool import ThreadPoolExecutor
 from datetime import datetime
-import pytz
 from app.models.models import db, ScanPolicy, ScanJob, ScanSubnet
 from app.tasks.task_manager import TaskManager
-import json
-import logging
-import shutil
-import threading
-import os
-import time
-from app.core.config.settings import Config
 from app.core.utils.logger import app_logger as logger
 from app.core.error.errors import DatabaseError
 
@@ -74,7 +71,7 @@ class PolicyScheduler:
                     if not self._scheduler_started and not self.scheduler.running:
                         self.scheduler.start()
                         self._scheduler_started = True
-                        logger.info("Scheduler started")
+                        logger.debug("Scheduler started")
                         # 在启动调度器后立即初始化任务
                         self.init_scheduler()
                         break
@@ -100,7 +97,7 @@ class PolicyScheduler:
                 # 检查是否已经在运行
                 existing_jobs = self.scheduler.get_jobs()
                 if existing_jobs:
-                    logger.info(f"Scheduler already has {len(existing_jobs)} jobs, skipping initialization")
+                    logger.debug(f"Scheduler already has {len(existing_jobs)} jobs, skipping initialization")
                     return
                     
                 with self.app.app_context():
@@ -119,7 +116,7 @@ class PolicyScheduler:
                         if not policy.deleted and policy.status == 'active':
                             self.schedule_policy(policy)
                         
-                    logger.info(f"Initialized scheduler with {len(policies)} policies")
+                    logger.debug(f"Initialized scheduler with {len(policies)} policies")
         except Exception as e:
             logger.error(f"Error initializing scheduler: {str(e)}")
     
@@ -128,7 +125,7 @@ class PolicyScheduler:
         try:
             # 检查策略是否被删除或未激活
             if policy.deleted or policy.status != 'active':
-                logger.info(f"Policy {policy.name} is deleted or inactive, skipping scheduling")
+                logger.debug(f"Policy {policy.name} is deleted or inactive, skipping scheduling")
                 return
 
             strategies = json.loads(policy.strategies) if isinstance(policy.strategies, str) else policy.strategies
@@ -165,7 +162,7 @@ class PolicyScheduler:
                                 replace_existing=True
                             )
                     
-                    logger.info(f"Scheduled policy {policy.name} with cron {strategy['cron']}")
+                    logger.debug(f"Scheduled policy {policy.name} with cron {strategy['cron']}")
                 except Exception as e:
                     logger.error(f"Failed to schedule job {job_id}: {str(e)}")
                     continue

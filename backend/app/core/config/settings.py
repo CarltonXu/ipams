@@ -19,12 +19,17 @@ class Config:
     REDIS_CAPTCHA_EXPIRE = int(os.getenv('REDIS_CAPTCHA_EXPIRE', 300))  # 5 minutes
 
     # 文件上传配置
-    UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))), 'uploads')
+    UPLOAD_FOLDER = os.getenv('UPLOAD_PATH', os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))), 'uploads'))
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 限制上传文件大小为16MB
+
+    # 设置日志配置
+    LOG_MAX_BYTES =int(os.getenv('LOG_MAX_BYTES', 10*1024*1024))
+    LOG_BACKUP_COUNT= int(os.getenv('LOG_BACKUP_COUNT', 5))
+    LOG_PATH = os.getenv('LOG_PATH', os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))), 'logs'))
 
 class DevelopmentConfig(Config):
     """开发环境配置"""
-    DEBUG = True
+    DEBUG = str(os.getenv('DEBUG', 'False')).lower() == 'true'
     TESTING = False
 
 class TestingConfig(Config):
@@ -35,7 +40,7 @@ class TestingConfig(Config):
 
 class ProductionConfig(Config):
     """生产环境配置"""
-    DEBUG = False
+    DEBUG = str(os.getenv('DEBUG', 'False')).lower() == 'true'
     TESTING = False
 
     # 生产环境数据库配置

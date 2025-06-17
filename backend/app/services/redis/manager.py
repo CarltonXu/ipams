@@ -1,8 +1,8 @@
-from typing import Optional, Any
+from typing import Optional
 from redis import Redis
 from flask import current_app
-import logging
 from app.core.error.errors import DatabaseError, DatabaseConnectionError
+from app.core.utils.logger import app_logger as logger
 
 class RedisManager:
     """Redis 服务管理器"""
@@ -23,7 +23,7 @@ class RedisManager:
                 raise DatabaseConnectionError("Redis 连接未初始化")
             return redis_client
         except Exception as e:
-            logging.error(f"Failed to get Redis connection: {str(e)}")
+            logger.error(f"Failed to get Redis connection: {str(e)}")
             raise DatabaseConnectionError(
                 message="无法连接到 Redis 服务器",
                 details={'original_error': str(e)}
@@ -48,7 +48,7 @@ class RedisManager:
             redis_client = RedisManager.get_redis()
             return redis_client.setex(key, ttl, value)
         except Exception as e:
-            logging.error(f"Redis set operation failed: {str(e)}")
+            logger.error(f"Redis set operation failed: {str(e)}")
             raise DatabaseError(
                 message="Redis 设置操作失败",
                 details={'key': key, 'original_error': str(e)}
@@ -71,7 +71,7 @@ class RedisManager:
             redis_client = RedisManager.get_redis()
             return redis_client.get(key)
         except Exception as e:
-            logging.error(f"Redis get operation failed: {str(e)}")
+            logger.error(f"Redis get operation failed: {str(e)}")
             raise DatabaseError(
                 message="Redis 获取操作失败",
                 details={'key': key, 'original_error': str(e)}
@@ -94,7 +94,7 @@ class RedisManager:
             redis_client = RedisManager.get_redis()
             return redis_client.delete(key) > 0
         except Exception as e:
-            logging.error(f"Redis delete operation failed: {str(e)}")
+            logger.error(f"Redis delete operation failed: {str(e)}")
             raise DatabaseError(
                 message="Redis 删除操作失败",
                 details={'key': key, 'original_error': str(e)}

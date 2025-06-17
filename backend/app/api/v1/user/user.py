@@ -2,7 +2,7 @@ from flask import Blueprint, jsonify, request, current_app
 from sqlalchemy import desc, asc
 from werkzeug.utils import secure_filename
 from app.models.models import db, User, IP
-from app.core.security.auth import token_required, admin_required, generate_token
+from app.core.security.auth import token_required, admin_required
 from app.core.utils import helpers
 import os
 import uuid

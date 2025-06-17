@@ -1,6 +1,6 @@
+import jwt
 from functools import wraps
 from flask import request, jsonify, current_app
-import jwt
 from datetime import datetime, timedelta
 from app.models.models import User
 

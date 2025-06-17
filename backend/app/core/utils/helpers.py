@@ -1,6 +1,3 @@
-from flask import request
-from PIL import Image, ImageDraw, ImageFont
-from app.models.models import db, ActionLog, SystemMetrics, NetworkMetrics, DiskMetrics, ProcessMetrics
 import re
 import uuid
 import random
@@ -11,6 +8,9 @@ import base64
 import psutil
 import platform
 import datetime
+from flask import request
+from PIL import Image, ImageDraw, ImageFont
+from app.models.models import db, ActionLog, SystemMetrics, NetworkMetrics, DiskMetrics, ProcessMetrics
 from app.core.utils.logger import app_logger as logger
 
 def is_valid_email(email):

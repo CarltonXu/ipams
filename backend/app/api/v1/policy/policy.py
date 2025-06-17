@@ -1,10 +1,11 @@
-from flask import Blueprint, request, jsonify, current_app
+import json
+from flask import Blueprint, request, jsonify
 from app.models.models import db, ScanPolicy, ScanSubnet, ScanJob
 from app.core.security.auth import token_required
 from sqlalchemy.exc import IntegrityError
 from app.services.scan.scheduler import scheduler
-import json
 from app.core.utils.helpers import log_action_to_db
+from app.core.utils.logger import app_logger as logger
 from app.services.notification.events import NotificationEvent, send_notification
 
 policy_bp = Blueprint('policy', __name__)
@@ -440,7 +441,7 @@ def get_policy_jobs(current_user, policy_id):
         })
 
     except Exception as e:
-        current_app.logger.error(f"Error fetching policy jobs: {str(e)}")
+        logger.error(f"Error fetching policy jobs: {str(e)}")
         return jsonify({
             'code': 500,
             'message': 'Internal server error',

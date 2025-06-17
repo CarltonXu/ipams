@@ -2,6 +2,7 @@ from flask import Blueprint, jsonify, request, current_app
 from app.models.models import db, User
 from app.core.security.auth import generate_token, token_required
 from app.core.utils import helpers
+from app.core.utils.logger import app_logger as logger
 from app.services.redis.manager import RedisManager
 
 import re
@@ -87,13 +88,23 @@ def login():
         # 查找用户
         user = User.query.filter_by(username=data.get('username')).first()
 
-        if user and not user.check_password(data.get('password')):
-            # 记录日志（登录失败）
+        if not user:
+            # 记录日志（用户不存在）
+            logger.warning(f'Login attempt failed: User {data.get("username")} not found')
+            return jsonify({
+                'code': 401,
+                'message': 'Invalid username or password',
+                'data': None
+            }), 401
+
+        if not user.check_password(data.get('password')):
+            # 记录日志（密码错误）
+            logger.warning(f'Login attempt failed: Invalid password for user {user.username}')
             helpers.log_action_to_db(
                 user=user,
                 action="Failed login attempt",
-                target=data.get('username'),
-                details="Invalid credentials"
+                target=user.username,
+                details="Invalid password"
             )
             return jsonify({
                 'code': 401,
@@ -136,7 +147,7 @@ def login():
 
     except Exception as e:
         # 记录系统错误
-        current_app.logger.error(f"Login error: {str(e)}")
+        logger.error(f"Login error: {str(e)}")
         return jsonify({
             'code': 500,
             'message': 'Internal server error',

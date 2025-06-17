@@ -1,14 +1,12 @@
 import atexit
 import os
 import time
-import logging
 
 from flask import Flask, send_from_directory
 from flask_cors import CORS
 from flask_migrate import Migrate
 from redis import Redis
 from sqlalchemy import text
-from flask_sqlalchemy import SQLAlchemy
 
 from app.core.config.settings import Config
 from app.models.models import db
@@ -20,7 +18,7 @@ from app.core.error.errors import DatabaseError
 from app.services.notification import NotificationManager
 from app.scripts.init_notification_templates import init_notification_templates
 from app.tasks.system_metrics import metrics_scheduler
-from app.core.utils.logger import app_logger as logger
+from app.core.utils.logger import app_logger as logger, init_app as init_logger
 
 # 创建 db 实例
 migrate = Migrate()
@@ -49,7 +47,7 @@ def create_redis_client(app):
             )
             # 测试连接
             client.ping()
-            logger.info("Redis connection established successfully")
+            logger.debug("Redis connection established successfully")
             return client
         except Exception as e:
             if attempt < max_retries - 1:
@@ -65,6 +63,10 @@ def create_redis_client(app):
 def init_extensions(app):
     """初始化扩展"""
     try:
+        # 初始化日志
+        init_logger(app)
+        logger.debug("Logger initialized successfully")
+
         # 初始化数据库
         db.init_app(app)
         migrate.init_app(app, db)
@@ -77,7 +79,7 @@ def init_extensions(app):
             try:
                 with app.app_context():
                     db.session.execute(text('SELECT 1'))
-                    logger.info("Database connection established successfully")
+                    logger.debug("Database connection established successfully")
                     break
             except Exception as e:
                 if attempt < max_retries - 1:
@@ -89,7 +91,7 @@ def init_extensions(app):
                         error_msg = "数据库连接超时"
                     elif "Can't connect" in error_msg:
                         error_msg = "无法连接到数据库服务器"
-                    logger.error(f"数据库连接失败: {error_msg}")
+                    logger.error(f"Database connect failed: {error_msg}")
                     raise DatabaseError(
                         message=error_msg,
                         details={'server': app.config.get('SQLALCHEMY_DATABASE_URI', '').split('@')[-1].split('/')[0]}
@@ -101,28 +103,31 @@ def init_extensions(app):
         
         # 初始化任务管理器
         task_manager.init_app(app)
-        logger.info("Task manager initialized successfully")
+        logger.debug("Task manager initialized successfully")
         
         # 初始化调度器
         scheduler.init_app(app)
-        logger.info("Scheduler initialized successfully")
+        logger.debug("Scheduler initialized successfully")
 
         # 初始化系统监控调度器
         metrics_scheduler.init_app(app)
+        logger.debug('Monitor scheduler initialized successfully')
         
         # 初始化通知管理器
         notification_manager.init_app(app)
         app.notification_manager = notification_manager
-        logger.info("Notification manager initialized successfully")
+        logger.debug("Notification manager initialized successfully")
         
     except Exception as e:
         logger.error(f"Failed to initialize extensions: {str(e)}")
         raise
 
-def create_app(config=None):
+def create_app(config_object=None):
     app = Flask(__name__)
-    if config:
-        app.config.from_object(config)
+    
+    # 加载配置
+    if config_object:
+        app.config.from_object(config_object)
     else:
         app.config.from_object(Config)
 
@@ -152,13 +157,13 @@ def create_app(config=None):
             os.makedirs(upload_folder, exist_ok=True)
             
             # 记录请求信息
-            logger.info(f"Attempting to access file: {filename}")
-            logger.info(f"Upload folder: {upload_folder}")
+            logger.debug(f"Attempting to access file: {filename}")
+            logger.debug(f"Upload folder: {upload_folder}")
             
             # 检查文件是否存在
             file_path = os.path.join(upload_folder, filename)
             if not os.path.exists(file_path):
-                app.logger.error(f"File not found: {file_path}")
+                logger.error(f"File not found: {file_path}")
                 return "File not found", 404
                 
             return send_from_directory(upload_folder, filename)
@@ -172,10 +177,12 @@ def create_app(config=None):
     # 创建数据库表
     with app.app_context():
         db.create_all()
-        logger.info("Database tables created successfully")
+        logger.debug("Database tables created successfully")
         
         # 初始化通知模板
         init_notification_templates()
-        logger.info("Notification templates initialized successfully")
+        logger.debug("Notification templates initialized successfully")
+    
+
     
     return app

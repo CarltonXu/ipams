@@ -1,6 +1,6 @@
-from flask import current_app
 import smtplib
 from email.mime.text import MIMEText
+from app.core.utils.logger import app_logger as logger
 
 class EmailNotifier:
     def __init__(self, app=None):
@@ -26,5 +26,5 @@ class EmailNotifier:
                 server.send_message(msg)
             return True
         except Exception as e:
-            self.app.logger.error(f"Failed to send email notification: {str(e)}")
+            logger.error(f"Failed to send email notification: {str(e)}")
             raise

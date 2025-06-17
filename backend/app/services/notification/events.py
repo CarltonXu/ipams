@@ -1,6 +1,7 @@
 from enum import Enum
 from typing import Dict, Any, Optional
 from flask import current_app
+from app.core.utils.logger import app_logger as logger
 
 class NotificationEvent(Enum):
     """通知事件类型"""
@@ -90,4 +91,4 @@ def send_notification(
         current_app.notification_manager.notify_user(user, message)
         
     except Exception as e:
-        current_app.notification_manager.app.logger.error(f"Failed to send notification: {str(e)}") 
+        logger.error(f"Failed to send notification: {str(e)}") 

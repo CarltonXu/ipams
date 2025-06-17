@@ -1,9 +1,7 @@
+import threading
 from typing import Dict, Any, Optional
 from datetime import datetime
-import logging
-import threading
-
-logger = logging.getLogger(__name__)
+from app.core.utils.logger import app_logger as logger
 
 class TaskState:
     def __init__(self):

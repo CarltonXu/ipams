@@ -1,18 +1,16 @@
-from concurrent.futures import ThreadPoolExecutor
-from typing import Dict, Any, Optional
-import logging
 import threading
 import os
+import shutil
 import multiprocessing
+
+from concurrent.futures import ThreadPoolExecutor
+from typing import Dict, Any, Optional
 from app.models.models import db, ScanJob, ScanSubnet, ScanPolicy
 from app.services.scan.executor import ScanExecutor
 from app.tasks.task_state import task_state
 from app.core.utils.logger import app_logger as logger
 from flask import current_app
-import shutil
 from datetime import datetime
-
-logger = logging.getLogger(__name__)
 
 class TaskManager:
     _instance = None
@@ -53,7 +51,6 @@ class TaskManager:
     def init_app(self, app):
         """初始化应用实例"""
         self.app = app
-        logger.info("TaskManager app initialized")
 
     def submit_scan_task(self, job_id: str, policy_id: str, subnet_id: str, scan_params: dict = None) -> ScanJob:
         """提交扫描任务"""

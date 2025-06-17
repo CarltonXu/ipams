@@ -1,8 +1,8 @@
 from flask import Blueprint, jsonify, request, current_app
 from app.core.security.auth import token_required
 from app.models.models import db, Notification
-from app.core.utils.helpers import log_action_to_db
-import smtplib # Import smtplib
+from app.core.utils.logger import app_logger as logger
+import smtplib
 
 notification_bp = Blueprint('notification', __name__)
 
@@ -52,13 +52,13 @@ def test_config(current_user):
                 )
                 return jsonify({'message': '测试发送成功'}) # Return success here
             except smtplib.SMTPAuthenticationError as e:
-                current_app.logger.error(f"Failed to send email notification (Authentication Error): {str(e)}")
+                logger.error(f"Failed to send email notification (Authentication Error): {str(e)}")
                 return jsonify({'error': 'SMTP认证失败，请检查用户名和密码。'}), 400
             except smtplib.SMTPException as e:
-                current_app.logger.error(f"Failed to send email notification (SMTP Error): {str(e)}")
+                logger.error(f"Failed to send email notification (SMTP Error): {str(e)}")
                 return jsonify({'error': '邮件服务器错误：' + str(e)}), 500
             except Exception as e:
-                current_app.logger.error(f"Failed to send email notification (General Error): {str(e)}")
+                logger.error(f"Failed to send email notification (General Error): {str(e)}")
                 return jsonify({'error': '邮件发送失败：' + str(e)}), 500
 
         elif type == 'wechat':
@@ -70,12 +70,12 @@ def test_config(current_user):
                 )
                 return jsonify({'message': '测试发送成功'}) # Moved this
             except Exception as e:
-                current_app.logger.error(f"Failed to send wechat notification: {str(e)}")
+                logger.error(f"Failed to send wechat notification: {str(e)}")
                 return jsonify({'error': '微信通知发送失败：' + str(e)}), 500
 
         return jsonify({'error': '无效的通知类型'}), 400 # Handle invalid type
     except Exception as e: # Catch any other unexpected errors
-        current_app.logger.error(f"An unexpected error occurred during notification test: {str(e)}")
+        logger.error(f"An unexpected error occurred during notification test: {str(e)}")
         return jsonify({'error': '服务器内部错误：' + str(e)}), 500
 
 @notification_bp.route('/notification/history', methods=['GET'])
@@ -175,5 +175,5 @@ def get_unread_count(current_user):
         unread_count = Notification.query.filter_by(user_id=current_user.id, read=False).count()
         return jsonify({'count': unread_count})
     except Exception as e:
-        current_app.logger.error(f"获取未读通知数量失败: {str(e)}")
-        return jsonify({'error': '获取未读通知数量失败'}), 500 
+        logger.error(f"Failed to obtain the number of unread notifications: {str(e)}")
+        return jsonify({'error': 'Failed to obtain the number of unread notifications'}), 500 

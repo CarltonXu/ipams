@@ -1,4 +1,5 @@
 import requests
+from app.core.utils.logger import app_logger as logger
 
 class WeChatNotifier:
     def __init__(self, app=None):
@@ -11,7 +12,7 @@ class WeChatNotifier:
         """Send WeChat notification using WeChat Work API"""
         try:
             if not webhook_url:
-                self.app.logger.error("Webhook URL not provided")
+                logger.error("Webhook URL not provided")
                 return
                 
             payload = {
@@ -25,4 +26,4 @@ class WeChatNotifier:
             response.raise_for_status()
             
         except Exception as e:
-            self.app.logger.error(f"Failed to send WeChat notification: {str(e)}") 
+            logger.error(f"Failed to send WeChat notification: {str(e)}") 
