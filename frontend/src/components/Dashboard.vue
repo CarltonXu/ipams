@@ -79,6 +79,14 @@
           </template>
           <div ref="jobStatusChartRef" class="chart"></div>
         </el-card>
+        <el-card class="chart-card">
+          <template #header>
+            <div class="chart-header">
+              <h3>{{ t('dashboard.charts.IPStatus') }}</h3>
+            </div>
+          </template>
+          <div ref="IPStatusChartRef" class="chart"></div>
+        </el-card>
       </div>
 
       <!-- 表格区域 -->
@@ -283,6 +291,9 @@ const refreshContainer = ref<HTMLElement | null>(null)
 const jobStatusChartRef = ref<HTMLElement | null>(null)
 let jobStatusChart: echarts.ECharts | null = null
 
+const IPStatusChartRef = ref<HTMLElement | null>(null)
+let IPStatusChart: echarts.ECharts | null = null
+
 const fetchData = async () => {
   const loadingInstance = ElLoading.service({
     target: refreshContainer.value || undefined,
@@ -335,6 +346,7 @@ onMounted(async () => {
     await fetchData()
     setupAutoRefresh()
     initJobStatusChart()
+    initIPStatusChart()
     window.addEventListener('resize', handleResize)
   } catch (error) {
     console.error('Failed to initialize dashboard:', error)
@@ -459,7 +471,15 @@ const initJobStatusChart = () => {
         {
           name: t('dashboard.charts.jobStatus'),
           type: 'pie',
-          radius: '50%',
+          radius: [20, 120],
+          center: ['50%', '50%'],
+          roseType: 'area',
+          itemStyle: {
+            borderRadius: 5
+          },
+          label: {
+            show: true
+          },
           data: [
             { 
               value: stats.value.successful_jobs || 0, 
@@ -489,6 +509,69 @@ const initJobStatusChart = () => {
     }
 
     jobStatusChart.setOption(option)
+  })
+}
+
+// 初始化任务状态图表
+const initIPStatusChart = () => {
+  nextTick(() => {
+    if (!IPStatusChartRef.value) return
+
+    if (!IPStatusChart) {
+      IPStatusChart = echarts.init(IPStatusChartRef.value)
+    }
+
+    const option = {
+      tooltip: {
+        trigger: 'item',
+        formatter: '{b}: {c} ({d}%)'
+      },
+      legend: {
+        orient: 'vertical',
+        left: 'left'
+      },
+      series: [
+        {
+          name: t('dashboard.charts.IPStatus'),
+          type: 'pie',
+          radius: [20, 120],
+          center: ['50%', '50%'],
+          roseType: 'area',
+          itemStyle: {
+            borderRadius: 5
+          },
+          label: {
+            show: true
+          },
+          data: [
+            { 
+              value: stats.value.total_ips || 0, 
+              name: t('dashboard.IPs.status.total'),
+              itemStyle: { color: '#67C23A' }
+            },
+            { 
+              value: stats.value.claimed_ips || 0, 
+              name: t('dashboard.IPs.status.claim'),
+              itemStyle: { color: '#409EFF' }
+            },
+            { 
+              value: stats.value.unclaimed_ips || 0, 
+              name: t('dashboard.IPs.status.unclaim'),
+              itemStyle: { color: '#F56C6C' }
+            }
+          ],
+          emphasis: {
+            itemStyle: {
+              shadowBlur: 10,
+              shadowOffsetX: 0,
+              shadowColor: 'rgba(0, 0, 0, 0.5)'
+            }
+          }
+        }
+      ]
+    }
+
+    IPStatusChart.setOption(option)
   })
 }
 

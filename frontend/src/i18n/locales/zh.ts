@@ -20,6 +20,7 @@ export default {
     charts: {
       resourceUsage: "资源使用趋势",
       jobStatus: "任务状态分布",
+      IPStatus: "主机IP状态分布",
       line: "折线图",
       bar: "柱状图"
     },
@@ -45,6 +46,13 @@ export default {
         details: '详情',
         created_at: '创建时间',
         source_ip: '源IP'
+      }
+    },
+    IPs: {
+      status: {
+        total: '总IP',
+        claim: '已认领',
+        unclaim: '未认领',
       }
     },
     recentJobs: {

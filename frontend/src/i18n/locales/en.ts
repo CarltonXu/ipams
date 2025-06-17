@@ -18,8 +18,9 @@ export default {
       minutes: 'minutes'
     },
     charts: {
-      resourceUsage: "Resource usage trend",
-      jobStatus: "Task status distribution",
+      resourceUsage: "Resource Usage Trend",
+      jobStatus: "Task Status Distribution",
+      IPStatus: 'IP Status Distribution',
       line: "Line chart",
       bar: "Bar chart"
     },
@@ -45,6 +46,13 @@ export default {
         details: 'Details',
         created_at: 'Created At',
         source_ip: 'Source IP'
+      }
+    },
+    IPs: {
+      status: {
+        total: 'Total IPs',
+        claim: 'Claim IPs',
+        unclaim: 'Unclaim IPs',
       }
     },
     recentJobs: {
