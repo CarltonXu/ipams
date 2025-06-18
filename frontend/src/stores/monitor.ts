@@ -1,79 +1,138 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import axios from 'axios'
-import type { MonitorData, SystemStats, ResourceHistory, ProcessInfo } from '../types/monitor'
 import { API_CONFIG } from '../config/api'
 
+interface SystemStats {
+  cpu_usage: number
+  memory_usage: number
+  process_count: number
+  cpu_count: number
+  memory_total: number
+  memory_used: number
+  memory_free: number
+  load_avg_1min: number
+  load_avg_5min: number
+  load_avg_15min: number
+}
+
+interface CpuTrend {
+  timestamps: string[]
+  cpu: number[]
+}
+
+interface MemoryTrend {
+  timestamps: string[]
+  memory: number[]
+}
+
+interface DiskTrend {
+  timestamps: string[]
+  disk_read: number[]
+  disk_write: number[]
+  disk_iops: number[]
+}
+
+interface NetworkTrend {
+  timestamps: string[]
+  network_sent: number[]
+  network_recv: number[]
+}
+
+interface Process {
+  pid: number
+  name: string
+  cpu_percent: number
+  memory_percent: number
+  memory_rss: number
+  memory_vms: number
+  status: string
+  num_threads: number
+  create_time: string
+}
+
+interface NetworkInterface {
+  name: string
+  bytes_sent: number
+  bytes_recv: number
+  packets_sent: number
+  packets_recv: number
+  errin: number
+  errout: number
+  dropin: number
+  dropout: number
+  is_up: boolean
+  speed: number
+  mtu: number
+}
+
+interface DiskPartition {
+  device: string
+  mountpoint: string
+  total: number
+  used: number
+  free: number
+  usage: number
+  read_bytes: number
+  write_bytes: number
+  read_count: number
+  write_count: number
+  read_time: number
+  write_time: number
+  is_removable: boolean
+  fstype: string
+}
+
 export const useMonitorStore = defineStore('monitor', () => {
-  // 状态
   const systemStats = ref<SystemStats>({
     cpu_usage: 0,
     memory_usage: 0,
-    disk_usage: 0,
-    process_count: 0
+    process_count: 0,
+    cpu_count: 0,
+    memory_total: 0,
+    memory_used: 0,
+    memory_free: 0,
+    load_avg_1min: 0,
+    load_avg_5min: 0,
+    load_avg_15min: 0
   })
 
-  const resourceHistory = ref<ResourceHistory>({
-    timestamps: [],
-    cpu: [],
-    memory: [],
-    disk: [],
-    network_sent: [],
-    network_recv: [],
-    disk_read: [],
-    disk_write: []
-  })
+  const cpuTrend = ref<CpuTrend>({ timestamps: [], cpu: [] })
+  const memoryTrend = ref<MemoryTrend>({ timestamps: [], memory: [] })
+  const diskTrend = ref<DiskTrend>({ timestamps: [], disk_read: [], disk_write: [], disk_iops: [] })
+  const networkTrend = ref<NetworkTrend>({ timestamps: [], network_sent: [], network_recv: [] })
 
-  const processes = ref<ProcessInfo[]>([])
+  const processes = ref<Process[]>([])
   const timeRange = ref<'1h' | '6h' | '24h'>('1h')
   const loading = ref(false)
   const error = ref<string | null>(null)
+  const networkInfo = ref<{ interfaces: NetworkInterface[] }>({ interfaces: [] })
+  const diskInfo = ref<{ partitions: DiskPartition[] }>({ partitions: [] })
 
-  // 计算属性
-  const cpuUsage = computed(() => systemStats.value.cpu_usage)
-  const memoryUsage = computed(() => systemStats.value.memory_usage)
-  const diskUsage = computed(() => systemStats.value.disk_usage)
-  const processCount = computed(() => systemStats.value.process_count)
+  let pollInterval: number | null = null
 
-  const resourceChartData = computed(() => ({
-    timestamps: resourceHistory.value.timestamps,
-    cpu: resourceHistory.value.cpu,
-    memory: resourceHistory.value.memory,
-    disk: resourceHistory.value.disk
-  }))
-
-  const networkChartData = computed(() => ({
-    timestamps: resourceHistory.value.timestamps,
-    sent: resourceHistory.value.network_sent,
-    recv: resourceHistory.value.network_recv
-  }))
-
-  const diskChartData = computed(() => ({
-    timestamps: resourceHistory.value.timestamps,
-    read: resourceHistory.value.disk_read,
-    write: resourceHistory.value.disk_write
-  }))
-
-  // 方法
-  const fetchMonitorData = async (range: string) => {
-    loading.value = true
-    error.value = null
+  const fetchMonitorData = async () => {
     try {
+      loading.value = true
+      error.value = null
       const response = await axios.get(`${API_CONFIG.BASE_API_URL}${API_CONFIG.ENDPOINTS.MONITOR.LIST}`, {
-        params: {
-          time_range: range
-        }
+        params: { time_range: timeRange.value }
       })
       if (response.data.code === 200) {
-        const { data } = response.data
+        const data = response.data.data
+        cpuTrend.value = data.cpu_trend
+        memoryTrend.value = data.memory_trend
+        diskTrend.value = data.disk_trend
+        networkTrend.value = data.network_trend
         systemStats.value = data.stats
-        resourceHistory.value = data.resources.resource_history
+        diskInfo.value = data.disk
+        networkInfo.value = data.network
         processes.value = data.processes
       } else {
         error.value = response.data.message || '获取监控数据失败'
       }
-    } catch (err) {
-      error.value = err instanceof Error ? err.message : '获取监控数据失败'
+    } catch (e) {
+      error.value = e instanceof Error ? e.message : '获取监控数据失败'
     } finally {
       loading.value = false
     }
@@ -81,48 +140,32 @@ export const useMonitorStore = defineStore('monitor', () => {
 
   const setTimeRange = (range: '1h' | '6h' | '24h') => {
     timeRange.value = range
-    fetchMonitorData(range)
+    fetchMonitorData()
   }
 
-  const searchProcesses = (keyword: string) => {
-    if (!keyword) return processes.value
-    const search = keyword.toLowerCase()
-    return processes.value.filter(p => 
-      p.name.toLowerCase().includes(search) || 
-      p.pid.toString().includes(search)
-    )
-  }
-
-  // 初始化
   const init = () => {
-    fetchMonitorData(timeRange.value)
-    // 设置定时刷新
-    const timer = setInterval(() => fetchMonitorData(timeRange.value), 10000)
-    return () => clearInterval(timer)
+    fetchMonitorData()
+    pollInterval = window.setInterval(fetchMonitorData, 5000)
+    return () => {
+      if (pollInterval) {
+        clearInterval(pollInterval)
+      }
+    }
   }
 
   return {
-    // 状态
     systemStats,
-    resourceHistory,
+    cpuTrend,
+    memoryTrend,
+    diskTrend,
+    networkTrend,
     processes,
     timeRange,
     loading,
     error,
-
-    // 计算属性
-    cpuUsage,
-    memoryUsage,
-    diskUsage,
-    processCount,
-    resourceChartData,
-    networkChartData,
-    diskChartData,
-
-    // 方法
-    fetchMonitorData,
+    networkInfo,
+    diskInfo,
     setTimeRange,
-    searchProcesses,
     init
   }
 })

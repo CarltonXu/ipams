@@ -7,7 +7,7 @@ import io
 import base64
 import psutil
 import platform
-import datetime
+from datetime import datetime, timedelta
 from flask import request
 from PIL import Image, ImageDraw, ImageFont
 from app.models.models import db, ActionLog, SystemMetrics, NetworkMetrics, DiskMetrics, ProcessMetrics
@@ -111,13 +111,20 @@ def collect_system_info():
     memory = psutil.virtual_memory()
     swap = psutil.swap_memory()
     load_avg = psutil.getloadavg()
-    process_count = len(psutil.pids())
     
-    # 线程总数
-    thread_count = sum(
-        (p.info.get('num_threads', 0) for p in psutil.process_iter(['num_threads'])),
-        start=0
-    )
+    # 收集进程信息
+    process_count = 0
+    thread_count = 0
+    try:
+        process_count = len(psutil.pids())
+        for proc in psutil.process_iter(['pid', 'num_threads']):
+            try:
+                thread_count += proc.info['num_threads'] or 0
+            except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+                continue
+    except Exception as e:
+        logger.error(f"获取线程数时发生错误: {str(e)}")
+
     
     return SystemMetrics(
         cpu_usage=psutil.cpu_percent(interval=1),
@@ -143,6 +150,8 @@ def collect_network_metrics():
         io_counters = psutil.net_io_counters(pernic=True)
         stats = psutil.net_if_stats()
         for iface, stat in stats.items():
+            if not iface.startswith(('en', 'eth')):
+                continue
             io = io_counters.get(iface)
             if io:
                 metrics.append(NetworkMetrics(
@@ -159,10 +168,17 @@ def collect_network_metrics():
                     speed=stat.speed,
                     mtu=stat.mtu
                 ))
-        logger.info(f"网络接口数量: {len(metrics)}")
+        logger.info(f"Number of network interfaces: {len(metrics)}")
     except Exception as e:
-        print(f"网络指标错误: {e}")
+        logger.error(f"Network metric error: {e}")
     return metrics
+
+def find_io_counter(device, io_counters):
+    dev_name = device.split('/')[-1]
+    for key in io_counters.keys():
+        if key == dev_name or key.endswith(dev_name):
+            return io_counters[key]
+    return None
 
 def collect_disk_metrics():
     metrics = []
@@ -172,8 +188,7 @@ def collect_disk_metrics():
         for part in partitions:
             try:
                 usage = psutil.disk_usage(part.mountpoint)
-                device = part.device.split('/')[-1]
-                io = io_counters.get(device, None)
+                io = find_io_counter(part.device, io_counters)
                 metrics.append(DiskMetrics(
                     device=part.device,
                     mountpoint=part.mountpoint,
@@ -191,9 +206,9 @@ def collect_disk_metrics():
                     fstype=part.fstype
                 ))
             except Exception as e:
-                print(f"磁盘 {part.device} 指标错误: {e}")
+                logger.error(f"Disk {part.device} metric error: {e}")
     except Exception as e:
-        print(f"磁盘指标错误: {e}")
+        logger.error(f"Disk metric error: {e}")
     return metrics
 
 def collect_process_metrics():
@@ -221,7 +236,7 @@ def collect_process_metrics():
             except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
                 continue
     except Exception as e:
-        print(f"进程指标错误: {e}")
+        print(f"Process metric error: {e}")
     return metrics
 
 def get_system_metrics():
@@ -239,21 +254,21 @@ def get_system_metrics():
             db.session.add(metric)
 
         db.session.commit()
-        logger.info("所有指标提交成功")
+        logger.info("All collections submit successfully")
         return {
             'system': system_metrics.to_dict(),
             'timestamp': timestamp.isoformat()
         }
     except Exception as e:
         db.session.rollback()
-        print(f"系统指标采集失败: {e}")
+        print(f"System metric collect error: {e}")
         return None
 
 def get_system_info():
     """获取系统基本信息"""
     # 获取系统启动时间
-    boot_time = datetime.datetime.fromtimestamp(psutil.boot_time())
-    uptime = datetime.datetime.now() - boot_time
+    boot_time = datetime.fromtimestamp(psutil.boot_time())
+    uptime = datetime.now() - boot_time
     hostname = socket.gethostname()
     
     # 返回原始数据
@@ -273,7 +288,6 @@ def get_system_info():
 
 def cleanup_old_metrics(days=7):
     """清理旧的监控数据"""
-    from datetime import datetime, timedelta
     try:
         cutoff_date = datetime.utcnow() - timedelta(days=days)
         SystemMetrics.query.filter(SystemMetrics.timestamp < cutoff_date).delete()

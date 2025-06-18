@@ -32,14 +32,6 @@ const routes: RouteRecordRaw[] = [
               name: 'Monitor',
               component: Monitor,
               meta: { requiresAuth: true },
-              children: [
-                {
-                  path: '',
-                  name: 'Monitor',
-                  component: () => import('../stores/monitor'),
-                  meta: { title: '系统监控', icon: 'monitor' }
-                }
-              ]
           },
           // 通知相关路由
           { 

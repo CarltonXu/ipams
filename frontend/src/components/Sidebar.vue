@@ -43,13 +43,19 @@
         <span>{{ $t('menu.settings') }}</span>
       </el-menu-item>
     </router-link>
+    <router-link to="/monitor">
+      <el-menu-item index="7">
+        <el-icon><Monitor /></el-icon>
+        <span>{{ $t('menu.monitor') }}</span>
+      </el-menu-item>
+    </router-link>
   </el-menu>
 </template>
 
 <script setup lang="ts">
 import { useAuthStore } from "../stores/auth"
 import { ElMenu, ElMenuItem, ElIcon } from 'element-plus';
-import { Setting, User, Bell, Operation, Clock } from '@element-plus/icons-vue';  // 引入 Element Plus 的图标
+import { Setting, User, Bell, Operation, Clock, Monitor } from '@element-plus/icons-vue';  // 引入 Element Plus 的图标
 
 const authStore = useAuthStore();
 </script>

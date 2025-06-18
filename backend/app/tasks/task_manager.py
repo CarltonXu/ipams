@@ -167,8 +167,16 @@ class TaskManager:
     def _update_job_status(self, job_id: str, future) -> None:
         """更新任务状态"""
         try:
+            # 先获取结果
             result = future.result()
-            with current_app.app_context():
+            
+            # 确保有应用实例
+            if not hasattr(self, 'app') or not self.app:
+                from flask import current_app
+                self.app = current_app._get_current_object()
+            
+            # 在应用上下文中执行数据库操作
+            with self.app.app_context():
                 job = ScanJob.query.get(job_id)
                 if job:
                     job.status = result['status']
@@ -176,11 +184,12 @@ class TaskManager:
                         job.error_message = result['error']
                     job.end_time = datetime.utcnow()
                     db.session.commit()
-                    logger.info(f"Updated task {job_id} status to {result['status']}")
+                    logger.info(f"Updated job {job_id} status to {result['status']}")
                 else:
                     logger.error(f"Job {job_id} not found")
         except Exception as e:
             logger.error(f"Error updating job status {job_id}: {str(e)}")
+            raise
 
     def get_task_status(self, job_id: str) -> Optional[Dict[str, Any]]:
         """获取任务状态"""

@@ -112,6 +112,7 @@ export default {
     scanConfig: 'Scan Config',
     task: 'Task Managent',
     settings: 'Settings',
+    monitor: 'Monitor',
     userManagement: 'User Management',
     notifications: 'Notification History',
     notificationSettings: 'Notification Settings'

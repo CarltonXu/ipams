@@ -112,6 +112,7 @@ export default {
     scanConfig: '配置扫描',
     task: '任务管理',
     settings: '系统设置',
+    monitor: '资源监控',
     userManagement: '用户管理',
     notifications: '通知历史',
     notificationSettings: '通知配置'
