@@ -5,12 +5,13 @@ import { useUserStore } from '../stores/user'
 import { useIPStore } from '../stores/ip';
 import { ElMessage } from 'element-plus';
 import { useI18n } from 'vue-i18n';
+import type { IP } from '../types/ip';
 
 // Props 和 Emits
 const props = defineProps({
   modelValue: Boolean, // 控制对话框显示状态
   ip: {
-    type: Object as () => { id: number; ip_address: string; device_name?: string; purpose?: string },
+    type: Object as () => IP | undefined,
     required: false,
   },
 });
@@ -32,7 +33,7 @@ const form = ref({
   manufacturer: '',
   model: '',
   purpose: '',
-  assigned_user_id: '',
+  assigned_user_id: undefined as string | undefined,
 });
 
 // 下拉选项
@@ -50,18 +51,18 @@ const users = computed(() => userStore.users);
 const { t } = useI18n();
 
 // 表单初始化
-const initForm = (ip: typeof props.ip) => {
+const initForm = (ip: IP) => {
   form.value = {
-    id: ip.id,
+    id: ip.id || '',
     ip_address: ip.ip_address || 'Unknown',
-    status: ip.status,
+    status: ip.status || '',
     os_type: ip.os_type || 'Other',
     device_name: ip.device_name || '',
     device_type: ip.device_type || 'Other',
     manufacturer: ip.manufacturer || 'Other',
     model: ip.model || 'Other',
     purpose: ip.purpose || '',
-    assigned_user_id: ip.assigned_user_id || '',
+    assigned_user_id: ip.assigned_user_id === undefined ? undefined : ip.assigned_user_id,
   };
 };
 
@@ -73,7 +74,9 @@ const handleClose = () => {
 
 // 重置表单
 const resetForm = () => {
-  initForm(props.ip);
+  if (props.ip) {
+    initForm(props.ip);
+  }
 };
 
 // 修改更新处理函数

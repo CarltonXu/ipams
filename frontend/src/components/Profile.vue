@@ -5,7 +5,7 @@
       <div class="profile-header">
         <div class="avatar-section">
           <el-avatar 
-            :src="user.avatar" 
+            :src="user?.avatar" 
             :size="120"
             class="avatar"
           />
@@ -26,10 +26,10 @@
         </div>
         
         <div class="user-basic-info">
-          <h1 class="username">{{ user.username }}</h1>
+          <h1 class="username">{{ user?.username ?? '' }}</h1>
           <span class="role-tag">
-            <el-tag :type="user.is_admin ? 'danger' : 'info'" size="small">
-              {{ user.is_admin ? $t('profile.role.admin') : $t('profile.role.user') }}
+            <el-tag :type="user?.is_admin ? 'danger' : 'info'" size="small">
+              {{ user?.is_admin ? $t('profile.role.admin') : $t('profile.role.user') }}
             </el-tag>
           </span>
         </div>
@@ -39,16 +39,16 @@
       <div class="info-section">
         <el-descriptions :column="1" border>
           <el-descriptions-item :label="$t('profile.fields.id')">
-            {{ user.id }}
+            {{ user?.id ?? '' }}
           </el-descriptions-item>
           <el-descriptions-item :label="$t('profile.fields.email')">
-            {{ user.email }}
+            {{ user?.email ?? '' }}
           </el-descriptions-item>
           <el-descriptions-item :label="$t('profile.fields.wechatId')">
-            {{ user.wechat_id || $t('profile.wechatPlaceholder') }}
+            {{ user?.wechat_id ?? $t('profile.wechatPlaceholder') }}
           </el-descriptions-item>
           <el-descriptions-item :label="$t('profile.fields.createdAt')">
-            {{ formatDate(user.created_at) }}
+            {{ formatDate(user?.created_at ?? '') }}
           </el-descriptions-item>
         </el-descriptions>
       </div>
@@ -200,7 +200,7 @@ const passwordRules = {
   confirmPassword: [
     { required: true, message: t('profile.validation.confirmPasswordRequired'), trigger: 'blur' },
     {
-      validator: (rule: any, value: string, callback: Function) => {
+      validator: (value: string, callback: Function) => {
         if (value !== passwordForm.value.newPassword) {
           callback(new Error(t('profile.validation.passwordMismatch')))
         } else {
@@ -224,9 +224,9 @@ const uploadHeaders = computed(() => {
 
 const editProfile = () => {
   form.value = { 
-    username: user.value.username,
-    email: user.value.email,
-    wechat_id: user.value.wechat_id || ''
+    username: user.value?.username ?? '',
+    email: user.value?.email ?? '',
+    wechat_id: user.value?.wechat_id ?? ''
   }
   isEditing.value = true
 }
@@ -262,7 +262,7 @@ const updateAvatar = async (response: any) => {
   }
 }
 
-const handleUploadError = (err: any, file: any) => {
+const handleUploadError = (err: any) => {
   let errorMessage = t('profile.messages.avatarFailed');
   
   // 处理错误响应
@@ -314,7 +314,7 @@ const handleChangePassword = async () => {
     if (valid) {
       try {
         await userStore.updatePassword(
-          user.id,
+          user.value?.id ?? '',
           passwordForm.value.oldPassword,
           passwordForm.value.newPassword
         )

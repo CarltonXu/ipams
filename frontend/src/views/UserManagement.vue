@@ -253,7 +253,7 @@ const { t } = useI18n();
 // Store 引用
 const userStore = useUserStore();
 const authStore = useAuthStore();
-const isAdmin = computed(() => authStore.user.is_admin);
+const isAdmin = computed(() => authStore.user?.is_admin);
 
 // 搜索和过滤条件
 const searchQuery = ref('');

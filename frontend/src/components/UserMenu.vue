@@ -1,8 +1,8 @@
 <template>
   <el-dropdown @command="handleCommand" trigger="click">
     <span class="el-dropdown-link">
-      <el-avatar size="small" :src="user.avatar" alt="Avatar" />
-      <span class="username">{{ user.username }}</span>
+      <el-avatar size="small" :src="user?.avatar" alt="Avatar" />
+      <span class="username">{{ user?.username }}</span>
     </span>
     <template #dropdown>
       <el-dropdown-menu>

@@ -643,7 +643,7 @@ watch(visible, (newVal) => {
 })
 
 // 监听任务列表变化
-watch(jobs, (newJobs) => {
+watch(jobs, () => {
   if (visible.value && hasRunningJobs.value) {
     startBackgroundRefresh()
   } else {

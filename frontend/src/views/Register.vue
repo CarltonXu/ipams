@@ -145,7 +145,7 @@ const rules = {
   confirmPassword: [
     { required: true, message: t('auth.validation.PasswordConfirm'), trigger: 'blur' },
     {
-      validator: (rule: any, value: string, callback: Function) => {
+      validator: (value: string, callback: Function) => {
         if (value !== form.value.password) {
           callback(new Error(t('auth.validation.passwordMismatch')));
         } else {

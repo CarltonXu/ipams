@@ -1,6 +1,6 @@
 import argparse
 from flask import Flask
-from app.config import Config
+from app.core.config.settings import Config
 from app.models.models import db, User
 
 def create_app():

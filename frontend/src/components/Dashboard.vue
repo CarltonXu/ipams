@@ -59,10 +59,10 @@
           <span class="label">{{ t('dashboard.systemInfo.platform') }}:</span>
           <span class="value">{{ resources.system_info.platform }}</span>
         </div>
-        <template v-for="(value, key) in resources.system_info" :key="key">
-          <div class="info-item" v-if="!['platform', 'uptime'].includes(key)">
+        <template v-for="(value, key) in resources.system_info" :key="String(key)">
+          <div class="info-item" v-if="!['platform', 'uptime'].includes(String(key))">
             <el-icon><InfoFilled /></el-icon>
-            <span class="label">{{ t(`dashboard.systemInfo.${key}`) }}:</span>
+            <span class="label">{{ t(`dashboard.systemInfo.${String(key)}`) }}:</span>
             <span class="value">{{ value }}</span>
           </div>
         </template>

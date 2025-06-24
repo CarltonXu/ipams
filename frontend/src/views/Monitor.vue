@@ -47,7 +47,7 @@
             </div>
           </template>
           <div class="metric-value">
-            <span class="value">{{ systemStats.disk_usage }}%</span>
+            <span class="value">{{ systemStats?.disk_usage }}%</span>
             <div class="sub-metrics">
               <div v-for="partition in diskInfo.partitions" :key="partition.device">
                 {{ partition.mountpoint }}: {{ partition.usage }}%
@@ -249,7 +249,6 @@ const processes = computed(() => monitorStore.processes)
 const networkInfo = computed(() => monitorStore.networkInfo)
 const diskInfo = computed(() => monitorStore.diskInfo)
 const timeRange = computed(() => monitorStore.timeRange)
-const loading = computed(() => monitorStore.loading)
 const error = computed(() => monitorStore.error)
 
 // 新结构：趋势数据
@@ -257,7 +256,6 @@ const cpuTrend = computed(() => monitorStore.cpuTrend)
 const memoryTrend = computed(() => monitorStore.memoryTrend)
 const diskTrend = computed(() => monitorStore.diskTrend)
 const networkTrend = computed(() => monitorStore.networkTrend)
-const processTrend = computed(() => monitorStore.processTrend)
 
 // 选中的网络接口和磁盘
 const selectedInterface = ref('')
@@ -324,6 +322,7 @@ const diskChartOption = computed(() => ({
 }))
 
 // 进程趋势图（可选：进程数/线程数）
+/*
 const processChartOption = computed(() => ({
   tooltip: { trigger: 'axis', axisPointer: { type: 'cross', label: { backgroundColor: '#6a7985' } } },
   legend: { data: ['进程数', '线程数'] },
@@ -335,6 +334,7 @@ const processChartOption = computed(() => ({
     { name: '线程数', type: 'line', data: processTrend.value.thread_count, smooth: true, areaStyle: {} }
   ]
 }))
+*/
 
 const handleTimeRangeChange = (range: '1h' | '6h' | '24h') => {
   monitorStore.setTimeRange(range)

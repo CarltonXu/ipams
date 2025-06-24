@@ -116,7 +116,7 @@
               </el-button>
               <!-- 只有当前用户的资源才可以修改 -->
               <el-button
-                v-if="row.status !== 'unclaimed' && (row.assigned_user && row.assigned_user.username === authStore.user.username || authStore.user.is_admin) || (row.status === 'active' && !row.assigned_user)"
+                v-if="row.status !== 'unclaimed' && (row.assigned_user && row.assigned_user.username === authStore.user?.username || authStore.user?.is_admin) || (row.status === 'active' && !row.assigned_user)"
                 type="primary"
                 size="small"
                 @click="openUpdateDialog(row)"
@@ -194,8 +194,8 @@ const searchColumn = ref('all');
 const statusFilter = ref('all');
 const claimDialogVisible = ref(false);
 const updateDialogVisible = ref(false);
-const claimSelectedIP = ref<IP | null>(null); // 当前选中的 IP 信息
-const updateSelectedIP = ref<IP | null>(null); // 当前选中的 IP 信息
+const claimSelectedIP = ref<IP | undefined>(undefined);
+const updateSelectedIP = ref<IP | undefined>(undefined);
 
 // 计算属性：是否已登录
 const isAuthenticated = computed(() => !!authStore.user);
@@ -306,7 +306,7 @@ const canBatchClaim = computed(() => {
 const canBatchUpdate = computed(() => {
   return selectedIPs.value.every(ip => 
     ip.status !== 'unclaimed' && 
-    (ip.assigned_user?.username === authStore.user.username || authStore.user.is_admin)
+    (ip.assigned_user?.username === authStore.user?.username || authStore.user?.is_admin)
   );
 });
 

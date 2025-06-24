@@ -8,6 +8,7 @@ interface SystemStats {
   memory_usage: number
   process_count: number
   cpu_count: number
+  disk_usage: number
   memory_total: number
   memory_used: number
   memory_free: number
@@ -87,6 +88,7 @@ export const useMonitorStore = defineStore('monitor', () => {
   const systemStats = ref<SystemStats>({
     cpu_usage: 0,
     memory_usage: 0,
+    disk_usage: 0,
     process_count: 0,
     cpu_count: 0,
     memory_total: 0,
