@@ -70,7 +70,7 @@ class MetricsScheduler:
                 # 添加收集指标的任务
                 self.scheduler.add_job(
                     self.collect_metrics,
-                    trigger=IntervalTrigger(seconds=10),
+                    trigger=IntervalTrigger(seconds=60),
                     id='collect_metrics',
                     replace_existing=True
                 )

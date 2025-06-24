@@ -6,13 +6,14 @@ from app.core.config.settings import get_config
 def parse_args():
     """解析命令行参数"""
     parser = argparse.ArgumentParser(description='IPAMS 后端服务')
-    parser.add_argument('--host', type=str, default='127.0.0.1',
+    parser.add_argument('--host', type=str, default=os.getenv("FLASK_RUN_HOST", "127.0.0.1"),
                       help='服务器主机地址 (默认: 127.0.0.1)')
-    parser.add_argument('--port', type=int, default=5000,
+    parser.add_argument('--port', type=int, default=os.getenv("FLASK_RUN_PORT", 5000),
                       help='服务器端口 (默认: 5000)')
     parser.add_argument('--env', type=str, choices=['development', 'testing', 'production'],
-                      default='development', help='运行环境 (默认: development)')
+                      default=os.getenv("FLASK_ENV", "development"), help='运行环境 (默认: development)')
     parser.add_argument('--debug', action='store_true',
+                      default=os.getenv("DEBUG", "False") == "True",
                       help='是否启用调试模式')
     return parser.parse_args()
 

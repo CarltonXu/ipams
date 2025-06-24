@@ -1,41 +1,36 @@
-version: '3.8'
+version: "3.8"
 
 services:
   frontend:
     build:
-      context: ../../frontend
-      dockerfile: ../docker/frontend/Dockerfile
+      context: ../frontend
+      dockerfile: ../frontend/Dockerfile
     ports:
       - "80:80"
-    volumes:
-      - ../../frontend:/app
-      - /app/node_modules
     environment:
-      - NODE_ENV=development
+      - NODE_ENV=production
     depends_on:
       - backend
     networks:
       - ipams-network
+    restart: always
 
   backend:
     build:
-      context: ../../backend
-      dockerfile: ../docker/backend/Dockerfile
+      context: ../backend
+      dockerfile: ../backend/Dockerfile
     ports:
       - "5000:5000"
-    environment:
-      - FLASK_APP=run.py
-      - FLASK_ENV=development
-      - FLASK_DEBUG=1
-      - REDIS_URL=redis://redis:6379/0
+    env_file:
+      - ../backend/.env
     volumes:
-      - ../../backend:/app
-      - ../../backend/uploads:/app/uploads
+      - ../backend/uploads:/app/uploads
     depends_on:
       - redis
       - mysql
     networks:
       - ipams-network
+    restart: always
 
   redis:
     image: redis:alpine
@@ -45,20 +40,22 @@ services:
       - redis-data:/data
     networks:
       - ipams-network
+    restart: always
 
   mysql:
     image: mysql:8.0
     ports:
       - "3306:3306"
     environment:
-      - MYSQL_ROOT_PASSWORD=dev_root_password
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
       - MYSQL_DATABASE=ipams
       - MYSQL_USER=ipams_user
-      - MYSQL_PASSWORD=dev_password
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
     volumes:
       - mysql-data:/var/lib/mysql
     networks:
       - ipams-network
+    restart: always
 
 networks:
   ipams-network:
