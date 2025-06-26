@@ -754,7 +754,7 @@ const handleCloseDetails = () => {
 }
 
 .ellipsis-tag {
-  display: contents;
+  display: table-cell;
   max-width: 180px;
   overflow: hidden;
   text-overflow: ellipsis;
