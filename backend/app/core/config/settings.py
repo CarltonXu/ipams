@@ -26,6 +26,21 @@ class Config:
     LOG_MAX_BYTES =int(os.getenv('LOG_MAX_BYTES', 10*1024*1024))
     LOG_BACKUP_COUNT= int(os.getenv('LOG_BACKUP_COUNT', 5))
     LOG_PATH = os.getenv('LOG_PATH', os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))), 'logs'))
+    
+    # 凭证加密配置
+    ENCRYPTION_KEY = os.getenv('ENCRYPTION_KEY', '')
+    
+    # Ansible配置
+    ANSIBLE_HOST_KEY_CHECKING = os.getenv('ANSIBLE_HOST_KEY_CHECKING', 'False')
+    ANSIBLE_TIMEOUT = int(os.getenv('ANSIBLE_TIMEOUT', 30))
+    
+    # 采集任务配置
+    COLLECTION_MAX_CONCURRENT = int(os.getenv('COLLECTION_MAX_CONCURRENT', 5))
+    COLLECTION_TIMEOUT = int(os.getenv('COLLECTION_TIMEOUT', 300))
+    
+    # 导出文件配置
+    EXPORT_FILE_DIR = os.getenv('EXPORT_FILE_DIR', os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))), 'exports'))
+    EXPORT_FILE_EXPIRY = int(os.getenv('EXPORT_FILE_EXPIRY', 3600))  # 导出文件保留时间（秒）
 
 class DevelopmentConfig(Config):
     """开发环境配置"""

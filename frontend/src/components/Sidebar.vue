@@ -10,41 +10,53 @@
         <span>{{ $t('menu.ipManagement') }}</span>
       </el-menu-item>
     </router-link>
+    <router-link to="/credentials">
+      <el-menu-item index="2">
+        <el-icon><Key /></el-icon>
+        <span>{{ $t('menu.credentials') }}</span>
+      </el-menu-item>
+    </router-link>
+    <router-link to="/hosts">
+      <el-menu-item index="3">
+        <el-icon><DataAnalysis /></el-icon>
+        <span>{{ $t('menu.hostInfo') }}</span>
+      </el-menu-item>
+    </router-link>
     <!-- 仅管理员可见 -->
     <template v-if="authStore.user?.is_admin">
       <router-link to="/users">
-        <el-menu-item index="2">
+        <el-menu-item index="4">
           <el-icon><User /></el-icon>
           <span>{{ $t('menu.userManagement') }}</span>
         </el-menu-item>
       </router-link>
       <router-link to="/scans">
-        <el-menu-item index="3">
+        <el-menu-item index="5">
           <el-icon><Operation /></el-icon>
           <span>{{ $t('menu.scanConfig') }}</span>
         </el-menu-item>
       </router-link>
       <router-link to="/tasks">
-        <el-menu-item index="4">
+        <el-menu-item index="6">
           <el-icon><Clock /></el-icon>
           <span>{{ $t('menu.task') }}</span>
         </el-menu-item>
       </router-link>
       <router-link to="/notifications">
-        <el-menu-item index="5">
+        <el-menu-item index="7">
           <el-icon><Bell /></el-icon>
           <span>{{ $t('menu.notifications') }}</span>
         </el-menu-item>
       </router-link>
     </template>
     <router-link to="/settings">
-      <el-menu-item index="6">
+      <el-menu-item index="8">
         <el-icon><Setting /></el-icon>
         <span>{{ $t('menu.settings') }}</span>
       </el-menu-item>
     </router-link>
     <router-link to="/monitor">
-      <el-menu-item index="7">
+      <el-menu-item index="9">
         <el-icon><Monitor /></el-icon>
         <span>{{ $t('menu.monitor') }}</span>
       </el-menu-item>
@@ -55,7 +67,7 @@
 <script setup lang="ts">
 import { useAuthStore } from "../stores/auth"
 import { ElMenu, ElMenuItem, ElIcon } from 'element-plus';
-import { Setting, User, Bell, Operation, Clock, Monitor } from '@element-plus/icons-vue';  // 引入 Element Plus 的图标
+import { Setting, User, Bell, Operation, Clock, Monitor, Key, DataAnalysis } from '@element-plus/icons-vue';
 
 const authStore = useAuthStore();
 </script>

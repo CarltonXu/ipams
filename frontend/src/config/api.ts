@@ -74,6 +74,33 @@ export const API_CONFIG = {
     },
     MONITOR: {
       LIST: '/monitor'
+    },
+    CREDENTIAL: {
+      LIST: '/credential',
+      CREATE: '/credential',
+      LIST_BY_ID: (id: string) => `/credential/${id}`,
+      UPDATE: (id: string) => `/credential/${id}`,
+      DELETE: (id: string) => `/credential/${id}`,
+      DETAIL: (id: string) => `/credential/${id}/detail`,
+      BINDINGS: (id: string) => `/credential/${id}/bindings`,
+      BATCH_BIND: (id: string) => `/credential/${id}/batch-bind`,
+      BATCH_UNBIND: (id: string) => `/credential/${id}/batch-unbind`,
+      TEST: (id: string) => `/credential/${id}/test`
+    },
+    HOST: {
+      LIST: '/host',
+      LIST_BY_ID: (id: string) => `/host/${id}`,
+      UPDATE: (id: string) => `/host/${id}`,
+      BIND_CREDENTIAL: (id: string) => `/host/${id}/bind-credential`,
+      UNBIND_CREDENTIAL: (id: string) => `/host/${id}/unbind-credential`,
+      COLLECT: (id: string) => `/host/${id}/collect`,
+      BATCH_COLLECT: '/host/batch-collect',
+      BATCH_BIND: '/host/batch-bind',
+      BATCH_UNBIND: '/host/batch-unbind',
+      COLLECTION_HISTORY: (id: string) => `/host/${id}/collection-history`,
+      EXPORT: '/host/export',
+      EXPORT_TEMPLATES: '/host/export/templates',
+      EXPORT_FIELDS: '/host/export/fields'
     }
   }
 } 

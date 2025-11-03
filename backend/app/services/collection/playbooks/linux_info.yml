@@ -1,0 +1,58 @@
+---
+- name: Collect Linux host information
+  hosts: all
+  gather_facts: yes
+  tasks:
+    - name: Collect basic system information
+      set_fact:
+        host_info:
+          hostname: "{{ ansible_hostname }}"
+          os_name: "{{ ansible_distribution }}"
+          os_version: "{{ ansible_distribution_version }}"
+          kernel_version: "{{ ansible_kernel }}"
+          cpu_model: "{{ ansible_processor_vcpus }}"
+          cpu_cores: "{{ ansible_processor_vcpus }}"
+          memory_total: "{{ ansible_memtotal_mb }}"
+          disk_info: "{{ ansible_mounts }}"
+          network_interfaces: "{{ ansible_interfaces }}"
+
+    - name: Collect detailed CPU information
+      shell: "lscpu | grep \"Model name\" | awk -F: '{print $2}' | xargs"
+      register: cpu_model_detail
+      ignore_errors: yes
+
+    - name: Update CPU model if available
+      set_fact:
+        host_info: "{{ host_info | combine({'cpu_model': cpu_model_detail.stdout}) }}"
+      when: cpu_model_detail.stdout is defined
+
+    - name: Collect disk information with details
+      shell: |
+        df -h | awk 'NR==1 || /^\/dev\//' | awk '{print $1 " " $2 " " $3 " " $4 " " $5 " " $6}'
+      register: disk_details
+      ignore_errors: yes
+
+    - name: Collect network interface details
+      shell: |
+        for iface in $(ls /sys/class/net/ | grep -v lo); do
+          ip addr show $iface | grep -E "inet |ether" | awk '{print $2}' | tr '\n' ' '
+          echo ""
+        done
+      register: network_details
+      ignore_errors: yes
+
+    - name: Get detailed network information
+      shell: |
+        for iface in $(ls /sys/class/net/ | grep -v lo); do
+          ip_addr=$(ip -4 addr show $iface | grep -oP '(?<=inet\s)\d+(\.\d+){3}')
+          mac_addr=$(ip link show $iface | grep -oP '(?<=link/ether\s)\S+')
+          status=$(ip link show $iface | grep -oP '(?<=state\s)\S+')
+          echo "{\"interface\": \"$iface\", \"ip\": \"$ip_addr\", \"mac\": \"$mac_addr\", \"status\": \"$status\"}"
+        done
+      register: network_info_json
+      ignore_errors: yes
+
+    - name: Display collected information
+      debug:
+        var: host_info
+

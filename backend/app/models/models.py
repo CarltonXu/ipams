@@ -651,4 +651,167 @@ class NotificationTemplate(db.Model):
         except KeyError as e:
             raise ValueError(f"模板渲染失败，缺少参数: {str(e)}")
         except Exception as e:
-            raise ValueError(f"模板渲染失败: {str(e)}") 
+            raise ValueError(f"模板渲染失败: {str(e)}")
+
+class Credential(db.Model):
+    """凭证管理模型"""
+    __tablename__ = 'credentials'
+    
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = db.Column(db.String(36), db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
+    name = db.Column(db.String(255), nullable=False)
+    credential_type = db.Column(db.String(20), nullable=False)  # linux, windows, vmware
+    username = db.Column(db.Text, nullable=True)  # 加密存储
+    password = db.Column(db.Text, nullable=True)  # 加密存储
+    private_key = db.Column(db.Text, nullable=True)  # SSH私钥，加密存储
+    is_default = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    deleted = db.Column(db.Boolean, default=False)
+    
+    # 关联关系
+    user = db.relationship('User', backref=db.backref('credentials', lazy=True))
+    host_bindings = db.relationship('HostCredentialBinding', back_populates='credential', cascade='all, delete-orphan')
+    
+    def to_dict(self, include_password=False):
+        """转换为字典"""
+        result = {
+            'id': self.id,
+            'user_id': self.user_id,
+            'name': self.name,
+            'credential_type': self.credential_type,
+            'username': self.username,
+            'is_default': self.is_default,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
+        # 只有当明确要求时才返回密码
+        if include_password:
+            result['password'] = self.password
+            result['private_key'] = self.private_key
+        return result
+
+class HostInfo(db.Model):
+    """主机详细信息模型"""
+    __tablename__ = 'host_infos'
+    
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    ip_id = db.Column(db.String(36), db.ForeignKey('ips.id', ondelete='CASCADE'), nullable=False)
+    scan_result_id = db.Column(db.String(36), db.ForeignKey('scan_results.id', ondelete='SET NULL'), nullable=True)
+    parent_host_id = db.Column(db.String(36), db.ForeignKey('host_infos.id', ondelete='CASCADE'), nullable=True)  # 父主机ID，用于VMware树形结构
+    host_type = db.Column(db.String(20), nullable=True)  # physical, vmware, other_virtualization
+    hostname = db.Column(db.String(255))
+    os_name = db.Column(db.String(255))
+    os_version = db.Column(db.String(255))
+    kernel_version = db.Column(db.String(255))
+    cpu_model = db.Column(db.String(255))
+    cpu_cores = db.Column(db.Integer)
+    memory_total = db.Column(db.BigInteger)  # MB
+    disk_info = db.Column(db.JSON)
+    network_interfaces = db.Column(db.JSON)
+    vmware_info = db.Column(db.JSON)
+    collection_status = db.Column(db.String(20), default='pending')  # pending, collecting, success, failed
+    collection_error = db.Column(db.Text)
+    last_collected_at = db.Column(db.DateTime)
+    raw_data = db.Column(db.JSON)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    deleted = db.Column(db.Boolean, default=False)
+    
+    # 关联关系
+    ip = db.relationship('IP', backref=db.backref('host_info', uselist=False))
+    scan_result = db.relationship('ScanResult', backref=db.backref('host_info', uselist=False))
+    credential_bindings = db.relationship('HostCredentialBinding', back_populates='host', cascade='all, delete-orphan')
+    parent_host = db.relationship('HostInfo', remote_side=[id], backref='child_hosts')
+    
+    def to_dict(self, include_children=False):
+        """转换为字典"""
+        result = {
+            'id': self.id,
+            'ip_id': self.ip_id,
+            'scan_result_id': self.scan_result_id,
+            'parent_host_id': self.parent_host_id,
+            'host_type': self.host_type,
+            'hostname': self.hostname,
+            'os_name': self.os_name,
+            'os_version': self.os_version,
+            'kernel_version': self.kernel_version,
+            'cpu_model': self.cpu_model,
+            'cpu_cores': self.cpu_cores,
+            'memory_total': self.memory_total,
+            'disk_info': self.disk_info,
+            'network_interfaces': self.network_interfaces,
+            'vmware_info': self.vmware_info,
+            'collection_status': self.collection_status,
+            'collection_error': self.collection_error,
+            'last_collected_at': self.last_collected_at.isoformat() if self.last_collected_at else None,
+            'raw_data': self.raw_data,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            'ip': self.ip.to_dict() if self.ip else None
+        }
+        
+        # 如果需要包含子主机（用于树形结构）
+        if include_children:
+            result['child_hosts'] = [child.to_dict(include_children=True) for child in self.child_hosts if not child.deleted]
+        
+        return result
+
+class HostCredentialBinding(db.Model):
+    """主机凭证绑定关系模型"""
+    __tablename__ = 'host_credential_bindings'
+    
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    host_id = db.Column(db.String(36), db.ForeignKey('host_infos.id', ondelete='CASCADE'), nullable=False)
+    credential_id = db.Column(db.String(36), db.ForeignKey('credentials.id', ondelete='CASCADE'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # 关联关系
+    host = db.relationship('HostInfo', back_populates='credential_bindings')
+    credential = db.relationship('Credential', back_populates='host_bindings')
+    
+    # 唯一约束：一个主机只能绑定一个特定凭证
+    __table_args__ = (
+        db.UniqueConstraint('host_id', 'credential_id', name='unique_host_credential'),
+    )
+    
+    def to_dict(self):
+        """转换为字典"""
+        return {
+            'id': self.id,
+            'host_id': self.host_id,
+            'credential_id': self.credential_id,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'credential': self.credential.to_dict() if self.credential else None
+        }
+
+class CollectionTask(db.Model):
+    """采集任务模型"""
+    __tablename__ = 'collection_tasks'
+    
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = db.Column(db.String(36), db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
+    trigger_type = db.Column(db.String(20), nullable=False)  # auto, manual
+    status = db.Column(db.String(20), default='pending')  # pending, running, completed, failed
+    total_hosts = db.Column(db.Integer, default=0)
+    success_count = db.Column(db.Integer, default=0)
+    failed_count = db.Column(db.Integer, default=0)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    end_time = db.Column(db.DateTime)
+    
+    # 关联关系
+    user = db.relationship('User', backref=db.backref('collection_tasks', lazy=True))
+    
+    def to_dict(self):
+        """转换为字典"""
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'trigger_type': self.trigger_type,
+            'status': self.status,
+            'total_hosts': self.total_hosts,
+            'success_count': self.success_count,
+            'failed_count': self.failed_count,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'end_time': self.end_time.isoformat() if self.end_time else None
+        } 

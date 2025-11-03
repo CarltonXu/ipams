@@ -13,6 +13,8 @@ import Dashboard from '../components/Dashboard.vue';
 import NotificationHistory from '../views/NotificationHistory.vue';
 import Tasks from '../views/Tasks.vue';
 import Monitor from '../views/Monitor.vue';
+import CredentialManagement from '../views/CredentialManagement.vue';
+import HostManagement from '../views/HostManagement.vue';
 
 const routes: RouteRecordRaw[] = [
     {
@@ -20,6 +22,8 @@ const routes: RouteRecordRaw[] = [
         component: MainLayout,
         children: [
           { path: 'ips', name: 'ShowIPs', component: IPList, meta: { requiresAuth: true } },
+          { path: 'credentials', name: 'CredentialManagement', component: CredentialManagement, meta: { requiresAuth: true } },
+          { path: 'hosts', name: 'HostManagement', component: HostManagement, meta: { requiresAuth: true } },
           { path: 'users', name: 'UserManagement', component: UserManagement, meta: { requiresAuth: true } },
           { path: 'scans', name: 'scan', component: ScanPolicyList, meta: { requiresAuth: true } },
           { path: 'tasks', name: 'task', component: Tasks, meta: { requiresAuth: true } },

@@ -85,6 +85,17 @@ export default {
     success: '操作成功',
     error: '操作失败',
     fetchError: '获取数据失败',
+    createError: '创建失败',
+    updateError: '更新失败',
+    deleteError: '删除失败',
+    testError: '测试失败',
+    exportError: '导出失败',
+    collectError: '采集失败',
+    batchCollectError: '批量采集失败',
+    bindError: '绑定失败',
+    unbindError: '解绑失败',
+    unknownError: '未知错误',
+    fields: '字段',
     confirm: '确认',
     warning: '警告',
     cancel: '取消',
@@ -105,10 +116,16 @@ export default {
     disabled: '禁用',
     view: '查看详情',
     stop: '停止',
+    createdAt: '创建时间',
+    updatedAt: '更新时间',
+    cores: '核心',
+    close: '关闭',
   },
   menu: {
     home: '首页',
     ipManagement: '主机管理',
+    credentials: '凭证管理',
+    hostInfo: '主机信息',
     scanConfig: '配置扫描',
     task: '任务管理',
     settings: '系统设置',
@@ -1184,4 +1201,175 @@ export default {
       '24h': '24小时'
     }
   },
+  credential: {
+    title: '凭证管理',
+    subtitle: '管理主机访问凭证',
+    name: '凭证名称',
+    type: '凭证类型',
+    username: '用户名',
+    password: '密码',
+    privateKey: 'SSH私钥',
+    isDefault: '默认凭证',
+    actions: {
+      add: '添加凭证',
+      edit: '编辑凭证',
+      delete: '删除凭证',
+      test: '测试连接',
+      refresh: '刷新列表',
+      viewDetail: '查看详情',
+      viewBindings: '查看绑定',
+      viewHost: '查看主机',
+      copy: '复制',
+      batchBind: '批量绑定',
+      batchUnbind: '批量解绑'
+    },
+    types: {
+      linux: 'Linux',
+      windows: 'Windows',
+      vmware: 'VMware'
+    },
+    placeholder: {
+      name: '请输入凭证名称',
+      username: '请输入用户名',
+      password: '请输入密码',
+      privateKey: '请输入SSH私钥（可选）'
+    },
+    messages: {
+      createSuccess: '凭证创建成功',
+      updateSuccess: '凭证更新成功',
+      deleteSuccess: '凭证删除成功',
+      deleteConfirm: '确定要删除该凭证吗？',
+      testSuccess: '连接测试成功',
+      testFailed: '连接测试失败',
+      alreadyExists: '凭证已存在',
+      noCredentials: '暂无凭证',
+      bindingsCount: '凭证 "{name}" 已绑定 {count} 个主机',
+      copySuccess: '已复制到剪贴板',
+      copyFailed: '复制失败',
+      unbindConfirm: '确定要解绑 {count} 个主机吗？',
+      unbindSuccess: '解绑成功',
+      unbindFailed: '解绑失败'
+    },
+    test: {
+      hostIp: '测试主机IP',
+      hostIpPlaceholder: '请输入要测试的主机IP地址',
+      hostIpRequired: '请输入测试主机IP'
+    },
+    boundAt: '绑定时间'
+  },
+  hostInfo: {
+    title: '主机信息',
+    subtitle: '主机详细信息管理',
+    ip: 'IP地址',
+    hostname: '主机名',
+    hostType: '主机类型',
+    osName: '操作系统',
+    osVersion: '版本',
+    kernel: '内核',
+    cpu: 'CPU',
+    memory: '内存',
+    disk: '磁盘',
+    network: '网络',
+    collectionStatus: '采集状态',
+    lastCollected: '最后采集时间',
+    actions: {
+      refresh: '刷新',
+      collect: '采集',
+      batchCollect: '批量采集',
+      bindCredential: '绑定凭证',
+      batchBindCredential: '批量绑定凭证',
+      unbindCredential: '解绑凭证',
+      selectCredential: '选择凭证',
+      export: '导出',
+      batchExport: '批量导出',
+      viewDetails: '查看详情'
+    },
+    types: {
+      physical: '物理机',
+      vmware: 'VMware虚拟机',
+      other_virtualization: '其他虚拟化'
+    },
+    status: {
+      pending: '待采集',
+      collecting: '采集中',
+      success: '采集成功',
+      failed: '采集失败'
+    },
+    filters: {
+      all: '全部',
+      search: '搜索主机'
+    },
+    messages: {
+      collectSuccess: '采集任务已启动',
+      collectFailed: '采集任务启动失败',
+      bindSuccess: '凭证绑定成功',
+      bindFailed: '凭证绑定失败',
+      unbindSuccess: '凭证解绑成功',
+      exportSuccess: '导出成功',
+      exportFailed: '导出失败',
+      noHosts: '暂无主机信息',
+      credentialRequired: '请选择凭证',
+      batchBindInfo: '将绑定 {count} 个主机到选定的凭证'
+    },
+    tabs: {
+      basic: '基本信息',
+      hardware: '硬件信息',
+      network: '网络信息',
+      disk: '磁盘信息',
+      vmware: 'VMware信息',
+      raw: '原始数据'
+    }
+  },
+  collection: {
+    title: '采集任务',
+    taskId: '任务ID',
+    triggerType: '触发方式',
+    status: '状态',
+    totalHosts: '总主机数',
+    successCount: '成功数',
+    failedCount: '失败数',
+    startTime: '开始时间',
+    endTime: '结束时间',
+    triggerTypes: {
+      auto: '自动触发',
+      manual: '手动触发'
+    },
+    statuses: {
+      pending: '等待中',
+      running: '运行中',
+      completed: '已完成',
+      failed: '失败'
+    },
+    messages: {
+      noTasks: '暂无采集任务'
+    }
+  },
+  export: {
+    title: '导出配置',
+    selectFields: '选择导出字段',
+    selectTemplate: '选择模板',
+    templates: {
+      basic: '基础信息',
+      detailed: '详细信息',
+      full: '完整信息'
+    },
+    fieldCategories: {
+      basic: '基础',
+      system: '系统',
+      hardware: '硬件',
+      network: '网络',
+      storage: '存储',
+      vmware: 'VMware',
+      status: '状态'
+    },
+    actions: {
+      export: '导出',
+      cancel: '取消'
+    },
+    messages: {
+      noFieldsSelected: '请至少选择一个字段',
+      exportSuccess: '导出成功',
+      exportFailed: '导出失败'
+    }
+  }
 };

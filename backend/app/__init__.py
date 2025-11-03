@@ -19,6 +19,8 @@ from app.services.notification import NotificationManager
 from app.scripts.init_notification_templates import init_notification_templates
 from app.tasks.system_metrics import metrics_scheduler
 from app.core.utils.logger import app_logger as logger, init_app as init_logger
+from app.services.collection.collector_manager import collector_manager
+from app.services.export.excel_exporter import excel_exporter
 
 # 创建 db 实例
 migrate = Migrate()
@@ -118,6 +120,14 @@ def init_extensions(app):
         app.notification_manager = notification_manager
         logger.debug("Notification manager initialized successfully")
         
+        # 初始化采集管理器
+        collector_manager.init_app(app)
+        logger.debug("Collector manager initialized successfully")
+        
+        # 初始化Excel导出器
+        excel_exporter.init_app(app)
+        logger.debug("Excel exporter initialized successfully")
+        
     except Exception as e:
         logger.error(f"Failed to initialize extensions: {str(e)}")
         raise
@@ -186,3 +196,8 @@ def create_app(config_object=None):
 
     
     return app
+
+def get_app():
+    """获取应用实例，用于Flask CLI"""
+    from app.core.config.settings import get_config
+    return create_app(get_config())

@@ -401,6 +401,9 @@ class ScanExecutor:
                         job.end_time = datetime.utcnow()
                         db.session.commit()
                         logger.debug(f"Job {self.job_id}: Status updated to completed")
+                        
+                        # 触发自动采集（如果配置了自动采集）
+                        self._trigger_auto_collection()
                     else:
                         logger.error(f"Job {self.job_id}: Failed to update status - job not found")
                 except Exception as e:
@@ -561,4 +564,69 @@ class ScanExecutor:
                 return result
         except Exception as e:
             logger.error(f"Error executing scan for job {self.job_id}: {str(e)}")
-            return False 
+            return False
+    
+    def _trigger_auto_collection(self):
+        """
+        触发自动信息采集
+        检查扫描结果中绑定了凭证的主机，自动触发信息采集
+        """
+        try:
+            from app.models.models import HostInfo
+            from app.services.collection.collector_manager import collector_manager
+            
+            # 检查是否启用自动采集
+            if not self.scan_params.get('auto_collect', False):
+                logger.debug(f"Job {self.job_id}: Auto collection disabled")
+                return
+            
+            # 获取扫描任务的所有结果
+            scan_results = ScanResult.query.filter_by(
+                job_id=self.job_id,
+                deleted=False
+            ).all()
+            
+            if not scan_results:
+                logger.debug(f"Job {self.job_id}: No scan results found for auto collection")
+                return
+            
+            # 为每个扫描结果查找或创建HostInfo，并检查是否有绑定凭证
+            host_ids_to_collect = []
+            for result in scan_results:
+                try:
+                    # 查找IP对应的HostInfo
+                    ip_obj = IP.query.filter_by(ip_address=result.ip_address, deleted=False).first()
+                    if not ip_obj:
+                        continue
+                    
+                    host_info = HostInfo.query.filter_by(ip_id=ip_obj.id, deleted=False).first()
+                    
+                    # 如果HostInfo不存在，创建一个
+                    if not host_info:
+                        host_info = HostInfo(
+                            ip_id=ip_obj.id,
+                            scan_result_id=result.id,
+                            collection_status='pending'
+                        )
+                        db.session.add(host_info)
+                        db.session.commit()
+                    
+                    # 检查是否有绑定凭证
+                    if host_info.credential_bindings:
+                        host_ids_to_collect.append(host_info.id)
+                        logger.debug(f"Job {self.job_id}: Host {result.ip_address} has credentials, will be collected")
+                
+                except Exception as e:
+                    logger.error(f"Error processing host {result.ip_address} for auto collection: {str(e)}")
+                    continue
+            
+            # 如果有待采集的主机，触发批量采集
+            if host_ids_to_collect:
+                try:
+                    task_id = collector_manager.collect_batch_hosts(host_ids_to_collect, self.job_user_id)
+                    logger.info(f"Job {self.job_id}: Triggered auto collection for {len(host_ids_to_collect)} hosts, task_id: {task_id}")
+                except Exception as e:
+                    logger.error(f"Error triggering auto collection: {str(e)}")
+        
+        except Exception as e:
+            logger.error(f"Error in auto collection trigger for job {self.job_id}: {str(e)}") 

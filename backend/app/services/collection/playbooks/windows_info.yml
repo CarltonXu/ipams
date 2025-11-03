@@ -1,0 +1,69 @@
+---
+- name: Collect Windows host information
+  hosts: all
+  gather_facts: yes
+  tasks:
+    - name: Collect basic system information
+      win_fact:
+      register: win_info
+
+    - name: Get Windows hostname
+      win_shell: hostname
+      register: hostname_result
+
+    - name: Get Windows OS information
+      win_shell: |
+        (Get-WmiObject Win32_OperatingSystem).Name
+      register: os_info_result
+
+    - name: Get Windows version
+      win_shell: |
+        (Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion").ReleaseId
+      register: os_version_result
+
+    - name: Get CPU information
+      win_shell: |
+        (Get-WmiObject Win32_Processor).Name
+      register: cpu_info_result
+
+    - name: Get CPU cores
+      win_shell: |
+        (Get-WmiObject Win32_Processor).NumberOfCores
+      register: cpu_cores_result
+
+    - name: Get total memory
+      win_shell: |
+        [math]::Round((Get-WmiObject Win32_ComputerSystem).TotalPhysicalMemory / 1GB)
+      register: memory_result
+
+    - name: Get disk information
+      win_shell: |
+        Get-WmiObject Win32_LogicalDisk | Select-Object DeviceID, @{Name="Size(GB)";Expression={[math]::Round($_.Size / 1GB,2)}}, @{Name="FreeSpace(GB)";Expression={[math]::Round($_.FreeSpace / 1GB,2)}}, FileSystem | ConvertTo-Json
+      register: disk_info_result
+
+    - name: Get network interfaces
+      win_shell: |
+        Get-NetAdapter | Select-Object Name, InterfaceDescription, LinkSpeed, Status | ConvertTo-Json
+      register: network_info_result
+
+    - name: Get detailed network information
+      win_shell: |
+        Get-NetIPAddress -AddressFamily IPv4 | Select-Object InterfaceAlias, IPAddress, InterfaceIndex | ConvertTo-Json
+      register: network_detailed_result
+
+    - name: Compile host information
+      set_fact:
+        host_info:
+          hostname: "{{ hostname_result.stdout }}"
+          os_name: "{{ os_info_result.stdout }}"
+          os_version: "{{ os_version_result.stdout }}"
+          cpu_model: "{{ cpu_info_result.stdout }}"
+          cpu_cores: "{{ cpu_cores_result.stdout }}"
+          memory_total: "{{ memory_result.stdout | int }}"
+          disk_info: "{{ disk_info_result.stdout }}"
+          network_interfaces: "{{ network_info_result.stdout }}"
+
+    - name: Display collected information
+      debug:
+        var: host_info
+

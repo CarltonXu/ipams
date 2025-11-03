@@ -85,6 +85,17 @@ export default {
     success: 'Operation Successful',
     error: 'Operation Failed',
     fetchError: 'Failed to fetch data',
+    createError: 'Create failed',
+    updateError: 'Update failed',
+    deleteError: 'Delete failed',
+    testError: 'Test failed',
+    exportError: 'Export failed',
+    collectError: 'Collection failed',
+    batchCollectError: 'Batch collection failed',
+    bindError: 'Bind failed',
+    unbindError: 'Unbind failed',
+    unknownError: 'Unknown error',
+    fields: 'Fields',
     confirm: 'Confirm',
     warning: 'Warning',
     cancel: 'Cancel',
@@ -105,10 +116,16 @@ export default {
     disabled: 'Disabled',
     view: 'View Details',
     stop: 'Stop',
+    createdAt: 'Created At',
+    updatedAt: 'Updated At',
+    cores: 'Cores',
+    close: 'Close',
   },
   menu: {
     home: 'Home',
     ipManagement: 'IP Management',
+    credentials: 'Credentials',
+    hostInfo: 'Host Information',
     scanConfig: 'Scan Config',
     task: 'Task Managent',
     settings: 'Settings',
@@ -1105,4 +1122,175 @@ export default {
       '24h': '24 Hours'
     }
   },
+  credential: {
+    title: 'Credential Management',
+    subtitle: 'Manage host access credentials',
+    name: 'Credential Name',
+    type: 'Credential Type',
+    username: 'Username',
+    password: 'Password',
+    privateKey: 'SSH Private Key',
+    isDefault: 'Default Credential',
+    actions: {
+      add: 'Add Credential',
+      edit: 'Edit Credential',
+      delete: 'Delete Credential',
+      test: 'Test Connection',
+      refresh: 'Refresh List',
+      viewDetail: 'View Detail',
+      viewBindings: 'View Bindings',
+      viewHost: 'View Host',
+      copy: 'Copy',
+      batchBind: 'Batch Bind',
+      batchUnbind: 'Batch Unbind'
+    },
+    types: {
+      linux: 'Linux',
+      windows: 'Windows',
+      vmware: 'VMware'
+    },
+    placeholder: {
+      name: 'Enter credential name',
+      username: 'Enter username',
+      password: 'Enter password',
+      privateKey: 'Enter SSH private key (optional)'
+    },
+    messages: {
+      createSuccess: 'Credential created successfully',
+      updateSuccess: 'Credential updated successfully',
+      deleteSuccess: 'Credential deleted successfully',
+      deleteConfirm: 'Are you sure to delete this credential?',
+      testSuccess: 'Connection test successful',
+      testFailed: 'Connection test failed',
+      alreadyExists: 'Credential already exists',
+      noCredentials: 'No credentials',
+      bindingsCount: 'Credential "{name}" is bound to {count} hosts',
+      copySuccess: 'Copied to clipboard',
+      copyFailed: 'Copy failed',
+      unbindConfirm: 'Are you sure to unbind {count} hosts?',
+      unbindSuccess: 'Unbind successful',
+      unbindFailed: 'Unbind failed'
+    },
+    test: {
+      hostIp: 'Test Host IP',
+      hostIpPlaceholder: 'Enter the host IP address to test',
+      hostIpRequired: 'Please enter test host IP'
+    },
+    boundAt: 'Bound At'
+  },
+  hostInfo: {
+    title: 'Host Information',
+    subtitle: 'Host information management',
+    ip: 'IP Address',
+    hostname: 'Hostname',
+    hostType: 'Host Type',
+    osName: 'Operating System',
+    osVersion: 'Version',
+    kernel: 'Kernel',
+    cpu: 'CPU',
+    memory: 'Memory',
+    disk: 'Disk',
+    network: 'Network',
+    collectionStatus: 'Collection Status',
+    lastCollected: 'Last Collected',
+    actions: {
+      refresh: 'Refresh',
+      collect: 'Collect',
+      batchCollect: 'Batch Collect',
+      bindCredential: 'Bind Credential',
+      batchBindCredential: 'Batch Bind Credential',
+      unbindCredential: 'Unbind Credential',
+      selectCredential: 'Select Credential',
+      export: 'Export',
+      batchExport: 'Batch Export',
+      viewDetails: 'View Details'
+    },
+    types: {
+      physical: 'Physical Machine',
+      vmware: 'VMware Virtual Machine',
+      other_virtualization: 'Other Virtualization'
+    },
+    status: {
+      pending: 'Pending',
+      collecting: 'Collecting',
+      success: 'Success',
+      failed: 'Failed'
+    },
+    filters: {
+      all: 'All',
+      search: 'Search Hosts'
+    },
+    messages: {
+      collectSuccess: 'Collection task started',
+      collectFailed: 'Collection task start failed',
+      bindSuccess: 'Credential bound successfully',
+      bindFailed: 'Credential bind failed',
+      unbindSuccess: 'Credential unbound successfully',
+      exportSuccess: 'Export successful',
+      exportFailed: 'Export failed',
+      noHosts: 'No host information',
+      credentialRequired: 'Please select a credential',
+      batchBindInfo: 'Will bind {count} hosts to the selected credential'
+    },
+    tabs: {
+      basic: 'Basic Info',
+      hardware: 'Hardware Info',
+      network: 'Network Info',
+      disk: 'Disk Info',
+      vmware: 'VMware Info',
+      raw: 'Raw Data'
+    }
+  },
+  collection: {
+    title: 'Collection Tasks',
+    taskId: 'Task ID',
+    triggerType: 'Trigger Type',
+    status: 'Status',
+    totalHosts: 'Total Hosts',
+    successCount: 'Success',
+    failedCount: 'Failed',
+    startTime: 'Start Time',
+    endTime: 'End Time',
+    triggerTypes: {
+      auto: 'Auto Trigger',
+      manual: 'Manual Trigger'
+    },
+    statuses: {
+      pending: 'Pending',
+      running: 'Running',
+      completed: 'Completed',
+      failed: 'Failed'
+    },
+    messages: {
+      noTasks: 'No collection tasks'
+    }
+  },
+  export: {
+    title: 'Export Configuration',
+    selectFields: 'Select Export Fields',
+    selectTemplate: 'Select Template',
+    templates: {
+      basic: 'Basic Info',
+      detailed: 'Detailed Info',
+      full: 'Full Info'
+    },
+    fieldCategories: {
+      basic: 'Basic',
+      system: 'System',
+      hardware: 'Hardware',
+      network: 'Network',
+      storage: 'Storage',
+      vmware: 'VMware',
+      status: 'Status'
+    },
+    actions: {
+      export: 'Export',
+      cancel: 'Cancel'
+    },
+    messages: {
+      noFieldsSelected: 'Please select at least one field',
+      exportSuccess: 'Export successful',
+      exportFailed: 'Export failed'
+    }
+  }
 };
