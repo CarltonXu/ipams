@@ -1128,4 +1128,60 @@ export default {
       loadFailed: '加载任务列表失败'
     }
   },
+  monitor: {
+    title: '资源监控',
+    cpu: {
+      title: 'CPU 使用率',
+      cores: 'CPU核心数',
+      loadAvg1min: '1分钟负载',
+      loadAvg5min: '5分钟负载',
+      loadAvg15min: '15分钟负载'
+    },
+    memory: {
+      title: '内存使用率',
+      total: '总内存',
+      used: '已用内存',
+      free: '空闲内存'
+    },
+    disk: {
+      title: '磁盘使用率',
+      io: '磁盘IO',
+      read: '读取速率',
+      write: '写入速率',
+      iops: 'IOPS'
+    },
+    process: {
+      title: '进程数',
+      list: '进程列表',
+      search: '搜索进程',
+      pid: 'PID',
+      name: '进程名',
+      cpuUsage: 'CPU使用率',
+      memoryUsage: '内存使用率',
+      physicalMemory: '物理内存',
+      virtualMemory: '虚拟内存',
+      status: '状态',
+      threads: '线程数',
+      createTime: '创建时间'
+    },
+    network: {
+      title: '网络流量',
+      sendSpeed: '发送速率',
+      recvSpeed: '接收速率',
+      errors: '错误数',
+      drops: '丢包数'
+    },
+    charts: {
+      resourceTrend: '资源使用趋势',
+      send: '发送',
+      recv: '接收',
+      read: '读取',
+      write: '写入'
+    },
+    timeRange: {
+      '1h': '1小时',
+      '6h': '6小时',
+      '24h': '24小时'
+    }
+  },
 };

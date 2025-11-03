@@ -1049,4 +1049,60 @@ export default {
       loadFailed: 'Failed to load task list'
     }
   },
+  monitor: {
+    title: 'Resource Monitor',
+    cpu: {
+      title: 'CPU Usage',
+      cores: 'CPU Cores',
+      loadAvg1min: '1 Min Load',
+      loadAvg5min: '5 Min Load',
+      loadAvg15min: '15 Min Load'
+    },
+    memory: {
+      title: 'Memory Usage',
+      total: 'Total Memory',
+      used: 'Used Memory',
+      free: 'Free Memory'
+    },
+    disk: {
+      title: 'Disk Usage',
+      io: 'Disk IO',
+      read: 'Read Speed',
+      write: 'Write Speed',
+      iops: 'IOPS'
+    },
+    process: {
+      title: 'Process Count',
+      list: 'Process List',
+      search: 'Search Process',
+      pid: 'PID',
+      name: 'Process Name',
+      cpuUsage: 'CPU Usage',
+      memoryUsage: 'Memory Usage',
+      physicalMemory: 'Physical Memory',
+      virtualMemory: 'Virtual Memory',
+      status: 'Status',
+      threads: 'Threads',
+      createTime: 'Create Time'
+    },
+    network: {
+      title: 'Network Traffic',
+      sendSpeed: 'Send Speed',
+      recvSpeed: 'Receive Speed',
+      errors: 'Errors',
+      drops: 'Drops'
+    },
+    charts: {
+      resourceTrend: 'Resource Usage Trend',
+      send: 'Send',
+      recv: 'Receive',
+      read: 'Read',
+      write: 'Write'
+    },
+    timeRange: {
+      '1h': '1 Hour',
+      '6h': '6 Hours',
+      '24h': '24 Hours'
+    }
+  },
 };
