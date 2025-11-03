@@ -53,8 +53,8 @@ def get_hosts(current_user):
         
         db.session.commit()
         
-        # 构建基础查询
-        hosts_query = HostInfo.query.filter_by(deleted=False)
+        # 构建基础查询（只查询根主机，不包括子主机）
+        hosts_query = HostInfo.query.filter_by(deleted=False, parent_host_id=None)
         
         # 只显示当前用户有权限查看的主机
         hosts_query = hosts_query.join(IP).filter(
@@ -108,10 +108,10 @@ def get_hosts(current_user):
                     bindings_map[binding.host_id] = []
                 bindings_map[binding.host_id].append(binding.to_dict())
         
-        # 构建返回数据
+        # 构建返回数据（支持树形结构）
         hosts_data = []
         for host in hosts_paginated.items:
-            host_dict = host.to_dict()
+            host_dict = host.to_dict(include_children=True)  # 包含子主机
             host_dict['credential_bindings'] = bindings_map.get(host.id, [])
             hosts_data.append(host_dict)
         

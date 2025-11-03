@@ -82,10 +82,16 @@
           :empty-text="$t('hostInfo.messages.noHosts')"
           stripe
           border
+          row-key="id"
+          :tree-props="{children: 'child_hosts', hasChildren: 'hasChildren'}"
           @selection-change="handleSelectionChange"
         >
-          <el-table-column type="selection" width="55" />
-          <el-table-column prop="ip.ip_address" :label="$t('hostInfo.ip')" min-width="120" />
+          <el-table-column type="selection" width="55" :selectable="isSelectable" />
+          <el-table-column prop="ip.ip_address" :label="$t('hostInfo.ip')" min-width="120">
+            <template #default="{ row }">
+              {{ row.parent_host_id ? '-' : row.ip?.ip_address }}
+            </template>
+          </el-table-column>
           <el-table-column prop="hostname" :label="$t('hostInfo.hostname')" min-width="150">
             <template #default="{ row }">
               {{ row.hostname || '-' }}
@@ -487,6 +493,11 @@ const getTypeTagType = (type: string) => {
     vmware: 'warning'
   };
   return typeMap[type] || '';
+};
+
+const isSelectable = (row: HostInfo) => {
+  // 子主机不可选，避免重复统计
+  return !row.parent_host_id;
 };
 </script>
 

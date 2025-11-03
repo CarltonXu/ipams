@@ -101,7 +101,12 @@ class CollectorManager:
                 host_info.collection_error = None
                 
                 # 更新主机信息
-                self._update_host_info(host_info, result.get('data', {}))
+                collection_data = result.get('data', {})
+                self._update_host_info(host_info, collection_data)
+                
+                # 如果是VMware批量采集，需要创建子主机记录
+                if isinstance(collection_data, dict) and 'vms' in collection_data:
+                    self._create_vm_child_records(host_info, collection_data['vms'])
             else:
                 host_info.collection_status = 'failed'
                 host_info.collection_error = result.get('error', 'Unknown error')
@@ -346,6 +351,56 @@ class CollectorManager:
             
         except Exception as e:
             logger.error(f"Error updating host info: {str(e)}")
+    
+    def _create_vm_child_records(self, parent_host: HostInfo, vm_list: List[Dict[str, Any]]):
+        """
+        为VMware采集结果创建子主机记录
+        
+        Args:
+            parent_host: 父主机（vCenter）
+            vm_list: 虚拟机列表
+        """
+        try:
+            for vm_info in vm_list:
+                # 检查是否已存在（根据VM UUID）
+                vm_uuid = vm_info.get('vmware_info', {}).get('vm_uuid')
+                if not vm_uuid:
+                    continue
+                
+                # 查找是否已有子主机记录（需要匹配vm_uuid）
+                existing_child = None
+                children = HostInfo.query.filter_by(
+                    parent_host_id=parent_host.id,
+                    deleted=False
+                ).all()
+                
+                for child in children:
+                    if child.vmware_info and child.vmware_info.get('vm_uuid') == vm_uuid:
+                        existing_child = child
+                        break
+                
+                if existing_child:
+                    # 更新已有记录
+                    self._update_host_info(existing_child, vm_info)
+                else:
+                    # 创建新的子主机记录
+                    child_host = HostInfo(
+                        ip_id=parent_host.ip_id,  # 子主机共享父主机的IP
+                        parent_host_id=parent_host.id,
+                        host_type='vmware',  # 子主机也是VMware类型
+                        collection_status='success',
+                        last_collected_at=datetime.utcnow()
+                    )
+                    db.session.add(child_host)
+                    db.session.flush()  # 获取ID后更新信息
+                    
+                    # 更新子主机信息
+                    self._update_host_info(child_host, vm_info)
+                    
+                logger.info(f"Created/updated VM child record for {vm_info.get('hostname', 'unknown')}")
+                
+        except Exception as e:
+            logger.error(f"Error creating VM child records: {str(e)}")
 
 
 # 创建全局实例
