@@ -94,7 +94,7 @@
           </el-table-column>
           <el-table-column prop="hostname" :label="$t('hostInfo.hostname')" min-width="150">
             <template #default="{ row }">
-              {{ row.hostname || '-' }}
+              {{ row.raw_data?.vmware_info?.vm_name || row.hostname || '-' }}
             </template>
           </el-table-column>
           <el-table-column prop="host_type" :label="$t('hostInfo.hostType')" width="120">
