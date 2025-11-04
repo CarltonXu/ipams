@@ -1,7 +1,7 @@
 // API 配置
 export const API_CONFIG = {
   // API 基础路径
-  BASE_URL: import.meta.env.VITE_API_BASE_URL || '/api/v1',
+  BASE_URL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001',
   
   // API 版本
   VERSION: 'v1',
@@ -9,7 +9,7 @@ export const API_CONFIG = {
   
   // 完整的基础 URL
   get BASE_API_URL() {
-    return this.BASE_URL
+    return `${this.BASE_URL}/${this.API_PREFIX}/${this.VERSION}`
   },
   
   // 各模块的 API 路径

@@ -3,7 +3,8 @@
 提供主机信息的查询、采集、绑定凭证等功能
 """
 from flask import Blueprint, request, jsonify
-from sqlalchemy import and_, or_, desc, asc
+from sqlalchemy import and_, or_, desc, asc, func
+from sqlalchemy.orm import joinedload
 from datetime import datetime
 import uuid
 
@@ -34,35 +35,51 @@ def get_hosts(current_user):
         sort_by = request.args.get('sort_by')
         sort_order = request.args.get('sort_order', 'asc')
         
-        # 获取当前用户有权限查看的所有IP
+        # 优化：批量确保存在HostInfo记录，避免N+1查询
+        # 使用子查询找出没有HostInfo的IP，然后批量创建
         if current_user.is_admin:
-            ips_query = IP.query.filter_by(deleted=False, status='active')
+            ip_filter = and_(IP.deleted == False, IP.status == 'active')
         else:
-            ips_query = IP.query.filter_by(deleted=False, status='active', assigned_user_id=current_user.id)
+            ip_filter = and_(IP.deleted == False, IP.status == 'active', IP.assigned_user_id == current_user.id)
         
-        # 为每个IP确保存在HostInfo记录
-        for ip in ips_query.all():
-            host_info = HostInfo.query.filter_by(ip_id=ip.id, deleted=False).first()
-            if not host_info:
-                # 自动创建HostInfo记录
-                host_info = HostInfo(
-                    ip_id=ip.id,
+        # 找出没有HostInfo的IP（使用LEFT JOIN）
+        ips_without_hostinfo = db.session.query(IP.id).filter(ip_filter).outerjoin(
+            HostInfo, and_(
+                HostInfo.ip_id == IP.id,
+                HostInfo.deleted == False
+            )
+        ).filter(HostInfo.id.is_(None)).all()
+        
+        # 批量创建缺失的HostInfo记录
+        if ips_without_hostinfo:
+            new_hostinfos = [
+                HostInfo(
+                    ip_id=ip_id[0],
                     collection_status='pending'
                 )
-                db.session.add(host_info)
-        
-        db.session.commit()
+                for ip_id in ips_without_hostinfo
+            ]
+            db.session.bulk_save_objects(new_hostinfos)
+            db.session.commit()
         
         # 构建基础查询（只查询根主机，不包括子主机）
+        # 使用 eager loading 优化关联查询，避免懒加载造成的N+1问题
         hosts_query = HostInfo.query.filter_by(deleted=False, parent_host_id=None)
         
-        # 只显示当前用户有权限查看的主机
-        hosts_query = hosts_query.join(IP).filter(
-            or_(
-                IP.assigned_user_id == current_user.id,
-                current_user.is_admin == True
-            )
-        )
+        # 判断是否需要JOIN IP表（用于搜索或权限过滤）
+        needs_ip_join = False
+        if query:  # 如果搜索条件包含IP地址，需要JOIN
+            needs_ip_join = True
+        if not current_user.is_admin:  # 非管理员需要权限过滤
+            needs_ip_join = True
+        
+        if needs_ip_join:
+            hosts_query = hosts_query.join(IP)
+            if not current_user.is_admin:
+                hosts_query = hosts_query.filter(IP.assigned_user_id == current_user.id)
+        else:
+            # 即使不需要JOIN，也要预加载IP关系
+            hosts_query = hosts_query.options(joinedload(HostInfo.ip))
         
         # 应用搜索条件
         if query:
@@ -96,12 +113,14 @@ def get_hosts(current_user):
             error_out=False
         )
         
-        # 批量加载凭证绑定信息
+        # 批量加载凭证绑定信息（优化：使用eager loading避免N+1查询）
         host_ids = [h.id for h in hosts_paginated.items]
         bindings_map = {}
         if host_ids:
             bindings = HostCredentialBinding.query.filter(
                 HostCredentialBinding.host_id.in_(host_ids)
+            ).options(
+                joinedload(HostCredentialBinding.credential)  # 预加载凭证信息
             ).all()
             for binding in bindings:
                 if binding.host_id not in bindings_map:
@@ -109,9 +128,31 @@ def get_hosts(current_user):
                 bindings_map[binding.host_id].append(binding.to_dict())
         
         # 构建返回数据（支持树形结构）
+        # 优化：批量加载子主机，避免递归查询中的N+1问题
+        child_hosts_map = {}
+        if host_ids:
+            # 一次性加载所有子主机
+            child_hosts = HostInfo.query.filter(
+                HostInfo.parent_host_id.in_(host_ids),
+                HostInfo.deleted == False
+            ).options(joinedload(HostInfo.ip)).all()
+            for child in child_hosts:
+                if child.parent_host_id not in child_hosts_map:
+                    child_hosts_map[child.parent_host_id] = []
+                child_hosts_map[child.parent_host_id].append(child)
+        
         hosts_data = []
         for host in hosts_paginated.items:
-            host_dict = host.to_dict(include_children=True)  # 包含子主机
+            # 使用预加载的子主机数据，避免递归查询
+            host_dict = host.to_dict(include_children=False)
+            # 手动添加子主机数据
+            if host.id in child_hosts_map:
+                host_dict['child_hosts'] = [
+                    child.to_dict(include_children=False) 
+                    for child in child_hosts_map[host.id]
+                ]
+            else:
+                host_dict['child_hosts'] = []
             host_dict['credential_bindings'] = bindings_map.get(host.id, [])
             hosts_data.append(host_dict)
         
