@@ -3,6 +3,165 @@
   hosts: all
   gather_facts: yes
   tasks:
+    - name: Collect detailed CPU information
+      shell: "lscpu | grep \"Model name\" | awk -F: '{print $2}' | xargs"
+      register: cpu_model_detail
+      ignore_errors: yes
+
+    - name: Get CPU cores
+      shell: "nproc"
+      register: cpu_cores_result
+      ignore_errors: yes
+
+    - name: Collect detailed disk information
+      shell: |
+        for device in $(lsblk -d -n -o NAME | grep -v loop); do
+          size=$(lsblk -d -n -o SIZE /dev/$device | head -1)
+          model=$(lsblk -d -n -o MODEL /dev/$device 2>/dev/null | head -1 || echo "N/A")
+          vendor=$(lsblk -d -n -o VENDOR /dev/$device 2>/dev/null | head -1 || echo "N/A")
+          type=$(lsblk -d -n -o TYPE /dev/$device | head -1)
+          echo "DEVICE=$device|SIZE=$size|MODEL=$model|VENDOR=$vendor|TYPE=$type"
+        done
+      register: disk_devices_result
+      ignore_errors: yes
+      changed_when: false
+
+    - name: Collect filesystem disk usage details
+      shell: |
+        df -hP | awk 'NR>1 && /^\/dev\// {
+          device=$1
+          size=$2
+          used=$3
+          avail=$4
+          use_percent=$5
+          mount=$6
+          fstype=$7
+          print "DEVICE=" device "|SIZE=" size "|USED=" used "|AVAIL=" avail "|USE%=" use_percent "|MOUNT=" mount "|FSTYPE=" fstype
+        }'
+      register: filesystem_info_result
+      ignore_errors: yes
+      changed_when: false
+
+    - name: Collect detailed network interface information as JSON
+      shell: |
+        python3 << 'EOF'
+        import json
+        import subprocess
+        import os
+        
+        interfaces = []
+        net_dir = '/sys/class/net'
+        
+        for iface in os.listdir(net_dir):
+            if iface == 'lo':
+                continue
+            
+            iface_path = os.path.join(net_dir, iface)
+            try:
+                with open(os.path.join(iface_path, 'address'), 'r') as f:
+                    mac = f.read().strip()
+            except:
+                mac = ""
+            
+            try:
+                with open(os.path.join(iface_path, 'operstate'), 'r') as f:
+                    state = f.read().strip()
+            except:
+                state = "unknown"
+            
+            try:
+                with open(os.path.join(iface_path, 'speed'), 'r') as f:
+                    speed = f.read().strip()
+            except:
+                speed = "0"
+            
+            try:
+                with open(os.path.join(iface_path, 'mtu'), 'r') as f:
+                    mtu = f.read().strip()
+            except:
+                mtu = "1500"
+            
+            # Get IP addresses
+            ipv4_result = subprocess.run(['ip', '-4', 'addr', 'show', iface], 
+                                       capture_output=True, text=True, timeout=5)
+            ipv4_match = subprocess.run(['grep', '-oP', r'(?<=inet\s)\d+(\.\d+){3}(/\d+)?'], 
+                                       input=ipv4_result.stdout, capture_output=True, text=True)
+            ipv4 = ipv4_match.stdout.strip().split('\n')[0] if ipv4_match.stdout.strip() else ""
+            
+            ipv6_result = subprocess.run(['ip', '-6', 'addr', 'show', iface], 
+                                        capture_output=True, text=True, timeout=5)
+            ipv6_match = subprocess.run(['grep', '-oP', r'(?<=inet6\s)[\da-f:]+(/\d+)?'], 
+                                       input=ipv6_result.stdout, capture_output=True, text=True)
+            ipv6 = ipv6_match.stdout.strip().split('\n')[0] if ipv6_match.stdout.strip() else ""
+            
+            # Get gateway
+            route_result = subprocess.run(['ip', 'route'], capture_output=True, text=True, timeout=5)
+            gateway = ""
+            for line in route_result.stdout.split('\n'):
+                if 'default' in line and iface in line:
+                    gateway = line.split()[2] if len(line.split()) > 2 else ""
+                    break
+            
+            interfaces.append({
+                "name": iface,
+                "mac_address": mac,
+                "state": state,
+                "speed": speed,
+                "mtu": mtu,
+                "ipv4": ipv4,
+                "ipv6": ipv6,
+                "gateway": gateway
+            })
+        
+        print(json.dumps(interfaces))
+        EOF
+      register: network_info_json_result
+      ignore_errors: yes
+      changed_when: false
+
+    - name: Collect filesystem information as JSON
+      shell: |
+        python3 << 'EOF'
+        import json
+        import subprocess
+        
+        filesystems = []
+        result = subprocess.run(['df', '-hP'], capture_output=True, text=True, timeout=10)
+        
+        for line in result.stdout.split('\n')[1:]:
+            if not line.strip() or not line.startswith('/dev/'):
+                continue
+            
+            parts = line.split()
+            if len(parts) >= 6:
+                filesystems.append({
+                    "device": parts[0],
+                    "size": parts[1],
+                    "used": parts[2],
+                    "avail": parts[3],
+                    "use_percent": parts[4],
+                    "mount": parts[5],
+                    "fstype": parts[6] if len(parts) > 6 else ""
+                })
+        
+        print(json.dumps(filesystems))
+        EOF
+      register: filesystem_json_result
+      ignore_errors: yes
+      changed_when: false
+
+    - name: Parse network interfaces JSON
+      set_fact:
+        network_interfaces_list: "{{ network_info_json_result.stdout | from_json }}"
+      when: network_info_json_result.stdout is defined and network_info_json_result.stdout != ""
+      ignore_errors: yes
+
+    - name: Parse filesystem JSON
+      set_fact:
+        filesystem_list: "{{ filesystem_json_result.stdout | from_json }}"
+      when: filesystem_json_result.stdout is defined and filesystem_json_result.stdout != ""
+      ignore_errors: yes
+
     - name: Collect basic system information
       set_fact:
         host_info:
@@ -10,49 +169,9 @@
           os_name: "{{ ansible_distribution }}"
           os_version: "{{ ansible_distribution_version }}"
           kernel_version: "{{ ansible_kernel }}"
-          cpu_model: "{{ ansible_processor_vcpus }}"
-          cpu_cores: "{{ ansible_processor_vcpus }}"
-          memory_total: "{{ ansible_memtotal_mb }}"
-          disk_info: "{{ ansible_mounts }}"
-          network_interfaces: "{{ ansible_interfaces }}"
-
-    - name: Collect detailed CPU information
-      shell: "lscpu | grep \"Model name\" | awk -F: '{print $2}' | xargs"
-      register: cpu_model_detail
-      ignore_errors: yes
-
-    - name: Update CPU model if available
-      set_fact:
-        host_info: "{{ host_info | combine({'cpu_model': cpu_model_detail.stdout}) }}"
-      when: cpu_model_detail.stdout is defined
-
-    - name: Collect disk information with details
-      shell: |
-        df -h | awk 'NR==1 || /^\/dev\//' | awk '{print $1 " " $2 " " $3 " " $4 " " $5 " " $6}'
-      register: disk_details
-      ignore_errors: yes
-
-    - name: Collect network interface details
-      shell: |
-        for iface in $(ls /sys/class/net/ | grep -v lo); do
-          ip addr show $iface | grep -E "inet |ether" | awk '{print $2}' | tr '\n' ' '
-          echo ""
-        done
-      register: network_details
-      ignore_errors: yes
-
-    - name: Get detailed network information
-      shell: |
-        for iface in $(ls /sys/class/net/ | grep -v lo); do
-          ip_addr=$(ip -4 addr show $iface | grep -oP '(?<=inet\s)\d+(\.\d+){3}')
-          mac_addr=$(ip link show $iface | grep -oP '(?<=link/ether\s)\S+')
-          status=$(ip link show $iface | grep -oP '(?<=state\s)\S+')
-          echo "{\"interface\": \"$iface\", \"ip\": \"$ip_addr\", \"mac\": \"$mac_addr\", \"status\": \"$status\"}"
-        done
-      register: network_info_json
-      ignore_errors: yes
-
-    - name: Display collected information
-      debug:
-        var: host_info
+          cpu_model: "{{ cpu_model_detail.stdout | default(ansible_processor[0] if ansible_processor is defined else 'Unknown') }}"
+          cpu_cores: "{{ cpu_cores_result.stdout | default(ansible_processor_vcpus) | int }}"
+          memory_total: "{{ ansible_memtotal_mb | int }}"
+          disk_info: "{{ filesystem_list | default([]) }}"
+          network_interfaces: "{{ network_interfaces_list | default(ansible_interfaces | default([])) }}"
 

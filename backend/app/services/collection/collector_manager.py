@@ -332,7 +332,16 @@ class CollectorManager:
             data: 采集到的数据
         """
         try:
-            host_info.hostname = data.get('hostname') or host_info.hostname
+            # 对于VMware主机，优先使用vm_name作为hostname
+            if 'vmware_info' in data and isinstance(data['vmware_info'], dict):
+                vm_name = data['vmware_info'].get('vm_name')
+                if vm_name:
+                    host_info.hostname = vm_name
+                else:
+                    host_info.hostname = data.get('hostname') or host_info.hostname
+            else:
+                host_info.hostname = data.get('hostname') or host_info.hostname
+            
             host_info.os_name = data.get('os_name') or host_info.os_name
             host_info.os_version = data.get('os_version') or host_info.os_version
             host_info.kernel_version = data.get('kernel_version') or host_info.kernel_version

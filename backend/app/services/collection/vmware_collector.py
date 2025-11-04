@@ -208,19 +208,90 @@ class VMwareCollector:
             hostname = guest.hostName if guest and hasattr(guest, 'hostName') else None
             os_name = summary.config.guestFullName if hasattr(summary.config, 'guestFullName') else None
             
-            # 网络接口信息
+            # 网络接口信息 - 增强：从配置和Guest状态获取详细信息
             network_interfaces = []
-            if guest and hasattr(guest, 'net'):
+            # 从vm.config.hardware.device获取网络适配器配置
+            if hasattr(vm, 'config') and hasattr(vm.config, 'hardware') and hasattr(vm.config.hardware, 'device'):
+                from pyVmomi import vim
+                for device in vm.config.hardware.device:
+                    if isinstance(device, vim.vm.device.VirtualEthernetCard):
+                        # 获取网络适配器配置信息
+                        net_adapter = {
+                            'label': device.deviceInfo.label if hasattr(device, 'deviceInfo') else None,
+                            'mac_address': device.macAddress if hasattr(device, 'macAddress') else None,
+                            'address_type': device.addressType if hasattr(device, 'addressType') else None,
+                            'wake_on_lan_enabled': device.wakeOnLanEnabled if hasattr(device, 'wakeOnLanEnabled') else None
+                        }
+                        
+                        # 获取连接的网络名称
+                        if hasattr(device, 'backing'):
+                            if isinstance(device.backing, vim.vm.device.VirtualEthernetCard.NetworkBackingInfo):
+                                net_adapter['network_name'] = device.backing.network.name if device.backing.network else None
+                            elif isinstance(device.backing, vim.vm.device.VirtualEthernetCard.DistributedVirtualPortBackingInfo):
+                                net_adapter['portgroup_key'] = device.backing.port.portgroupKey if device.backing.port else None
+                        
+                        # 从Guest状态获取IP地址信息
+                        if guest and hasattr(guest, 'net'):
+                            for net in guest.net:
+                                if hasattr(net, 'deviceConfigId') and net.deviceConfigId == device.key:
+                                    net_adapter['ip_addresses'] = list(net.ipAddress) if hasattr(net, 'ipAddress') and net.ipAddress else []
+                                    net_adapter['connected'] = net.connected if hasattr(net, 'connected') else None
+                                    net_adapter['network'] = net.network if hasattr(net, 'network') else None
+                                    break
+                        
+                        network_interfaces.append(net_adapter)
+            
+            # 如果没有从配置获取到网络信息，从Guest状态获取
+            if not network_interfaces and guest and hasattr(guest, 'net'):
                 for net in guest.net:
                     network_interfaces.append({
                         'device': net.deviceConfigId if hasattr(net, 'deviceConfigId') else None,
-                        'ip_address': net.ipAddress[0] if hasattr(net, 'ipAddress') and net.ipAddress else None,
-                        'mac_address': net.macAddress if hasattr(net, 'macAddress') else None
+                        'ip_addresses': list(net.ipAddress) if hasattr(net, 'ipAddress') and net.ipAddress else [],
+                        'mac_address': net.macAddress if hasattr(net, 'macAddress') else None,
+                        'connected': net.connected if hasattr(net, 'connected') else None,
+                        'network': net.network if hasattr(net, 'network') else None
                     })
             
-            # 磁盘信息
+            # 磁盘信息 - 增强：从配置和Guest状态获取详细信息
             disk_info = []
-            if hasattr(vm, 'guest') and hasattr(vm.guest, 'disk'):
+            # 从vm.config.hardware.device获取虚拟磁盘配置
+            if hasattr(vm, 'config') and hasattr(vm.config, 'hardware') and hasattr(vm.config.hardware, 'device'):
+                from pyVmomi import vim
+                for device in vm.config.hardware.device:
+                    if isinstance(device, vim.vm.device.VirtualDisk):
+                        disk_detail = {
+                            'label': device.deviceInfo.label if hasattr(device, 'deviceInfo') else None,
+                            'capacity_bytes': device.capacityInBytes if hasattr(device, 'capacityInBytes') else None,
+                            'capacity_kb': device.capacityInKB if hasattr(device, 'capacityInKB') else None,
+                            'disk_mode': str(device.backing.diskMode) if hasattr(device, 'backing') and hasattr(device.backing, 'diskMode') else None,
+                            'eagerly_scrub': device.backing.eagerlyScrub if hasattr(device, 'backing') and hasattr(device.backing, 'eagerlyScrub') else None,
+                            'thin_provisioned': device.backing.thinProvisioned if hasattr(device, 'backing') and hasattr(device.backing, 'thinProvisioned') else None,
+                            'uuid': device.backing.uuid if hasattr(device, 'backing') and hasattr(device.backing, 'uuid') else None
+                        }
+                        
+                        # 获取存储路径
+                        if hasattr(device, 'backing'):
+                            if isinstance(device.backing, vim.vm.device.VirtualDisk.FlatVer2BackingInfo):
+                                disk_detail['file_name'] = device.backing.fileName if hasattr(device.backing, 'fileName') else None
+                                disk_detail['datastore'] = device.backing.datastore.name if device.backing.datastore else None
+                            elif isinstance(device.backing, vim.vm.device.VirtualDisk.SeSparseBackingInfo):
+                                disk_detail['file_name'] = device.backing.fileName if hasattr(device.backing, 'fileName') else None
+                                disk_detail['datastore'] = device.backing.datastore.name if device.backing.datastore else None
+                        
+                        # 从Guest状态获取使用情况
+                        if hasattr(vm, 'guest') and hasattr(vm.guest, 'disk'):
+                            for disk in vm.guest.disk:
+                                if hasattr(disk, 'diskPath') and disk.diskPath:
+                                    # 尝试匹配磁盘路径
+                                    disk_detail['disk_path'] = disk.diskPath
+                                    disk_detail['capacity_guest'] = disk.capacity if hasattr(disk, 'capacity') else None
+                                    disk_detail['free_space'] = disk.freeSpace if hasattr(disk, 'freeSpace') else None
+                                    break
+                        
+                        disk_info.append(disk_detail)
+            
+            # 如果没有从配置获取到磁盘信息，从Guest状态获取
+            if not disk_info and hasattr(vm, 'guest') and hasattr(vm.guest, 'disk'):
                 for disk in vm.guest.disk:
                     disk_info.append({
                         'disk_path': disk.diskPath if hasattr(disk, 'diskPath') else None,

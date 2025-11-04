@@ -36,32 +36,90 @@
         [math]::Round((Get-WmiObject Win32_ComputerSystem).TotalPhysicalMemory / 1GB)
       register: memory_result
 
-    - name: Get disk information
+    - name: Get detailed disk information
       win_shell: |
-        Get-WmiObject Win32_LogicalDisk | Select-Object DeviceID, @{Name="Size(GB)";Expression={[math]::Round($_.Size / 1GB,2)}}, @{Name="FreeSpace(GB)";Expression={[math]::Round($_.FreeSpace / 1GB,2)}}, FileSystem | ConvertTo-Json
+        $disks = Get-WmiObject Win32_LogicalDisk | ForEach-Object {
+          @{
+            DeviceID = $_.DeviceID
+            Size = [math]::Round($_.Size / 1GB, 2)
+            FreeSpace = [math]::Round($_.FreeSpace / 1GB, 2)
+            UsedSpace = [math]::Round(($_.Size - $_.FreeSpace) / 1GB, 2)
+            UsePercent = if ($_.Size -gt 0) { [math]::Round((($_.Size - $_.FreeSpace) / $_.Size) * 100, 2) } else { 0 }
+            FileSystem = $_.FileSystem
+            VolumeName = $_.VolumeName
+            DriveType = $_.DriveType
+          }
+        }
+        $disks | ConvertTo-Json -Depth 10
       register: disk_info_result
+      ignore_errors: yes
 
-    - name: Get network interfaces
+    - name: Get physical disk information
       win_shell: |
-        Get-NetAdapter | Select-Object Name, InterfaceDescription, LinkSpeed, Status | ConvertTo-Json
+        $physicalDisks = Get-WmiObject Win32_DiskDrive | ForEach-Object {
+          @{
+            DeviceID = $_.DeviceID
+            Model = $_.Model
+            Size = [math]::Round($_.Size / 1GB, 2)
+            InterfaceType = $_.InterfaceType
+            MediaType = $_.MediaType
+            Partitions = $_.Partitions
+          }
+        }
+        $physicalDisks | ConvertTo-Json -Depth 10
+      register: physical_disk_info_result
+      ignore_errors: yes
+
+    - name: Get detailed network adapter information
+      win_shell: |
+        $adapters = Get-NetAdapter | ForEach-Object {
+          $adapter = $_
+          $ipConfig = Get-NetIPAddress -InterfaceIndex $adapter.ifIndex -AddressFamily IPv4 -ErrorAction SilentlyContinue
+          $ipv6Config = Get-NetIPAddress -InterfaceIndex $adapter.ifIndex -AddressFamily IPv6 -ErrorAction SilentlyContinue
+          $route = Get-NetRoute -InterfaceIndex $adapter.ifIndex -DestinationPrefix "0.0.0.0/0" -ErrorAction SilentlyContinue
+          
+          @{
+            Name = $adapter.Name
+            InterfaceDescription = $adapter.InterfaceDescription
+            LinkSpeed = $adapter.LinkSpeed
+            Status = $adapter.Status.ToString()
+            MacAddress = ($adapter | Get-NetAdapterHardwareInfo).MacAddress
+            PhysicalMediaType = $adapter.PhysicalMediaType
+            MTU = $adapter.NlMtuMax
+            IPv4Address = if ($ipConfig) { $ipConfig.IPAddress } else { $null }
+            IPv4PrefixLength = if ($ipConfig) { $ipConfig.PrefixLength } else { $null }
+            IPv6Address = if ($ipv6Config) { $ipv6Config.IPAddress } else { $null }
+            IPv6PrefixLength = if ($ipv6Config) { $ipv6Config.PrefixLength } else { $null }
+            Gateway = if ($route) { $route.NextHop } else { $null }
+          }
+        }
+        $adapters | ConvertTo-Json -Depth 10
       register: network_info_result
+      ignore_errors: yes
 
-    - name: Get detailed network information
-      win_shell: |
-        Get-NetIPAddress -AddressFamily IPv4 | Select-Object InterfaceAlias, IPAddress, InterfaceIndex | ConvertTo-Json
-      register: network_detailed_result
+    - name: Parse disk information JSON
+      set_fact:
+        disk_info_parsed: "{{ disk_info_result.stdout | from_json }}"
+      when: disk_info_result.stdout is defined and disk_info_result.stdout != ""
+      ignore_errors: yes
+
+    - name: Parse network information JSON
+      set_fact:
+        network_info_parsed: "{{ network_info_result.stdout | from_json }}"
+      when: network_info_result.stdout is defined and network_info_result.stdout != ""
+      ignore_errors: yes
 
     - name: Compile host information
       set_fact:
         host_info:
-          hostname: "{{ hostname_result.stdout }}"
-          os_name: "{{ os_info_result.stdout }}"
-          os_version: "{{ os_version_result.stdout }}"
-          cpu_model: "{{ cpu_info_result.stdout }}"
-          cpu_cores: "{{ cpu_cores_result.stdout }}"
-          memory_total: "{{ memory_result.stdout | int }}"
-          disk_info: "{{ disk_info_result.stdout }}"
-          network_interfaces: "{{ network_info_result.stdout }}"
+          hostname: "{{ hostname_result.stdout | trim }}"
+          os_name: "{{ os_info_result.stdout | trim }}"
+          os_version: "{{ os_version_result.stdout | trim }}"
+          cpu_model: "{{ cpu_info_result.stdout | trim }}"
+          cpu_cores: "{{ cpu_cores_result.stdout | int }}"
+          memory_total: "{{ (memory_result.stdout | int) * 1024 }}"
+          disk_info: "{{ disk_info_parsed | default([]) }}"
+          network_interfaces: "{{ network_info_parsed | default([]) }}"
 
     - name: Display collected information
       debug:

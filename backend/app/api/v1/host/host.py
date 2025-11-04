@@ -572,6 +572,7 @@ def get_collection_history(current_user, host_id):
 def export_hosts(current_user):
     """
     导出主机信息到Excel
+    支持导出父主机及其所有子主机
     """
     try:
         from flask import send_file
@@ -580,6 +581,7 @@ def export_hosts(current_user):
         host_ids = data.get('host_ids', [])
         fields = data.get('fields', [])
         template = data.get('template')
+        include_children = data.get('include_children', True)  # 默认包含子主机
         
         if not host_ids:
             return jsonify({'error': 'host_ids required'}), 400
@@ -594,8 +596,86 @@ def export_hosts(current_user):
         if not current_user.is_admin:
             hosts_query = hosts_query.join(IP).filter(IP.assigned_user_id == current_user.id)
         
-        hosts_list = hosts_query.all()
-        hosts_data = [host.to_dict() for host in hosts_list]
+        hosts_list = hosts_query.options(joinedload(HostInfo.ip)).all()
+        
+        # 如果需要包含子主机，递归查找所有子主机
+        all_host_ids = set(host_ids)
+        if include_children:
+            # 一次性加载所有可能的子主机，避免递归查询
+            all_child_hosts = HostInfo.query.filter(
+                HostInfo.parent_host_id.isnot(None),
+                HostInfo.deleted == False
+            ).options(joinedload(HostInfo.ip)).all()
+            
+            # 构建父主机ID到子主机的映射
+            parent_to_children = {}
+            for child in all_child_hosts:
+                parent_id = child.parent_host_id
+                if parent_id not in parent_to_children:
+                    parent_to_children[parent_id] = []
+                parent_to_children[parent_id].append(child)
+            
+            # 递归查找所有子主机ID（包括子主机的子主机）
+            def find_all_children_recursive(parent_ids, visited=None):
+                """递归查找所有子主机ID"""
+                if visited is None:
+                    visited = set()
+                if not parent_ids:
+                    return set(), []
+                
+                child_ids = set()
+                child_objects = []
+                
+                for parent_id in parent_ids:
+                    if parent_id in visited:
+                        continue
+                    visited.add(parent_id)
+                    
+                    if parent_id in parent_to_children:
+                        for child in parent_to_children[parent_id]:
+                            child_ids.add(child.id)
+                            child_objects.append(child)
+                            # 递归查找子主机的子主机
+                            grandchild_ids, grandchild_objects = find_all_children_recursive([child.id], visited)
+                            child_ids.update(grandchild_ids)
+                            child_objects.extend(grandchild_objects)
+                
+                return child_ids, child_objects
+            
+            child_ids, child_hosts = find_all_children_recursive(host_ids)
+            all_host_ids.update(child_ids)
+            
+            # 添加子主机到列表
+            if child_hosts:
+                hosts_list.extend(child_hosts)
+        
+        # 构建父主机信息映射（优化：避免在循环中查询数据库）
+        parent_host_info_map = {}
+        all_parent_ids = set()
+        for host in hosts_list:
+            if host.parent_host_id:
+                all_parent_ids.add(host.parent_host_id)
+        
+        if all_parent_ids:
+            # 一次性查询所有父主机信息
+            parent_hosts = HostInfo.query.filter(
+                HostInfo.id.in_(list(all_parent_ids))
+            ).options(joinedload(HostInfo.ip)).all()
+            for parent in parent_hosts:
+                parent_host_info_map[parent.id] = {
+                    'hostname': parent.hostname,
+                    'ip_address': parent.ip.ip_address if parent.ip else ''
+                }
+        
+        # 转换为字典格式
+        hosts_data = []
+        for host in hosts_list:
+            host_dict = host.to_dict(include_children=False)
+            # 添加父主机信息标识（用于Excel中标识层级关系）
+            if host.parent_host_id and host.parent_host_id in parent_host_info_map:
+                parent_info = parent_host_info_map[host.parent_host_id]
+                host_dict['_parent_hostname'] = parent_info['hostname'] or parent_info['ip_address']
+            hosts_data.append(host_dict)
         
         # 导出到Excel
         filepath = excel_exporter.export_hosts(hosts_data, fields, template)

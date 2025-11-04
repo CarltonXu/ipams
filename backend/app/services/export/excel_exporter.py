@@ -59,9 +59,10 @@ class ExcelExporter:
                     template: Optional[str] = None) -> str:
         """
         导出主机信息到Excel
+        支持导出父主机及其子主机，自动添加父主机信息列
         
         Args:
-            hosts: 主机信息列表
+            hosts: 主机信息列表（包含父主机和子主机）
             fields: 要导出的字段列表
             template: 预设模板名称（可选）
             
@@ -73,21 +74,35 @@ class ExcelExporter:
             if template and template in self.TEMPLATES:
                 fields = self.TEMPLATES[template]['fields']
             
+            # 检测是否有子主机（通过检查是否有_parent_hostname字段）
+            has_children = any('_parent_hostname' in host for host in hosts)
+            
+            # 如果有子主机，在字段列表前添加"父主机"列
+            export_fields = fields.copy()
+            parent_hostname_index = 0
+            if has_children:
+                # 将父主机信息列添加到最前面
+                export_fields.insert(0, '_parent_hostname')
+                parent_hostname_index = 0
+            
             # 创建工作簿
             wb = Workbook()
             ws = wb.active
             ws.title = "主机信息"
             
             # 设置表头
-            headers = self._get_field_headers(fields)
+            headers = self._get_field_headers(export_fields)
             ws.append(headers)
             
             # 设置表头样式
             self._style_headers(ws, headers)
             
+            # 按父主机和子主机分组排序：先父主机，后子主机
+            sorted_hosts = self._sort_hosts_by_hierarchy(hosts)
+            
             # 填充数据
-            for host in hosts:
-                row_data = self._extract_row_data(host, fields)
+            for host in sorted_hosts:
+                row_data = self._extract_row_data(host, export_fields)
                 ws.append(row_data)
             
             # 调整列宽
@@ -98,7 +113,7 @@ class ExcelExporter:
             filepath = os.path.join(self.export_dir, filename)
             wb.save(filepath)
             
-            logger.info(f"Excel export completed: {filepath}")
+            logger.info(f"Excel export completed: {filepath}, total hosts: {len(hosts)}")
             return filepath
             
         except Exception as e:
@@ -116,6 +131,7 @@ class ExcelExporter:
             表头列表
         """
         field_names = {
+            '_parent_hostname': '父主机',  # 新增：父主机信息列
             'ip.ip_address': 'IP地址',
             'hostname': '主机名',
             'host_type': '主机类型',
@@ -151,8 +167,22 @@ class ExcelExporter:
         for field in fields:
             value = None
             
+            # 处理父主机信息字段
+            if field == '_parent_hostname':
+                value = host.get('_parent_hostname', '')
+            # 处理主机名字段：对于VMware，优先显示vm_name，否则显示hostname
+            elif field == 'hostname':
+                # 如果是VMware类型，从vmware_info中获取vm_name
+                if host.get('host_type') == 'vmware' and host.get('vmware_info'):
+                    vmware_info = host.get('vmware_info', {})
+                    if isinstance(vmware_info, dict):
+                        value = vmware_info.get('vm_name') or host.get('hostname')
+                    else:
+                        value = host.get('hostname')
+                else:
+                    value = host.get('hostname')
             # 从host_info或ip中获取值
-            if '.' in field:
+            elif '.' in field:
                 # 嵌套字段，如 ip.ip_address
                 parts = field.split('.')
                 value = host
@@ -198,6 +228,56 @@ class ExcelExporter:
             row_data.append(value)
         
         return row_data
+    
+    def _sort_hosts_by_hierarchy(self, hosts: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """
+        按层级关系排序主机：先父主机，后子主机
+        
+        Args:
+            hosts: 主机列表
+            
+        Returns:
+            排序后的主机列表
+        """
+        # 分离父主机和子主机
+        parent_hosts = []
+        child_hosts = []
+        
+        for host in hosts:
+            if host.get('parent_host_id') or host.get('_parent_hostname'):
+                child_hosts.append(host)
+            else:
+                parent_hosts.append(host)
+        
+        # 构建父主机ID到子主机的映射
+        parent_id_map = {}
+        for child in child_hosts:
+            parent_id = child.get('parent_host_id')
+            if parent_id:
+                if parent_id not in parent_id_map:
+                    parent_id_map[parent_id] = []
+                parent_id_map[parent_id].append(child)
+        
+        # 排序：先父主机，然后按父主机ID分组添加子主机
+        sorted_hosts = []
+        for parent in parent_hosts:
+            sorted_hosts.append(parent)
+            # 添加该父主机的所有子主机
+            parent_id = parent.get('id')
+            if parent_id in parent_id_map:
+                sorted_hosts.extend(parent_id_map[parent_id])
+        
+        # 如果有孤立子主机（父主机不在列表中），也添加它们
+        processed_child_ids = set()
+        for parent_id in parent_id_map:
+            for child in parent_id_map[parent_id]:
+                processed_child_ids.add(child.get('id'))
+        
+        for child in child_hosts:
+            if child.get('id') not in processed_child_ids:
+                sorted_hosts.append(child)
+        
+        return sorted_hosts
     
     def _style_headers(self, ws, headers: List[str]):
         """
