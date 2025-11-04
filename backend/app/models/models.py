@@ -651,7 +651,7 @@ class NotificationTemplate(db.Model):
         except KeyError as e:
             raise ValueError(f"模板渲染失败，缺少参数: {str(e)}")
         except Exception as e:
-            raise ValueError(f"模板渲染失败: {str(e)}")
+            raise ValueError(f"模板渲染失败: {str(e)}") 
 
 class Credential(db.Model):
     """凭证管理模型"""
@@ -707,8 +707,14 @@ class HostInfo(db.Model):
     cpu_model = db.Column(db.String(255))
     cpu_cores = db.Column(db.Integer)
     memory_total = db.Column(db.BigInteger)  # MB
+    memory_free_mb = db.Column(db.Integer)  # 空闲内存（MB）
     disk_info = db.Column(db.JSON)
+    disk_count = db.Column(db.Integer)  # 磁盘数量（计算字段）
+    disk_total_gb = db.Column(db.Float)  # 总磁盘容量（GB，计算字段）
     network_interfaces = db.Column(db.JSON)
+    network_count = db.Column(db.Integer)  # 网卡数量（计算字段）
+    os_bit = db.Column(db.String(10))  # 操作系统位数（32-bit, 64-bit）
+    boot_method = db.Column(db.String(20))  # 启动方式（BIOS, UEFI）
     vmware_info = db.Column(db.JSON)
     collection_status = db.Column(db.String(20), default='pending')  # pending, collecting, success, failed
     collection_error = db.Column(db.Text)
@@ -739,8 +745,14 @@ class HostInfo(db.Model):
             'cpu_model': self.cpu_model,
             'cpu_cores': self.cpu_cores,
             'memory_total': self.memory_total,
+            'memory_free_mb': self.memory_free_mb,
             'disk_info': self.disk_info,
+            'disk_count': self.disk_count,
+            'disk_total_gb': self.disk_total_gb,
             'network_interfaces': self.network_interfaces,
+            'network_count': self.network_count,
+            'os_bit': self.os_bit,
+            'boot_method': self.boot_method,
             'vmware_info': self.vmware_info,
             'collection_status': self.collection_status,
             'collection_error': self.collection_error,
@@ -814,4 +826,71 @@ class CollectionTask(db.Model):
             'failed_count': self.failed_count,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'end_time': self.end_time.isoformat() if self.end_time else None
-        } 
+        }
+
+
+class CollectionProgress(db.Model):
+    """采集进度追踪模型"""
+    __tablename__ = 'collection_progress'
+    
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    task_id = db.Column(db.String(36), nullable=False, index=True)  # 关联CollectionTask的ID
+    host_id = db.Column(db.String(36), db.ForeignKey('host_infos.id', ondelete='SET NULL'), nullable=True)  # 当前处理的主机ID（可选）
+    total_count = db.Column(db.Integer, default=0)  # 总任务数
+    completed_count = db.Column(db.Integer, default=0)  # 已完成数
+    failed_count = db.Column(db.Integer, default=0)  # 失败数
+    current_step = db.Column(db.String(255))  # 当前步骤描述
+    status = db.Column(db.String(20), default='running')  # running, completed, failed, cancelled
+    error_message = db.Column(db.Text)  # 错误信息（如果有）
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # 关联关系
+    host = db.relationship('HostInfo', backref=db.backref('collection_progress_records', lazy=True))
+    
+    def to_dict(self):
+        """转换为字典"""
+        progress_percent = 0
+        if self.total_count > 0:
+            progress_percent = round((self.completed_count / self.total_count) * 100, 2)
+        
+        return {
+            'id': self.id,
+            'task_id': self.task_id,
+            'host_id': self.host_id,
+            'total_count': self.total_count,
+            'completed_count': self.completed_count,
+            'failed_count': self.failed_count,
+            'current_step': self.current_step,
+            'status': self.status,
+            'error_message': self.error_message,
+            'progress_percent': progress_percent,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
+    
+    def update_progress(self, completed=None, failed=None, current_step=None, status=None, error_message=None, commit=False):
+        """
+        更新进度
+        
+        Args:
+            completed: 已完成数量
+            failed: 失败数量
+            current_step: 当前步骤描述
+            status: 状态
+            error_message: 错误信息
+            commit: 是否自动提交（默认False，由调用者控制事务）
+        """
+        if completed is not None:
+            self.completed_count = completed
+        if failed is not None:
+            self.failed_count = failed
+        if current_step is not None:
+            self.current_step = current_step
+        if status is not None:
+            self.status = status
+        if error_message is not None:
+            self.error_message = error_message
+        self.updated_at = datetime.utcnow()
+        if commit:
+            db.session.commit() 

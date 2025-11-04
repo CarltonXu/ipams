@@ -162,6 +162,37 @@
       when: filesystem_json_result.stdout is defined and filesystem_json_result.stdout != ""
       ignore_errors: yes
 
+    - name: Get free memory (MemAvailable)
+      shell: |
+        awk '/MemAvailable/ {print int($2/1024)}' /proc/meminfo || awk '/MemFree/ {print int($2/1024)}' /proc/meminfo
+      register: memory_free_result
+      ignore_errors: yes
+      changed_when: false
+
+    - name: Get system architecture (32-bit or 64-bit)
+      shell: |
+        if [ "$(uname -m)" = "x86_64" ]; then
+          echo "64-bit"
+        elif [ "$(uname -m)" = "i386" ] || [ "$(uname -m)" = "i686" ]; then
+          echo "32-bit"
+        else
+          uname -m
+        fi
+      register: os_bit_result
+      ignore_errors: yes
+      changed_when: false
+
+    - name: Detect boot method (BIOS or UEFI)
+      shell: |
+        if [ -d /sys/firmware/efi ]; then
+          echo "UEFI"
+        else
+          echo "BIOS"
+        fi
+      register: boot_method_result
+      ignore_errors: yes
+      changed_when: false
+
     - name: Collect basic system information
       set_fact:
         host_info:
@@ -172,6 +203,9 @@
           cpu_model: "{{ cpu_model_detail.stdout | default(ansible_processor[0] if ansible_processor is defined else 'Unknown') }}"
           cpu_cores: "{{ cpu_cores_result.stdout | default(ansible_processor_vcpus) | int }}"
           memory_total: "{{ ansible_memtotal_mb | int }}"
+          memory_free_mb: "{{ memory_free_result.stdout | default(0) | int }}"
+          os_bit: "{{ os_bit_result.stdout | default('Unknown') | trim }}"
+          boot_method: "{{ boot_method_result.stdout | default('Unknown') | trim }}"
           disk_info: "{{ filesystem_list | default([]) }}"
           network_interfaces: "{{ network_interfaces_list | default(ansible_interfaces | default([])) }}"
 

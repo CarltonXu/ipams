@@ -26,7 +26,7 @@ class Config:
     LOG_MAX_BYTES =int(os.getenv('LOG_MAX_BYTES', 10*1024*1024))
     LOG_BACKUP_COUNT= int(os.getenv('LOG_BACKUP_COUNT', 5))
     LOG_PATH = os.getenv('LOG_PATH', os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))), 'logs'))
-    
+
     # 凭证加密配置
     ENCRYPTION_KEY = os.getenv('ENCRYPTION_KEY', '')
     
@@ -37,6 +37,11 @@ class Config:
     # 采集任务配置
     COLLECTION_MAX_CONCURRENT = int(os.getenv('COLLECTION_MAX_CONCURRENT', 5))
     COLLECTION_TIMEOUT = int(os.getenv('COLLECTION_TIMEOUT', 300))
+    
+    # VMware采集并发配置
+    VMWARE_COLLECTION_MAX_WORKERS = int(os.getenv('VMWARE_COLLECTION_MAX_WORKERS', 10))
+    BATCH_COLLECTION_MAX_WORKERS = int(os.getenv('BATCH_COLLECTION_MAX_WORKERS', 5))
+    COLLECTION_TIMEOUT_SECONDS = int(os.getenv('COLLECTION_TIMEOUT_SECONDS', 300))
     
     # 导出文件配置
     EXPORT_FILE_DIR = os.getenv('EXPORT_FILE_DIR', os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))), 'exports'))

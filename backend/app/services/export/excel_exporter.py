@@ -198,7 +198,15 @@ class ExcelExporter:
             # 处理特殊字段
             if field == 'memory_total' and value:
                 value = f"{value} MB"
-            elif field in ['network_interfaces', 'disk_info', 'vmware_info'] and value:
+            elif field == 'disk_info' and value:
+                # 使用格式化函数格式化磁盘信息
+                host_type = host.get('host_type', 'physical')
+                value = self._format_disk_info(value, host_type)
+            elif field == 'network_interfaces' and value:
+                # 使用格式化函数格式化网络信息
+                host_type = host.get('host_type', 'physical')
+                value = self._format_network_info(value, host_type)
+            elif field == 'vmware_info' and value:
                 # JSON字段转换为字符串
                 value = json.dumps(value, ensure_ascii=False)
             elif field == 'collection_status' and value:
@@ -344,6 +352,152 @@ class ExcelExporter:
             {'field': 'last_collected_at', 'label': '最后采集时间', 'category': 'status'},
             {'field': 'collection_error', 'label': '采集错误', 'category': 'status'}
         ]
+    
+    def _format_disk_info(self, disk_info: Any, host_type: str = 'physical') -> str:
+        """
+        格式化磁盘信息为管道分隔字符串
+        
+        Args:
+            disk_info: 磁盘信息（可能是列表或JSON字符串）
+            host_type: 主机类型（vmware, physical等）
+            
+        Returns:
+            格式化后的字符串，每行一个磁盘，字段用|分隔
+        """
+        try:
+            # 如果是字符串，尝试解析JSON
+            if isinstance(disk_info, str):
+                disk_info = json.loads(disk_info)
+            
+            if not disk_info or not isinstance(disk_info, list):
+                return ""
+            
+            formatted_lines = []
+            
+            for disk in disk_info:
+                if not isinstance(disk, dict):
+                    continue
+                
+                if host_type == 'vmware':
+                    # VMware格式：datastore|file_name|capacity_kb|disk_mode
+                    datastore = disk.get('datastore', '')
+                    file_name = disk.get('file_name', '')
+                    capacity_kb = disk.get('capacity_kb', 0)
+                    disk_mode = disk.get('disk_mode', '')
+                    
+                    # 转换为GB
+                    capacity_gb = f"{capacity_kb / 1024 / 1024:.2f}GB" if capacity_kb else "0GB"
+                    
+                    line = f"{datastore}|{file_name}|{capacity_gb}|{disk_mode}"
+                    formatted_lines.append(line)
+                else:
+                    # Linux/Windows格式：device|size|vendor|model|mount|fstype|use_percent
+                    device = disk.get('device') or disk.get('DeviceID', '')
+                    size = disk.get('size') or disk.get('Size', '')
+                    
+                    # Linux格式处理
+                    if 'vendor' in disk:
+                        vendor = disk.get('vendor', '')
+                        model = disk.get('model', '')
+                        mount = disk.get('mount', '')
+                        fstype = disk.get('fstype', '')
+                        use_percent = disk.get('use_percent', '')
+                        line = f"{device}|{size}|{vendor}|{model}|{mount}|{fstype}|{use_percent}"
+                    # Windows格式处理
+                    elif 'Model' in disk:
+                        model = disk.get('Model', '')
+                        interface = disk.get('InterfaceType', '')
+                        media_type = disk.get('MediaType', '')
+                        line = f"{device}|{size}GB|{model}|{interface}|{media_type}"
+                    else:
+                        # 通用格式：device|size|free_space|used_space|use_percent
+                        free_space = disk.get('FreeSpace') or disk.get('avail', '')
+                        used_space = disk.get('UsedSpace') or disk.get('used', '')
+                        use_percent = disk.get('UsePercent') or disk.get('use_percent', '')
+                        line = f"{device}|{size}|{free_space}|{used_space}|{use_percent}%"
+                    
+                    formatted_lines.append(line)
+            
+            return '\n'.join(formatted_lines) if formatted_lines else ""
+            
+        except Exception as e:
+            logger.warning(f"Error formatting disk info: {str(e)}")
+            # 如果格式化失败，返回JSON字符串
+            if isinstance(disk_info, str):
+                return disk_info
+            return json.dumps(disk_info, ensure_ascii=False) if disk_info else ""
+    
+    def _format_network_info(self, network_interfaces: Any, host_type: str = 'physical') -> str:
+        """
+        格式化网络信息为管道分隔字符串
+        
+        Args:
+            network_interfaces: 网络接口信息（可能是列表或JSON字符串）
+            host_type: 主机类型（vmware, physical等）
+            
+        Returns:
+            格式化后的字符串，每行一个网卡，字段用|分隔
+        """
+        try:
+            # 如果是字符串，尝试解析JSON
+            if isinstance(network_interfaces, str):
+                network_interfaces = json.loads(network_interfaces)
+            
+            if not network_interfaces or not isinstance(network_interfaces, list):
+                return ""
+            
+            formatted_lines = []
+            
+            for interface in network_interfaces:
+                if not isinstance(interface, dict):
+                    continue
+                
+                if host_type == 'vmware':
+                    # VMware格式：network_name|mac_address|connected|ip_addresses
+                    network_name = interface.get('network_name', '')
+                    mac_address = interface.get('mac_address', '')
+                    connected = interface.get('connected', '')
+                    ip_addresses = interface.get('ip_addresses', [])
+                    
+                    # IP地址列表转换为字符串
+                    ip_str = ','.join(ip_addresses) if isinstance(ip_addresses, list) else str(ip_addresses)
+                    
+                    line = f"{network_name}|{mac_address}|{connected}|{ip_str}"
+                    formatted_lines.append(line)
+                else:
+                    # Linux/Windows格式：name|mac_address|state|mtu|speed|ipv4|gateway
+                    name = interface.get('name') or interface.get('Name', '')
+                    mac_address = interface.get('mac_address') or interface.get('MacAddress', '')
+                    
+                    # Linux格式
+                    if 'state' in interface:
+                        state = interface.get('state', '')
+                        mtu = interface.get('mtu', '')
+                        speed = interface.get('speed', '')
+                        ipv4 = interface.get('ipv4', '')
+                        gateway = interface.get('gateway', '')
+                        line = f"{name}|{mac_address}|{state}|{mtu}|{speed}|{ipv4}|{gateway}"
+                    # Windows格式
+                    elif 'Status' in interface:
+                        status = interface.get('Status', '')
+                        link_speed = interface.get('LinkSpeed', '')
+                        ipv4 = interface.get('IPv4Address', '')
+                        gateway = interface.get('Gateway', '')
+                        line = f"{name}|{mac_address}|{status}|{link_speed}|{ipv4}|{gateway}"
+                    else:
+                        # 通用格式
+                        line = f"{name}|{mac_address}"
+                    
+                    formatted_lines.append(line)
+            
+            return '\n'.join(formatted_lines) if formatted_lines else ""
+            
+        except Exception as e:
+            logger.warning(f"Error formatting network info: {str(e)}")
+            # 如果格式化失败，返回JSON字符串
+            if isinstance(network_interfaces, str):
+                return network_interfaces
+            return json.dumps(network_interfaces, ensure_ascii=False) if network_interfaces else ""
     
     def get_template_list(self) -> List[Dict[str, str]]:
         """

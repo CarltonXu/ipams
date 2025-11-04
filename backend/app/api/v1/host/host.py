@@ -8,7 +8,7 @@ from sqlalchemy.orm import joinedload
 from datetime import datetime
 import uuid
 
-from app.models.models import db, HostInfo, HostCredentialBinding, CollectionTask, Credential, IP
+from app.models.models import db, HostInfo, HostCredentialBinding, CollectionTask, Credential, IP, CollectionProgress
 from app.core.security.auth import token_required
 from app.core.utils.logger import app_logger as logger
 from app.services.collection.collector_manager import collector_manager
@@ -335,7 +335,7 @@ def unbind_credential(current_user, host_id):
 @token_required
 def collect_host_info(current_user, host_id):
     """
-    触发单个主机信息采集
+    触发单个主机信息采集（改为异步批量采集方式以支持进度显示）
     """
     try:
         host = HostInfo.query.filter_by(id=host_id, deleted=False).first()
@@ -347,36 +347,16 @@ def collect_host_info(current_user, host_id):
         if not current_user.is_admin and host.ip.assigned_user_id != current_user.id:
             return jsonify({'error': 'Permission denied'}), 403
         
-        data = request.get_json()
-        credential_id = data.get('credential_id')
+        # 使用批量采集API来处理单个主机，这样可以支持进度显示
+        task_id = collector_manager.collect_batch_hosts([host_id], current_user.id)
         
-        # 支持自定义凭证
-        custom_credential = None
-        if data.get('username') or data.get('password'):
-            custom_credential = {
-                'username': data.get('username'),
-                'password': data.get('password'),
-                'private_key': data.get('private_key'),
-                'credential_type': data.get('credential_type', 'linux'),
-                'port': data.get('port')
-            }
-        
-        # 执行采集
-        result = collector_manager.collect_single_host(host_id, credential_id, custom_credential)
-        
-        if result['success']:
-            return jsonify({
-                'message': 'Collection started successfully',
-                'result': result
-            }), 200
-        else:
-            return jsonify({
-                'message': 'Collection failed',
-                'error': result.get('error')
-            }), 500
+        return jsonify({
+            'message': 'Collection started successfully',
+            'task_id': task_id
+        }), 202  # 202 Accepted 表示请求已接受，正在处理
         
     except Exception as e:
-        logger.error(f"Error collecting host info: {str(e)}")
+        logger.error(f"Error starting collection: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 
@@ -718,5 +698,111 @@ def get_export_fields(current_user):
         return jsonify({'fields': fields}), 200
     except Exception as e:
         logger.error(f"Error fetching fields: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@host_bp.route('/host/collection-progress/<task_id>', methods=['GET'])
+@token_required
+def get_collection_progress(current_user, task_id):
+    """
+    获取采集任务进度
+    
+    Args:
+        task_id: 采集任务ID或CollectionTask ID
+    """
+    try:
+        # 首先尝试从CollectionProgress表中查找
+        progress = CollectionProgress.query.filter_by(task_id=task_id).first()
+        
+        if progress:
+            # 检查权限：确保任务属于当前用户
+            task = CollectionTask.query.get(task_id)
+            if task and task.user_id != current_user.id and not current_user.is_admin:
+                return jsonify({'error': 'Permission denied'}), 403
+            
+            return jsonify(progress.to_dict()), 200
+        
+        # 如果没有CollectionProgress记录，尝试从CollectionTask获取基本信息
+        task = CollectionTask.query.get(task_id)
+        if not task:
+            return jsonify({'error': 'Task not found'}), 404
+        
+        # 检查权限
+        if task.user_id != current_user.id and not current_user.is_admin:
+            return jsonify({'error': 'Permission denied'}), 403
+        
+        # 计算进度百分比
+        progress_percent = 0
+        if task.total_hosts > 0:
+            completed = task.success_count + task.failed_count
+            progress_percent = round((completed / task.total_hosts) * 100, 2)
+        
+        return jsonify({
+            'task_id': task.id,
+            'total_count': task.total_hosts,
+            'completed_count': task.success_count + task.failed_count,
+            'success_count': task.success_count,
+            'failed_count': task.failed_count,
+            'status': task.status,
+            'current_step': f"Processing hosts ({task.success_count + task.failed_count}/{task.total_hosts})",
+            'progress_percent': progress_percent,
+            'created_at': task.created_at.isoformat() if task.created_at else None,
+            'updated_at': task.end_time.isoformat() if task.end_time else None
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Error fetching collection progress: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@host_bp.route('/host/collection-tasks', methods=['GET'])
+@token_required
+def get_collection_tasks(current_user):
+    """
+    获取当前用户的采集任务列表
+    支持分页和状态过滤
+    """
+    try:
+        page = request.args.get('page', 1, type=int)
+        page_size = request.args.get('page_size', 20, type=int)
+        status = request.args.get('status')  # pending, running, completed, failed
+        
+        # 构建查询
+        query = CollectionTask.query.filter_by(user_id=current_user.id)
+        
+        if status:
+            query = query.filter_by(status=status)
+        
+        # 按创建时间倒序
+        query = query.order_by(desc(CollectionTask.created_at))
+        
+        # 分页
+        paginated = query.paginate(
+            page=page,
+            per_page=page_size,
+            error_out=False
+        )
+        
+        tasks_data = []
+        for task in paginated.items:
+            # 获取进度信息（如果有）
+            progress = CollectionProgress.query.filter_by(task_id=task.id).first()
+            
+            task_dict = task.to_dict()
+            if progress:
+                task_dict['progress'] = progress.to_dict()
+            
+            tasks_data.append(task_dict)
+        
+        return jsonify({
+            'tasks': tasks_data,
+            'total': paginated.total,
+            'pages': paginated.pages,
+            'page_size': page_size,
+            'current_page': paginated.page
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Error fetching collection tasks: {str(e)}")
         return jsonify({'error': str(e)}), 500
 

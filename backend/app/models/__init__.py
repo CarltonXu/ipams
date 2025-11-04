@@ -4,6 +4,7 @@ from .models import IP
 from .models import ScanSubnet, ScanPolicy, ScanJob, ScanResult
 from .models import SystemConfig
 from .models import Notification, NotificationTemplate
+from .models import Credential, HostInfo, HostCredentialBinding, CollectionTask, CollectionProgress
 
 __all__ = [
     'db',
@@ -17,5 +18,10 @@ __all__ = [
     "SystemConfig",
     'PolicySchedule',
     'Notification',
-    'NotificationTemplate'
+    'NotificationTemplate',
+    'Credential',
+    'HostInfo',
+    'HostCredentialBinding',
+    'CollectionTask',
+    'CollectionProgress'
 ]

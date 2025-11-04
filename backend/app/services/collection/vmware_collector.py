@@ -2,7 +2,8 @@
 VMware 主机信息采集器
 使用 pyvmomi 库连接 VMware vCenter/ESXi 并采集虚拟机信息
 """
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, Callable
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from flask import current_app
 from app.core.utils.logger import app_logger as logger
 from app.core.security.encryption import decrypt_credential
@@ -16,7 +17,9 @@ class VMwareCollector:
     
     def collect_vm_info(self, vcenter_host: str, username: str, password: str, 
                        vm_name: Optional[str] = None, vm_uuid: Optional[str] = None,
-                       collect_all_vms: bool = False) -> Dict[str, Any]:
+                       collect_all_vms: bool = False, 
+                       progress_callback: Optional[Callable[[int, int, Dict[str, Any]], None]] = None,
+                       max_workers: Optional[int] = None) -> Dict[str, Any]:
         """
         采集VMware虚拟机信息
         
@@ -27,6 +30,8 @@ class VMwareCollector:
             vm_name: 虚拟机名称（可选）
             vm_uuid: 虚拟机UUID（可选）
             collect_all_vms: 是否采集所有虚拟机（用于vCenter）
+            progress_callback: 进度回调函数，参数为(completed, total, vm_info)
+            max_workers: 最大并发工作线程数（默认从配置读取）
             
         Returns:
             采集的虚拟机信息字典或列表
@@ -53,14 +58,80 @@ class VMwareCollector:
             try:
                 content = service_instance.RetrieveContent()
                 
-                # 如果采集所有虚拟机
+                # 如果采集所有虚拟机，使用并发采集
                 if collect_all_vms:
+                    # 获取最大工作线程数
+                    if max_workers is None:
+                        max_workers = current_app.config.get('VMWARE_COLLECTION_MAX_WORKERS', 10) if current_app else 10
+                    
                     vms = self._get_all_vms(content)
+                    total = len(vms)
+                    
+                    logger.info(
+                        f"开始VMware采集: vCenter={vcenter_host}, VM数量={total}, 并发线程数={max_workers}",
+                        extra={
+                            'host_ip': vcenter_host,
+                            'vm_count': total,
+                            'max_workers': max_workers,
+                            'operation': 'vmware_collect_all_start'
+                        }
+                    )
+                    
+                    # 使用线程池并发采集
                     vm_list = []
-                    for vm in vms:
-                        vm_info = self._collect_vm_details(vm, content)
-                        vm_list.append(vm_info)
-                    return {'vms': vm_list, 'total': len(vm_list)}
+                    completed_count = 0
+                    failed_count = 0
+                    
+                    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                        # 提交所有任务
+                        future_to_vm = {
+                            executor.submit(self._collect_vm_details, vm, content): vm 
+                            for vm in vms
+                        }
+                        
+                        # 处理完成的任务
+                        for future in as_completed(future_to_vm):
+                            vm = future_to_vm[future]
+                            try:
+                                vm_info = future.result()
+                                if vm_info:
+                                    vm_list.append(vm_info)
+                                    completed_count += 1
+                                    # 调用进度回调
+                                    if progress_callback:
+                                        try:
+                                            progress_callback(completed_count, total, vm_info)
+                                        except Exception as e:
+                                            logger.error(f"Error in progress callback: {str(e)}", exc_info=True)
+                                else:
+                                    failed_count += 1
+                                    logger.warning(
+                                        f"Failed to collect VM: {vm.name if hasattr(vm, 'name') else 'Unknown'}"
+                                    )
+                            except Exception as e:
+                                failed_count += 1
+                                vm_name = vm.name if hasattr(vm, 'name') else 'Unknown'
+                                logger.error(
+                                    f"Error collecting VM {vm_name}: {str(e)}",
+                                    extra={
+                                        'vm_name': vm_name,
+                                        'error': str(e),
+                                        'operation': 'vmware_collect_single'
+                                    }
+                                )
+                    
+                    logger.info(
+                        f"VMware采集完成: vCenter={vcenter_host}, 成功={completed_count}, 失败={failed_count}, 总计={total}",
+                        extra={
+                            'host_ip': vcenter_host,
+                            'total_vms': total,
+                            'completed': completed_count,
+                            'failed': failed_count,
+                            'operation': 'vmware_collect_all_complete'
+                        }
+                    )
+                    
+                    return {'vms': vm_list, 'total': total, 'completed': completed_count, 'failed': failed_count}
                 
                 # 查找单个虚拟机
                 vm = None
@@ -208,6 +279,33 @@ class VMwareCollector:
             hostname = guest.hostName if guest and hasattr(guest, 'hostName') else None
             os_name = summary.config.guestFullName if hasattr(summary.config, 'guestFullName') else None
             
+            # Guest内存使用情况
+            memory_free_mb = None
+            if guest and hasattr(guest, 'memoryUsageMB'):
+                # 计算空闲内存 = 总内存 - 已使用内存
+                memory_used_mb = guest.memoryUsageMB if hasattr(guest, 'memoryUsageMB') else 0
+                memory_free_mb = max(0, memory_total - memory_used_mb) if memory_total > 0 else None
+            
+            # 启动固件类型（BIOS/UEFI）
+            boot_method = None
+            if hasattr(vm, 'config') and hasattr(vm.config, 'firmware'):
+                firmware_type = str(vm.config.firmware) if vm.config.firmware else None
+                if firmware_type:
+                    if 'efi' in firmware_type.lower() or 'uefi' in firmware_type.lower():
+                        boot_method = 'UEFI'
+                    elif 'bios' in firmware_type.lower():
+                        boot_method = 'BIOS'
+                    else:
+                        boot_method = firmware_type
+            
+            # 操作系统位数（从Guest OS信息推断）
+            os_bit = None
+            if os_name:
+                if '64-bit' in os_name or 'x64' in os_name.lower() or 'amd64' in os_name.lower():
+                    os_bit = '64-bit'
+                elif '32-bit' in os_name or 'x86' in os_name.lower():
+                    os_bit = '32-bit'
+            
             # 网络接口信息 - 增强：从配置和Guest状态获取详细信息
             network_interfaces = []
             # 从vm.config.hardware.device获取网络适配器配置
@@ -323,6 +421,9 @@ class VMwareCollector:
                 'cpu_model': cpu_model,
                 'cpu_cores': cpu_cores,
                 'memory_total': memory_total,
+                'memory_free_mb': memory_free_mb,
+                'os_bit': os_bit,
+                'boot_method': boot_method,
                 'network_interfaces': network_interfaces,
                 'disk_info': disk_info,
                 'vmware_info': vmware_info

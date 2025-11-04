@@ -1223,6 +1223,7 @@ export default {
     messages: {
       collectSuccess: 'Collection task started',
       collectFailed: 'Collection task start failed',
+      collectStarted: 'Collection task started',
       bindSuccess: 'Credential bound successfully',
       bindFailed: 'Credential bind failed',
       unbindSuccess: 'Credential unbound successfully',
@@ -1231,6 +1232,21 @@ export default {
       noHosts: 'No host information',
       credentialRequired: 'Please select a credential',
       batchBindInfo: 'Will bind {count} hosts to the selected credential'
+    },
+    collectionProgress: {
+      title: 'Collection Progress',
+      total: 'Total',
+      completed: 'Completed',
+      failed: 'Failed',
+      currentStep: 'Current Step',
+      error: 'Error Message',
+      noData: 'No progress data',
+      status: {
+        running: 'Running',
+        completed: 'Completed',
+        failed: 'Failed',
+        cancelled: 'Cancelled'
+      }
     },
     tabs: {
       basic: 'Basic Info',

@@ -1302,6 +1302,7 @@ export default {
     messages: {
       collectSuccess: '采集任务已启动',
       collectFailed: '采集任务启动失败',
+      collectStarted: '采集任务已启动',
       bindSuccess: '凭证绑定成功',
       bindFailed: '凭证绑定失败',
       unbindSuccess: '凭证解绑成功',
@@ -1310,6 +1311,21 @@ export default {
       noHosts: '暂无主机信息',
       credentialRequired: '请选择凭证',
       batchBindInfo: '将绑定 {count} 个主机到选定的凭证'
+    },
+    collectionProgress: {
+      title: '采集进度',
+      total: '总数',
+      completed: '已完成',
+      failed: '失败',
+      currentStep: '当前步骤',
+      error: '错误信息',
+      noData: '暂无进度数据',
+      status: {
+        running: '运行中',
+        completed: '已完成',
+        failed: '失败',
+        cancelled: '已取消'
+      }
     },
     tabs: {
       basic: '基本信息',

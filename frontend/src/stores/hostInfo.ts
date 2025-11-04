@@ -139,12 +139,13 @@ export const useHostInfoStore = defineStore('hostInfo', {
     },
 
     /**
-     * 触发单个主机信息采集
+     * 触发单个主机信息采集（现在返回task_id用于进度追踪）
      */
-    async collectHostInfo(id: string, data?: HostInfoCollectRequest): Promise<HostInfoCollectResponse> {
+    async collectHostInfo(id: string, data?: HostInfoCollectRequest): Promise<HostInfoBatchCollectResponse> {
       this.loading = true;
       try {
-        const response = await axios.post<HostInfoCollectResponse>(
+        // 单个主机采集现在也使用批量采集API，返回task_id
+        const response = await axios.post<HostInfoBatchCollectResponse>(
           `${API_CONFIG.BASE_API_URL}${API_CONFIG.ENDPOINTS.HOST.COLLECT(id)}`,
           data || {}
         );
@@ -278,6 +279,37 @@ export const useHostInfoStore = defineStore('hostInfo', {
         throw error;
       } finally {
         this.loading = false;
+      }
+    },
+
+    /**
+     * 获取采集任务进度
+     */
+    async getCollectionProgress(taskId: string) {
+      try {
+        const response = await axios.get(
+          `${API_CONFIG.BASE_API_URL}${API_CONFIG.ENDPOINTS.HOST.COLLECTION_PROGRESS(taskId)}`
+        );
+        return response.data;
+      } catch (error: any) {
+        this.error = error.response?.data?.error || t('common.fetchError');
+        throw error;
+      }
+    },
+
+    /**
+     * 获取采集任务列表
+     */
+    async getCollectionTasks(params?: { page?: number; page_size?: number; status?: string }) {
+      try {
+        const response = await axios.get(
+          `${API_CONFIG.BASE_API_URL}${API_CONFIG.ENDPOINTS.HOST.COLLECTION_TASKS}`,
+          { params }
+        );
+        return response.data;
+      } catch (error: any) {
+        this.error = error.response?.data?.error || t('common.fetchError');
+        throw error;
       }
     }
   }

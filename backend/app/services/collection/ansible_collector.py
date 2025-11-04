@@ -34,6 +34,16 @@ class AnsibleCollector:
             采集的主机信息字典
         """
         try:
+            logger.info(
+                "Linux collection started",
+                extra={
+                    'host_ip': host_ip,
+                    'username': username,
+                    'port': port,
+                    'operation': 'linux_collect'
+                }
+            )
+            
             playbook_path = os.path.join(self.base_dir, 'linux_info.yml')
             
             # 准备inventory文件
@@ -50,13 +60,37 @@ class AnsibleCollector:
                 result = self._run_playbook(playbook_path, inventory_file, tmp_dir)
                 
                 if result.get('success'):
-                    return self._parse_linux_result(result)
+                    host_info = self._parse_linux_result(result)
+                    logger.info(
+                        "Linux collection completed",
+                        extra={
+                            'host_ip': host_ip,
+                            'hostname': host_info.get('hostname'),
+                            'operation': 'linux_collect'
+                        }
+                    )
+                    return host_info
                 else:
-                    logger.error(f"Failed to collect Linux info from {host_ip}: {result.get('error')}")
+                    error_msg = result.get('error', 'Unknown error')
+                    logger.error(
+                        f"Failed to collect Linux info from {host_ip}: {error_msg}",
+                        extra={
+                            'host_ip': host_ip,
+                            'error': error_msg,
+                            'operation': 'linux_collect'
+                        }
+                    )
                     return {}
                     
         except Exception as e:
-            logger.error(f"Error collecting Linux info from {host_ip}: {str(e)}")
+            logger.error(
+                f"Error collecting Linux info from {host_ip}: {str(e)}",
+                extra={
+                    'host_ip': host_ip,
+                    'error': str(e),
+                    'operation': 'linux_collect'
+                }
+            )
             return {}
     
     def collect_windows_info(self, host_ip: str, username: str, password: str, port: int = 5985) -> Dict[str, Any]:
@@ -73,6 +107,16 @@ class AnsibleCollector:
             采集的主机信息字典
         """
         try:
+            logger.info(
+                "Windows collection started",
+                extra={
+                    'host_ip': host_ip,
+                    'username': username,
+                    'port': port,
+                    'operation': 'windows_collect'
+                }
+            )
+            
             playbook_path = os.path.join(self.base_dir, 'windows_info.yml')
             
             # 准备inventory文件
@@ -89,13 +133,37 @@ class AnsibleCollector:
                 result = self._run_playbook(playbook_path, inventory_file, tmp_dir)
                 
                 if result.get('success'):
-                    return self._parse_windows_result(result)
+                    host_info = self._parse_windows_result(result)
+                    logger.info(
+                        "Windows collection completed",
+                        extra={
+                            'host_ip': host_ip,
+                            'hostname': host_info.get('hostname'),
+                            'operation': 'windows_collect'
+                        }
+                    )
+                    return host_info
                 else:
-                    logger.error(f"Failed to collect Windows info from {host_ip}: {result.get('error')}")
+                    error_msg = result.get('error', 'Unknown error')
+                    logger.error(
+                        f"Failed to collect Windows info from {host_ip}: {error_msg}",
+                        extra={
+                            'host_ip': host_ip,
+                            'error': error_msg,
+                            'operation': 'windows_collect'
+                        }
+                    )
                     return {}
                     
         except Exception as e:
-            logger.error(f"Error collecting Windows info from {host_ip}: {str(e)}")
+            logger.error(
+                f"Error collecting Windows info from {host_ip}: {str(e)}",
+                extra={
+                    'host_ip': host_ip,
+                    'error': str(e),
+                    'operation': 'windows_collect'
+                }
+            )
             return {}
     
     def _prepare_inventory(self, host_ip: str, username: str, password: Optional[str], 

@@ -109,6 +109,45 @@
       when: network_info_result.stdout is defined and network_info_result.stdout != ""
       ignore_errors: yes
 
+    - name: Get free memory
+      win_shell: |
+        [math]::Round((Get-WmiObject Win32_OperatingSystem).FreePhysicalMemory / 1024)
+      register: memory_free_result
+      ignore_errors: yes
+
+    - name: Get OS architecture (32-bit or 64-bit)
+      win_shell: |
+        $arch = (Get-WmiObject Win32_OperatingSystem).OSArchitecture
+        if ($arch -like "*64*") {
+          "64-bit"
+        } elseif ($arch -like "*32*") {
+          "32-bit"
+        } else {
+          $arch
+        }
+      register: os_bit_result
+      ignore_errors: yes
+
+    - name: Detect boot method (BIOS or UEFI)
+      win_shell: |
+        $firmware = (Get-WmiObject Win32_ComputerSystem).BootupState
+        $biosMode = (Get-WmiObject Win32_ComputerSystem).BootType
+        if ($biosMode -eq 3 -or $firmware -like "*UEFI*") {
+          "UEFI"
+        } elseif ($biosMode -eq 2 -or $firmware -like "*Legacy*") {
+          "BIOS"
+        } else {
+          # Check for EFI partition
+          $efiPartition = Get-Partition | Where-Object {$_.Type -eq "System" -or $_.Type -eq "EFI System"}
+          if ($efiPartition) {
+            "UEFI"
+          } else {
+            "BIOS"
+          }
+        }
+      register: boot_method_result
+      ignore_errors: yes
+
     - name: Compile host information
       set_fact:
         host_info:
@@ -118,6 +157,9 @@
           cpu_model: "{{ cpu_info_result.stdout | trim }}"
           cpu_cores: "{{ cpu_cores_result.stdout | int }}"
           memory_total: "{{ (memory_result.stdout | int) * 1024 }}"
+          memory_free_mb: "{{ memory_free_result.stdout | default(0) | int }}"
+          os_bit: "{{ os_bit_result.stdout | default('Unknown') | trim }}"
+          boot_method: "{{ boot_method_result.stdout | default('Unknown') | trim }}"
           disk_info: "{{ disk_info_parsed | default([]) }}"
           network_interfaces: "{{ network_info_parsed | default([]) }}"
 

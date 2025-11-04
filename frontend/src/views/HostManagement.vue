@@ -295,6 +295,13 @@
         </el-button>
       </template>
     </el-dialog>
+
+    <!-- 采集进度对话框 -->
+    <CollectionProgress
+      v-model="progressDialogVisible"
+      :task-id="currentTaskId"
+      @completed="handleProgressCompleted"
+    />
   </div>
 </template>
 
@@ -307,6 +314,7 @@ import { useHostInfoStore } from '../stores/hostInfo';
 import { useCredentialStore } from '../stores/credential';
 import ExportDialog from '../components/ExportDialog.vue';
 import BindCredentialDialog from '../components/BindCredentialDialog.vue';
+import CollectionProgress from '../components/CollectionProgress.vue';
 import type { HostInfo } from '../types/hostInfo';
 
 const { t } = useI18n();
@@ -327,6 +335,10 @@ const currentBindingHost = ref<{id: string, ip: string} | null>(null);
 const batchBindDialogVisible = ref(false);
 const batchBindCredentialId = ref('');
 const loading = ref(false);
+
+// 采集进度相关
+const progressDialogVisible = ref(false);
+const currentTaskId = ref<string | null>(null);
 
 const pagination = ref({
   currentPage: 1,
@@ -447,9 +459,16 @@ const handleSelectionChange = (selection: HostInfo[]) => {
 
 const handleCollect = async (host: HostInfo) => {
   try {
-    await hostInfoStore.collectHostInfo(host.id);
-    ElMessage.success(t('hostInfo.messages.collectSuccess'));
-    await loadHosts();
+    const response = await hostInfoStore.collectHostInfo(host.id);
+    // 单个主机采集现在也返回task_id，显示进度对话框
+    if (response.task_id) {
+      currentTaskId.value = response.task_id;
+      progressDialogVisible.value = true;
+      ElMessage.success(t('hostInfo.messages.collectStarted', '采集任务已启动'));
+    } else {
+      ElMessage.success(t('hostInfo.messages.collectSuccess'));
+      await loadHosts();
+    }
   } catch (error) {
     ElMessage.error(t('hostInfo.messages.collectFailed'));
   }
@@ -457,12 +476,27 @@ const handleCollect = async (host: HostInfo) => {
 
 const handleBatchCollect = async () => {
   try {
-    await hostInfoStore.batchCollectHosts({ host_ids: selectedHostIds.value });
-    ElMessage.success(t('hostInfo.messages.collectSuccess'));
-    await loadHosts();
+    const response = await hostInfoStore.batchCollectHosts({ host_ids: selectedHostIds.value });
+    // 如果返回了task_id，显示进度对话框
+    if (response.task_id) {
+      currentTaskId.value = response.task_id;
+      progressDialogVisible.value = true;
+      ElMessage.success(t('hostInfo.messages.collectStarted', '采集任务已启动'));
+    } else {
+      ElMessage.success(t('hostInfo.messages.collectSuccess'));
+      await loadHosts();
+    }
   } catch (error) {
     ElMessage.error(t('hostInfo.messages.collectFailed'));
   }
+};
+
+// 处理进度完成事件
+const handleProgressCompleted = async () => {
+  ElMessage.success(t('hostInfo.messages.collectSuccess'));
+  await loadHosts();
+  // 可以选择自动关闭对话框或保持打开让用户查看结果
+  // progressDialogVisible.value = false;
 };
 
 const handleBatchExport = () => {
