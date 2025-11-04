@@ -84,6 +84,8 @@
           border
           row-key="id"
           :tree-props="{children: 'child_hosts', hasChildren: 'hasChildren'}"
+          :lazy="true"
+          :load="loadChildren"
           @selection-change="handleSelectionChange"
         >
           <el-table-column type="selection" width="55" :selectable="isSelectable" />
@@ -332,9 +334,27 @@ const pagination = ref({
   total: 0
 });
 
+// 存储原始数据（包含子节点）
+const originalHostsData = ref<HostInfo[]>([]);
+
 const tableData = computed(() => {
-  return hostInfoStore.hosts;
+  return originalHostsData.value.map(host => {
+    const hasChildren = !!(host.child_hosts && host.child_hosts.length > 0);
+    
+    const result: any = {
+      ...host,
+      child_hosts: hasChildren ? [] : undefined,
+      hasChildren: hasChildren,
+      _hasLoadedChildren: false,
+      _loading: false
+    };
+    
+    return result;
+  });
 });
+
+// 存储已加载的子节点数据
+const loadedChildrenMap = ref<Map<string, HostInfo[]>>(new Map());
 
 const selectedHostIds = computed(() => {
   return selectedHosts.value.map(h => h.id);
@@ -359,8 +379,47 @@ const loadHosts = async () => {
       query: searchQuery.value || undefined
     });
     pagination.value.total = hostInfoStore.total;
+    originalHostsData.value = JSON.parse(JSON.stringify(hostInfoStore.hosts));
+    loadedChildrenMap.value.clear();
   } catch (error) {
     ElMessage.error(t('common.fetchError'));
+  }
+};
+
+// 懒加载子节点
+const loadChildren = async (row: any, _treeNode: any, resolve: (data: HostInfo[]) => void) => {
+  if (loadedChildrenMap.value.has(row.id)) {
+    const cachedChildren = loadedChildrenMap.value.get(row.id)!;
+    resolve(cachedChildren);
+    return;
+  }
+
+  try {
+    const originalHost = originalHostsData.value.find(h => h.id === row.id);
+    
+    if (originalHost && originalHost.child_hosts && originalHost.child_hosts.length > 0) {
+      await new Promise(resolveDelay => setTimeout(resolveDelay, 300));
+      
+      const children = originalHost.child_hosts.map((child: HostInfo) => {
+        const childHasChildren = !!(child.child_hosts && child.child_hosts.length > 0);
+        return {
+          ...child,
+          child_hosts: undefined,
+          hasChildren: childHasChildren,
+          _hasLoadedChildren: false,
+          _loading: false
+        };
+      });
+      
+      loadedChildrenMap.value.set(row.id, children);
+      resolve(children);
+      return;
+    }
+
+    resolve([]);
+  } catch (error) {
+    ElMessage.error(t('hostInfo.messages.loadChildrenFailed') || '加载子节点失败');
+    resolve([]);
   }
 };
 
@@ -496,7 +555,6 @@ const getTypeTagType = (type: string) => {
 };
 
 const isSelectable = (row: HostInfo) => {
-  // 子主机不可选，避免重复统计
   return !row.parent_host_id;
 };
 </script>
@@ -568,6 +626,29 @@ const isSelectable = (row: HostInfo) => {
 
 .credential-name {
   margin-right: 10px;
+}
+
+/* 加载动画样式 */
+.is-loading {
+  animation: rotating 2s linear infinite;
+}
+
+@keyframes rotating {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 表格行加载状态样式 */
+.table-container :deep(.el-table__body-wrapper) {
+  transition: opacity 0.3s;
+}
+
+.table-container :deep(.el-table__row) {
+  transition: background-color 0.2s;
 }
 </style>
 
