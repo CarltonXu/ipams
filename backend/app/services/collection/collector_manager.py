@@ -333,7 +333,34 @@ class CollectorManager:
                 max_workers=max_workers
             )
             
-            if isinstance(vm_data, list):
+            # 检查返回的数据是否包含错误信息
+            if isinstance(vm_data, dict):
+                # 如果返回的字典包含error或success:False，表示采集失败
+                if 'error' in vm_data or vm_data.get('success') is False:
+                    error_msg = vm_data.get('error', 'VMware collection failed')
+                    return {'success': False, 'error': error_msg}
+                # 如果返回空字典，也视为失败
+                if not vm_data:
+                    return {'success': False, 'error': 'VMware collection returned empty data'}
+                # 如果包含vms字段，说明是批量采集结果
+                if 'vms' in vm_data:
+                    return {
+                        'success': True,
+                        'data': {
+                            'host_type': 'vmware',
+                            'vms': vm_data.get('vms', []),
+                            'total': vm_data.get('total', 0),
+                            'completed': vm_data.get('completed', 0),
+                            'failed': vm_data.get('failed', 0)
+                        }
+                    }
+                # 其他情况，返回数据（可能是单个VM的信息）
+                return {
+                    'success': True,
+                    'data': vm_data
+                }
+            elif isinstance(vm_data, list):
+                # 如果是列表，说明是VM列表
                 return {
                     'success': True,
                     'data': {
@@ -342,10 +369,8 @@ class CollectorManager:
                     }
                 }
             else:
-                return {
-                    'success': True,
-                    'data': vm_data
-                }
+                # 其他类型或None，视为失败
+                return {'success': False, 'error': 'VMware collection returned invalid data'}
                 
         except Exception as e:
             logger.error(f"Error executing VMware collection with progress: {str(e)}")

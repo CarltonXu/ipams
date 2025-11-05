@@ -150,12 +150,14 @@ class VMwareCollector:
                     logger.info(f"Attempting to find VM by name: {vm_name}")
                     vm = self._get_vm_by_name(content, vm_name)
                 else:
-                    logger.error("Either vm_name or vm_uuid must be provided")
-                    return {}
+                    error_msg = "Either vm_name or vm_uuid must be provided"
+                    logger.error(error_msg)
+                    return {'error': error_msg, 'success': False}
                 
                 if not vm:
-                    logger.error(f"VM not found: name={vm_name}, uuid={vm_uuid}")
-                    return {}
+                    error_msg = f"VM not found: name={vm_name}, uuid={vm_uuid}"
+                    logger.error(error_msg)
+                    return {'error': error_msg, 'success': False}
                 
                 # 采集虚拟机信息
                 vm_info = self._collect_vm_details(vm, content)
@@ -167,8 +169,10 @@ class VMwareCollector:
                 connect.Disconnect(service_instance)
                 
         except Exception as e:
-            logger.error(f"Error collecting VMware VM info: {str(e)}")
-            return {}
+            error_msg = str(e)
+            logger.error(f"Error collecting VMware VM info: {error_msg}")
+            # 返回包含错误信息的字典，而不是空字典
+            return {'error': error_msg, 'success': False}
     
     def _get_all_vms(self, content):
         """
