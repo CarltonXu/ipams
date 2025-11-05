@@ -1379,7 +1379,14 @@ export default {
       noRunningTask: '未找到正在进行的采集任务，已刷新列表',
       loadChildrenFailed: '加载子节点失败',
       noValidHostsForBind: '没有可绑定凭证的主机（VMware子主机不能绑定凭证）',
-      someHostsSkipped: '已跳过 {count} 个VMware子主机'
+      someHostsSkipped: '已跳过 {count} 个VMware子主机',
+      credentialRequiredTitle: '需要绑定凭证',
+      credentialRequiredForCollection: '主机 {hostName} 未绑定凭证，请先绑定凭证后再进行采集。',
+      vmwareChildNeedParentCredential: 'VMware子主机需要使用父主机({hostName})的凭证进行采集，请先为父主机绑定凭证。',
+      batchCollectCredentialRequired: '以下主机未绑定凭证，请先绑定凭证后再进行采集：{hostNames}',
+      confirmBatchCollect: '确认批量采集',
+      batchCollectPartial: '只有 {count} 台主机已绑定凭证，是否只采集这些主机？',
+      noValidHostsForCollect: '没有可采集的主机（所有主机都未绑定凭证）'
     }
   },
   collection: {

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
+import { ref, computed, onMounted, onUnmounted, onActivated, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { Grid, Clock, Check, Close, Loading, Refresh } from '@element-plus/icons-vue';
@@ -275,9 +275,24 @@ onMounted(() => {
   setupAutoRefresh();
 });
 
+// 组件激活时（用于keep-alive场景，或tab切换时）
+onActivated(() => {
+  // 当组件被激活（tab切换显示时），刷新数据
+  fetchTasks();
+  // 如果自动刷新已启用，重新设置
+  if (autoRefreshEnabled.value) {
+    setupAutoRefresh();
+  }
+});
+
 // 组件卸载
 onUnmounted(() => {
   clearAutoRefresh();
+});
+
+// 暴露方法给父组件调用
+defineExpose({
+  fetchTasks
 });
 </script>
 

@@ -1296,11 +1296,18 @@ export default {
       exportFailed: 'Export failed',
       noHosts: 'No host information',
       credentialRequired: 'Please select a credential',
+      credentialRequiredTitle: 'Credential Required',
       batchBindInfo: 'Will bind {count} hosts to the selected credential',
       noRunningTask: 'No running collection task found, list refreshed',
       loadChildrenFailed: 'Failed to load child nodes',
       noValidHostsForBind: 'No valid hosts for binding credentials (VMware child hosts cannot bind credentials)',
-      someHostsSkipped: 'Skipped {count} VMware child hosts'
+      someHostsSkipped: 'Skipped {count} VMware child hosts',
+      credentialRequiredForCollection: 'Host {hostName} has no credential bound. Please bind a credential before collection.',
+      vmwareChildNeedParentCredential: 'VMware child host requires parent host ({hostName}) credential for collection. Please bind credential to parent host first.',
+      batchCollectCredentialRequired: 'The following hosts have no credentials bound. Please bind credentials before collection: {hostNames}',
+      confirmBatchCollect: 'Confirm Batch Collection',
+      batchCollectPartial: 'Only {count} hosts have credentials bound. Collect only these hosts?',
+      noValidHostsForCollect: 'No valid hosts for collection (all hosts have no credentials bound)'
     }
   },
   collection: {

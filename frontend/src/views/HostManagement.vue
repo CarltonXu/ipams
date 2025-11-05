@@ -210,7 +210,7 @@
         
         <!-- 任务历史标签页 -->
         <el-tab-pane :label="$t('hostInfo.tabs.taskHistory', '采集任务历史')" name="tasks">
-          <CollectionTaskHistory />
+          <CollectionTaskHistory ref="taskHistoryRef" />
         </el-tab-pane>
       </el-tabs>
     </el-card>
@@ -354,7 +354,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch, nextTick } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { Search, Refresh } from '@element-plus/icons-vue';
@@ -436,6 +436,26 @@ onMounted(async () => {
   await credentialStore.fetchCredentials();
 });
 
+// 任务历史组件引用
+const taskHistoryRef = ref<InstanceType<typeof CollectionTaskHistory> | null>(null);
+
+// 监听tab切换，自动刷新数据
+watch(activeTab, (newTab) => {
+  if (newTab === 'hosts') {
+    // 切换到主机列表标签时，刷新主机列表
+    loadHosts();
+  } else if (newTab === 'tasks') {
+    // 切换到任务历史标签时，刷新任务列表
+    // 使用 nextTick 确保组件已经渲染
+    nextTick(() => {
+      if (taskHistoryRef.value) {
+        // 调用子组件的刷新方法
+        (taskHistoryRef.value as any).fetchTasks?.();
+      }
+    });
+  }
+});
+
 const loadHosts = async () => {
   try {
     await hostInfoStore.fetchHosts({
@@ -514,6 +534,49 @@ const handleSelectionChange = (selection: HostInfo[]) => {
 
 const handleCollect = async (host: HostInfo) => {
   try {
+    // 检查凭证绑定情况
+    let hasCredential = false;
+    let parentHost: HostInfo | null = null;
+    
+    if (host.parent_host_id) {
+      // 如果是VMware子主机，检查父主机是否有凭证
+      parentHost = originalHostsData.value.find(h => h.id === host.parent_host_id) || null;
+      if (parentHost && parentHost.credential_bindings && parentHost.credential_bindings.length > 0) {
+        hasCredential = true;
+      }
+    } else {
+      // 普通主机，检查自己是否有凭证
+      if (host.credential_bindings && host.credential_bindings.length > 0) {
+        hasCredential = true;
+      }
+    }
+    
+    if (!hasCredential) {
+      // 没有凭证，提示用户先绑定凭证
+      const hostToBind = parentHost || host;
+      const hostName = hostToBind.ip?.ip_address || hostToBind.hostname || hostToBind.id;
+      
+      try {
+        await ElMessageBox.confirm(
+          parentHost 
+            ? t('hostInfo.messages.vmwareChildNeedParentCredential', { hostName }, `VMware子主机需要使用父主机(${hostName})的凭证进行采集，请先为父主机绑定凭证。`)
+            : t('hostInfo.messages.credentialRequiredForCollection', { hostName }, `主机 ${hostName} 未绑定凭证，请先绑定凭证后再进行采集。`),
+          t('hostInfo.messages.credentialRequiredTitle', '需要绑定凭证'),
+          {
+            confirmButtonText: t('hostInfo.actions.bindCredential', '绑定凭证'),
+            cancelButtonText: t('common.cancel', '取消'),
+            type: 'warning'
+          }
+        );
+        
+        // 用户确认后，打开绑定凭证对话框
+        handleBindCredential(hostToBind);
+      } catch {
+        // 用户取消，不进行任何操作
+      }
+      return;
+    }
+    
     // 立即更新本地主机状态为'collecting'，防止重复点击
     const hostIndex = originalHostsData.value.findIndex(h => h.id === host.id);
     if (hostIndex !== -1) {
@@ -527,8 +590,8 @@ const handleCollect = async (host: HostInfo) => {
       progressDialogVisible.value = true;
       ElMessage.success(t('hostInfo.messages.collectStarted', '采集任务已启动'));
     } else {
-      ElMessage.success(t('hostInfo.messages.collectSuccess'));
-      await loadHosts();
+    ElMessage.success(t('hostInfo.messages.collectSuccess'));
+    await loadHosts();
     }
   } catch (error) {
     ElMessage.error(t('hostInfo.messages.collectFailed'));
@@ -539,23 +602,96 @@ const handleCollect = async (host: HostInfo) => {
 
 const handleBatchCollect = async () => {
   try {
+    // 检查所有选中主机是否有凭证
+    const hostsWithoutCredential: HostInfo[] = [];
+    const hostsToCollect: string[] = [];
+    
+    for (const hostId of selectedHostIds.value) {
+      const host = originalHostsData.value.find(h => h.id === hostId);
+      if (!host) continue;
+      
+      let hasCredential = false;
+      let parentHost: HostInfo | null = null;
+      
+      if (host.parent_host_id) {
+        // 如果是VMware子主机，检查父主机是否有凭证
+        parentHost = originalHostsData.value.find(h => h.id === host.parent_host_id) || null;
+        if (parentHost && parentHost.credential_bindings && parentHost.credential_bindings.length > 0) {
+          hasCredential = true;
+        }
+      } else {
+        // 普通主机，检查自己是否有凭证
+        if (host.credential_bindings && host.credential_bindings.length > 0) {
+          hasCredential = true;
+        }
+      }
+      
+      if (!hasCredential) {
+        hostsWithoutCredential.push(parentHost || host);
+      } else {
+        hostsToCollect.push(hostId);
+      }
+    }
+    
+    // 如果有主机没有凭证，提示用户
+    if (hostsWithoutCredential.length > 0) {
+      const hostNames = hostsWithoutCredential.map(h => h.ip?.ip_address || h.hostname || h.id).join('、');
+      await ElMessageBox.alert(
+        t('hostInfo.messages.batchCollectCredentialRequired', { hostNames }, `以下主机未绑定凭证，请先绑定凭证后再进行采集：${hostNames}`),
+        t('hostInfo.messages.credentialRequiredTitle', '需要绑定凭证'),
+        {
+          confirmButtonText: t('common.confirm', '确定'),
+          type: 'warning'
+        }
+      );
+      
+      // 如果有未绑定凭证的主机，不进行批量采集
+      if (hostsToCollect.length === 0) {
+        return;
+      }
+      
+      // 如果部分主机有凭证，询问是否只采集有凭证的主机
+      if (hostsToCollect.length < selectedHostIds.value.length) {
+        try {
+          await ElMessageBox.confirm(
+            t('hostInfo.messages.batchCollectPartial', { count: hostsToCollect.length }, `只有 ${hostsToCollect.length} 台主机已绑定凭证，是否只采集这些主机？`),
+            t('hostInfo.messages.confirmBatchCollect', '确认批量采集'),
+            {
+              confirmButtonText: t('common.confirm', '确定'),
+              cancelButtonText: t('common.cancel', '取消'),
+              type: 'info'
+            }
+          );
+        } catch {
+          // 用户取消，不进行采集
+          return;
+        }
+      }
+    }
+    
+    // 如果没有可采集的主机，返回
+    if (hostsToCollect.length === 0) {
+      ElMessage.warning(t('hostInfo.messages.noValidHostsForCollect', '没有可采集的主机（所有主机都未绑定凭证）'));
+      return;
+    }
+    
     // 立即更新本地所有选中主机状态为'collecting'，防止重复点击
-    selectedHostIds.value.forEach(hostId => {
+    hostsToCollect.forEach(hostId => {
       const hostIndex = originalHostsData.value.findIndex(h => h.id === hostId);
       if (hostIndex !== -1) {
         originalHostsData.value[hostIndex].collection_status = 'collecting';
       }
     });
     
-    const response = await hostInfoStore.batchCollectHosts({ host_ids: selectedHostIds.value });
+    const response = await hostInfoStore.batchCollectHosts({ host_ids: hostsToCollect });
     // 如果返回了task_id，显示进度对话框
     if (response.task_id) {
       currentTaskId.value = response.task_id;
       progressDialogVisible.value = true;
       ElMessage.success(t('hostInfo.messages.collectStarted', '采集任务已启动'));
     } else {
-      ElMessage.success(t('hostInfo.messages.collectSuccess'));
-      await loadHosts();
+    ElMessage.success(t('hostInfo.messages.collectSuccess'));
+    await loadHosts();
     }
   } catch (error) {
     ElMessage.error(t('hostInfo.messages.collectFailed'));
