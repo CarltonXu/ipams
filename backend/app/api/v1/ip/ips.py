@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request
 from sqlalchemy import desc, asc
-from app.models.models import db, IP, User
+from app.models.models import db, IP, User, HostInfo
 from app.core.security.auth import token_required
 from app.core.utils import helpers
 from app.services.notification.events import NotificationEvent, send_notification
@@ -117,6 +117,19 @@ def claim_ip(current_user, ip_id):
     ip.purpose = data.get('purpose')
     ip.status = 'active'
 
+    # 同步更新HostInfo的host_type（如果存在）
+    host_info = HostInfo.query.filter_by(ip_id=ip.id, deleted=False).first()
+    if host_info:
+        host_info.host_type = ip.host_type
+    else:
+        # 如果HostInfo不存在，创建一个新的（在认领IP时自动创建HostInfo）
+        host_info = HostInfo(
+            ip_id=ip.id,
+            host_type=ip.host_type,
+            collection_status='pending'
+        )
+        db.session.add(host_info)
+
     db.session.commit()
 
     # 记录日志
@@ -175,6 +188,10 @@ def update_ip(current_user, ip_id):
         ip.os_type = data['os_type']
     if 'host_type' in data:
         ip.host_type = data['host_type']
+        # 同步更新HostInfo的host_type（如果存在）
+        host_info = HostInfo.query.filter_by(ip_id=ip.id, deleted=False).first()
+        if host_info:
+            host_info.host_type = ip.host_type
     if 'manufacturer' in data:
         ip.manufacturer = data.get('manufacturer', ip.manufacturer)
     if 'model' in data:

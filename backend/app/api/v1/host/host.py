@@ -43,23 +43,41 @@ def get_hosts(current_user):
             ip_filter = and_(IP.deleted == False, IP.status == 'active', IP.assigned_user_id == current_user.id)
         
         # 找出没有HostInfo的IP（使用LEFT JOIN）
-        ips_without_hostinfo = db.session.query(IP.id).filter(ip_filter).outerjoin(
+        ips_without_hostinfo = db.session.query(IP.id, IP.host_type).filter(ip_filter).outerjoin(
             HostInfo, and_(
                 HostInfo.ip_id == IP.id,
                 HostInfo.deleted == False
             )
         ).filter(HostInfo.id.is_(None)).all()
         
-        # 批量创建缺失的HostInfo记录
+        # 批量创建缺失的HostInfo记录，同步IP的host_type
         if ips_without_hostinfo:
             new_hostinfos = [
                 HostInfo(
-                    ip_id=ip_id[0],
+                    ip_id=ip_id,
+                    host_type=ip_host_type,  # 从IP同步host_type
                     collection_status='pending'
                 )
-                for ip_id in ips_without_hostinfo
+                for ip_id, ip_host_type in ips_without_hostinfo
             ]
             db.session.bulk_save_objects(new_hostinfos)
+            db.session.commit()
+        
+        # 同步更新已存在但host_type为空的HostInfo记录
+        # 找出host_type为空的HostInfo，但IP有host_type的记录
+        hosts_without_hosttype = db.session.query(HostInfo, IP.host_type).join(
+            IP, HostInfo.ip_id == IP.id
+        ).filter(
+            and_(
+                HostInfo.deleted == False,
+                HostInfo.host_type.is_(None),
+                IP.host_type.isnot(None)
+            )
+        ).all()
+        
+        if hosts_without_hosttype:
+            for host_info, ip_host_type in hosts_without_hosttype:
+                host_info.host_type = ip_host_type
             db.session.commit()
         
         # 构建基础查询（只查询根主机，不包括子主机）
@@ -93,7 +111,19 @@ def get_hosts(current_user):
         
         # 应用过滤条件
         if host_type and host_type != 'all':
-            hosts_query = hosts_query.filter(HostInfo.host_type == host_type)
+            # 如果HostInfo.host_type为空，则使用IP.host_type作为fallback
+            # 需要JOIN IP表来访问IP.host_type
+            if not needs_ip_join:
+                hosts_query = hosts_query.join(IP)
+            hosts_query = hosts_query.filter(
+                or_(
+                    HostInfo.host_type == host_type,
+                    and_(
+                        HostInfo.host_type.is_(None),
+                        IP.host_type == host_type
+                    )
+                )
+            )
         
         if collection_status and collection_status != 'all':
             hosts_query = hosts_query.filter(HostInfo.collection_status == collection_status)
