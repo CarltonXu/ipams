@@ -129,8 +129,10 @@ export default {
     ipAddressManagement: 'IP地址管理',
     credentials: '凭证管理',
     hostInfo: '主机信息', // 保留旧键以兼容
-    resourceCollection: '资源采集',
-    scanConfig: '配置扫描',
+    hostManagement: '主机管理', // 保留旧键以兼容
+    hostCollection: '主机采集',
+    resourceCollection: '资源采集', // 保留旧键以兼容
+    scanConfig: '扫描配置',
     task: '任务管理',
     settings: '系统设置',
     monitor: '资源监控',
@@ -138,8 +140,8 @@ export default {
     notifications: '通知历史',
     notificationSettings: '通知配置',
     category: {
-      basicResource: '基础资源',
-      resourceCollection: '资源采集',
+      resourceManagement: '资源管理',
+      networkScan: '网络扫描',
       systemManagement: '系统管理'
     }
   },

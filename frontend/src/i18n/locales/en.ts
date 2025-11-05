@@ -129,7 +129,9 @@ export default {
     ipAddressManagement: 'IP Address Management',
     credentials: 'Credentials',
     hostInfo: 'Host Information', // Keep old key for compatibility
-    resourceCollection: 'Resource Collection',
+    hostManagement: 'Host Management', // Keep old key for compatibility
+    hostCollection: 'Host Collection',
+    resourceCollection: 'Resource Collection', // Keep old key for compatibility
     scanConfig: 'Scan Config',
     task: 'Task Management',
     settings: 'Settings',
@@ -138,8 +140,8 @@ export default {
     notifications: 'Notification History',
     notificationSettings: 'Notification Settings',
     category: {
-      basicResource: 'Basic Resources',
-      resourceCollection: 'Resource Collection',
+      resourceManagement: 'Resource Management',
+      networkScan: 'Network Scan',
       systemManagement: 'System Management'
     }
   },

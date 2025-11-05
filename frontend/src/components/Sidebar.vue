@@ -9,79 +9,85 @@
       </div>
     </div>
 
-    <el-menu
+  <el-menu
       :default-active="activeIndex"
       :collapse="isCollapsed"
-      background-color="#ffffff"
-      text-color="#333333"
+    background-color="#ffffff"
+    text-color="#333333"
       active-text-color="#409eff"
       :unique-opened="true"
       @select="handleMenuSelect">
       
-      <!-- 基础资源 -->
-      <el-sub-menu index="basic">
+      <!-- 资源管理 -->
+      <el-sub-menu index="resource">
         <template #title>
           <el-icon><Grid /></el-icon>
-          <span>{{ $t('menu.category.basicResource') }}</span>
+          <span>{{ $t('menu.category.resourceManagement') }}</span>
         </template>
-        <el-menu-item index="basic-ip" @click="router.push('/ips')">
+        <el-menu-item index="resource-ip" @click="router.push('/ips')">
           <el-icon><Connection /></el-icon>
           <template #title>{{ $t('menu.ipAddressManagement') }}</template>
-        </el-menu-item>
-        <el-menu-item index="basic-credential" @click="router.push('/credentials')">
-          <el-icon><Key /></el-icon>
+      </el-menu-item>
+        <el-menu-item index="resource-credential" @click="router.push('/credentials')">
+        <el-icon><Key /></el-icon>
           <template #title>{{ $t('menu.credentials') }}</template>
-        </el-menu-item>
+      </el-menu-item>
       </el-sub-menu>
 
-      <!-- 资源采集 -->
-      <el-sub-menu index="collection">
-        <template #title>
-          <el-icon><DataAnalysis /></el-icon>
-          <span>{{ $t('menu.category.resourceCollection') }}</span>
-        </template>
-        <el-menu-item index="collection-host" @click="router.push('/hosts')">
-          <el-icon><Files /></el-icon>
-          <template #title>{{ $t('menu.resourceCollection') }}</template>
+      <!-- 主机采集 -->
+      <el-menu-item index="host" @click="router.push('/hosts')">
+        <el-icon><DataAnalysis /></el-icon>
+        <template #title>{{ $t('menu.hostCollection') }}</template>
+      </el-menu-item>
+
+      <!-- 系统监控 -->
+      <el-menu-item index="monitor" @click="router.push('/monitor')">
+        <el-icon><Monitor /></el-icon>
+        <template #title>{{ $t('menu.monitor') }}</template>
+      </el-menu-item>
+
+      <!-- 网络扫描（仅管理员可见） -->
+    <template v-if="authStore.user?.is_admin">
+        <el-sub-menu index="scan">
+          <template #title>
+          <el-icon><Operation /></el-icon>
+            <span>{{ $t('menu.category.networkScan') }}</span>
+          </template>
+          <el-menu-item index="scan-config" @click="router.push('/scans')">
+            <el-icon><Setting /></el-icon>
+            <template #title>{{ $t('menu.scanConfig') }}</template>
         </el-menu-item>
-        <el-menu-item index="collection-monitor" @click="router.push('/monitor')">
-          <el-icon><Monitor /></el-icon>
-          <template #title>{{ $t('menu.monitor') }}</template>
-        </el-menu-item>
-      </el-sub-menu>
+          <el-menu-item index="scan-task" @click="router.push('/tasks')">
+          <el-icon><Clock /></el-icon>
+            <template #title>{{ $t('menu.task') }}</template>
+          </el-menu-item>
+        </el-sub-menu>
+      </template>
 
       <!-- 系统管理（仅管理员可见） -->
       <template v-if="authStore.user?.is_admin">
         <el-sub-menu index="admin">
           <template #title>
-            <el-icon><Setting /></el-icon>
+            <el-icon><UserFilled /></el-icon>
             <span>{{ $t('menu.category.systemManagement') }}</span>
           </template>
           <el-menu-item index="admin-user" @click="router.push('/users')">
             <el-icon><User /></el-icon>
             <template #title>{{ $t('menu.userManagement') }}</template>
-          </el-menu-item>
-          <el-menu-item index="admin-scan" @click="router.push('/scans')">
-            <el-icon><Operation /></el-icon>
-            <template #title>{{ $t('menu.scanConfig') }}</template>
-          </el-menu-item>
-          <el-menu-item index="admin-task" @click="router.push('/tasks')">
-            <el-icon><Clock /></el-icon>
-            <template #title>{{ $t('menu.task') }}</template>
-          </el-menu-item>
+        </el-menu-item>
           <el-menu-item index="admin-notification" @click="router.push('/notifications')">
-            <el-icon><Bell /></el-icon>
+          <el-icon><Bell /></el-icon>
             <template #title>{{ $t('menu.notifications') }}</template>
-          </el-menu-item>
+        </el-menu-item>
         </el-sub-menu>
-      </template>
+    </template>
 
       <!-- 系统设置 -->
       <el-menu-item index="settings" @click="router.push('/settings')">
         <el-icon><Tools /></el-icon>
         <template #title>{{ $t('menu.settings') }}</template>
       </el-menu-item>
-    </el-menu>
+  </el-menu>
   </div>
 </template>
 
@@ -98,6 +104,7 @@ import {
 import { 
   Setting, 
   User, 
+  UserFilled,
   Bell, 
   Operation, 
   Clock, 
@@ -106,7 +113,6 @@ import {
   DataAnalysis,
   Grid,
   Connection,
-  Files,
   Tools,
   Expand,
   Fold
@@ -140,13 +146,13 @@ const toggleCollapse = () => {
 // 根据路由计算当前激活的菜单项
 const activeIndex = computed(() => {
   const path = route.path;
-  if (path === '/ips') return 'basic-ip';
-  if (path === '/credentials') return 'basic-credential';
-  if (path === '/hosts') return 'collection-host';
-  if (path === '/monitor') return 'collection-monitor';
+  if (path === '/ips') return 'resource-ip';
+  if (path === '/credentials') return 'resource-credential';
+  if (path === '/hosts') return 'host';
+  if (path === '/monitor') return 'monitor';
   if (path === '/users') return 'admin-user';
-  if (path === '/scans') return 'admin-scan';
-  if (path === '/tasks') return 'admin-task';
+  if (path === '/scans') return 'scan-config';
+  if (path === '/tasks') return 'scan-task';
   if (path === '/notifications') return 'admin-notification';
   if (path === '/settings') return 'settings';
   return '';
