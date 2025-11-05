@@ -8,6 +8,10 @@
         </div>
       </div>
 
+      <!-- 标签页切换 -->
+      <el-tabs v-model="activeTab" class="host-tabs">
+        <el-tab-pane :label="$t('hostInfo.tabs.hostList', '主机列表')" name="hosts">
+
       <!-- 筛选器 -->
       <div class="filters">
         <el-select
@@ -143,6 +147,15 @@
                   {{ $t('hostInfo.actions.collect') }}
                 </el-button>
                 <el-button
+                  v-if="row.collection_status === 'collecting'"
+                  type="danger"
+                  size="small"
+                  @click="handleCancelCollection(row)"
+                  :loading="cancellingTasks[row.id]"
+                >
+                  {{ $t('hostInfo.actions.cancelCollection', '取消采集') }}
+                </el-button>
+                <el-button
                   type="info"
                   size="small"
                   @click="handleViewDetails(row)"
@@ -168,6 +181,13 @@
           />
         </div>
       </div>
+        </el-tab-pane>
+        
+        <!-- 任务历史标签页 -->
+        <el-tab-pane :label="$t('hostInfo.tabs.taskHistory', '采集任务历史')" name="tasks">
+          <CollectionTaskHistory />
+        </el-tab-pane>
+      </el-tabs>
     </el-card>
 
     <!-- 主机详情抽屉 -->
@@ -308,13 +328,14 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { ElMessage } from 'element-plus';
+import { ElMessage, ElMessageBox } from 'element-plus';
 import { Search, Refresh } from '@element-plus/icons-vue';
 import { useHostInfoStore } from '../stores/hostInfo';
 import { useCredentialStore } from '../stores/credential';
 import ExportDialog from '../components/ExportDialog.vue';
 import BindCredentialDialog from '../components/BindCredentialDialog.vue';
 import CollectionProgress from '../components/CollectionProgress.vue';
+import CollectionTaskHistory from '../components/CollectionTaskHistory.vue';
 import type { HostInfo } from '../types/hostInfo';
 
 const { t } = useI18n();
@@ -339,6 +360,12 @@ const loading = ref(false);
 // 采集进度相关
 const progressDialogVisible = ref(false);
 const currentTaskId = ref<string | null>(null);
+
+// 标签页
+const activeTab = ref('hosts');
+
+// 取消任务相关
+const cancellingTasks = ref<Record<string, boolean>>({});
 
 const pagination = ref({
   currentPage: 1,
@@ -459,6 +486,12 @@ const handleSelectionChange = (selection: HostInfo[]) => {
 
 const handleCollect = async (host: HostInfo) => {
   try {
+    // 立即更新本地主机状态为'collecting'，防止重复点击
+    const hostIndex = originalHostsData.value.findIndex(h => h.id === host.id);
+    if (hostIndex !== -1) {
+      originalHostsData.value[hostIndex].collection_status = 'collecting';
+    }
+    
     const response = await hostInfoStore.collectHostInfo(host.id);
     // 单个主机采集现在也返回task_id，显示进度对话框
     if (response.task_id) {
@@ -471,11 +504,21 @@ const handleCollect = async (host: HostInfo) => {
     }
   } catch (error) {
     ElMessage.error(t('hostInfo.messages.collectFailed'));
+    // 如果失败，重新加载主机列表以恢复正确状态
+    await loadHosts();
   }
 };
 
 const handleBatchCollect = async () => {
   try {
+    // 立即更新本地所有选中主机状态为'collecting'，防止重复点击
+    selectedHostIds.value.forEach(hostId => {
+      const hostIndex = originalHostsData.value.findIndex(h => h.id === hostId);
+      if (hostIndex !== -1) {
+        originalHostsData.value[hostIndex].collection_status = 'collecting';
+      }
+    });
+    
     const response = await hostInfoStore.batchCollectHosts({ host_ids: selectedHostIds.value });
     // 如果返回了task_id，显示进度对话框
     if (response.task_id) {
@@ -488,6 +531,8 @@ const handleBatchCollect = async () => {
     }
   } catch (error) {
     ElMessage.error(t('hostInfo.messages.collectFailed'));
+    // 如果失败，重新加载主机列表以恢复正确状态
+    await loadHosts();
   }
 };
 
@@ -497,6 +542,88 @@ const handleProgressCompleted = async () => {
   await loadHosts();
   // 可以选择自动关闭对话框或保持打开让用户查看结果
   // progressDialogVisible.value = false;
+};
+
+// 取消采集任务
+const handleCancelCollection = async (host: HostInfo) => {
+  try {
+    // 查找该主机正在进行的任务（包括pending和running状态）
+    // 先查找running状态
+    let tasksResponse = await hostInfoStore.getCollectionTasks({
+      status: 'running',
+      host_id: host.id,
+      page: 1,
+      page_size: 10
+    });
+    
+    // 如果没找到running，再查找pending状态
+    if (!tasksResponse.tasks || tasksResponse.tasks.length === 0) {
+      tasksResponse = await hostInfoStore.getCollectionTasks({
+        status: 'pending',
+        host_id: host.id,
+        page: 1,
+        page_size: 10
+      });
+    }
+    
+    // 如果还是没找到，尝试不指定状态查找（可能任务刚创建，状态还没更新）
+    if (!tasksResponse.tasks || tasksResponse.tasks.length === 0) {
+      tasksResponse = await hostInfoStore.getCollectionTasks({
+        host_id: host.id,
+        page: 1,
+        page_size: 10
+      });
+      
+      // 过滤出pending或running状态的任务
+      if (tasksResponse.tasks) {
+        tasksResponse.tasks = tasksResponse.tasks.filter(
+          (task: any) => task.status === 'pending' || task.status === 'running'
+        );
+      }
+    }
+    
+    if (!tasksResponse.tasks || tasksResponse.tasks.length === 0) {
+      // 如果确实找不到任务，可能是任务已完成或状态已更新，直接刷新主机列表
+      ElMessage.info(t('hostInfo.messages.noRunningTask', '未找到正在进行的采集任务，已刷新列表'));
+      await loadHosts();
+      return;
+    }
+    
+    // 选择最新的任务（通常是第一个，因为按创建时间倒序）
+    const runningTask = tasksResponse.tasks[0];
+    
+    await ElMessageBox.confirm(
+      t('hostInfo.collectionTask.confirmCancel', '确定要取消此采集任务吗？取消后可以重新发起采集。'),
+      t('hostInfo.collectionTask.cancelTask', '取消任务'),
+      {
+        confirmButtonText: t('common.confirm', '确定'),
+        cancelButtonText: t('common.cancel', '取消'),
+        type: 'warning'
+      }
+    );
+    
+    cancellingTasks.value[host.id] = true;
+    try {
+      await hostInfoStore.cancelCollectionTask(runningTask.id);
+      ElMessage.success(t('hostInfo.collectionTask.cancelSuccess', '任务已取消'));
+      
+      // 刷新主机列表和任务列表
+      await loadHosts();
+      
+      // 如果当前进度对话框打开的是这个任务，关闭它
+      if (currentTaskId.value === runningTask.id) {
+        progressDialogVisible.value = false;
+        currentTaskId.value = null;
+      }
+    } finally {
+      cancellingTasks.value[host.id] = false;
+    }
+  } catch (error: any) {
+    if (error !== 'cancel') {  // 用户取消操作不算错误
+      ElMessage.error(error.message || t('hostInfo.collectionTask.cancelFailed', '取消任务失败'));
+    }
+    cancellingTasks.value[host.id] = false;
+  }
 };
 
 const handleBatchExport = () => {

@@ -120,6 +120,8 @@ export default {
     updatedAt: 'Updated At',
     cores: 'Cores',
     close: 'Close',
+    second: 's',
+    operationFailed: 'Operation failed',
   },
   menu: {
     home: 'Home',
@@ -1193,18 +1195,6 @@ export default {
     network: 'Network',
     collectionStatus: 'Collection Status',
     lastCollected: 'Last Collected',
-    actions: {
-      refresh: 'Refresh',
-      collect: 'Collect',
-      batchCollect: 'Batch Collect',
-      bindCredential: 'Bind Credential',
-      batchBindCredential: 'Batch Bind Credential',
-      unbindCredential: 'Unbind Credential',
-      selectCredential: 'Select Credential',
-      export: 'Export',
-      batchExport: 'Batch Export',
-      viewDetails: 'View Details'
-    },
     types: {
       physical: 'Physical Machine',
       vmware: 'VMware Virtual Machine',
@@ -1219,19 +1209,6 @@ export default {
     filters: {
       all: 'All',
       search: 'Search Hosts'
-    },
-    messages: {
-      collectSuccess: 'Collection task started',
-      collectFailed: 'Collection task start failed',
-      collectStarted: 'Collection task started',
-      bindSuccess: 'Credential bound successfully',
-      bindFailed: 'Credential bind failed',
-      unbindSuccess: 'Credential unbound successfully',
-      exportSuccess: 'Export successful',
-      exportFailed: 'Export failed',
-      noHosts: 'No host information',
-      credentialRequired: 'Please select a credential',
-      batchBindInfo: 'Will bind {count} hosts to the selected credential'
     },
     collectionProgress: {
       title: 'Collection Progress',
@@ -1254,7 +1231,67 @@ export default {
       network: 'Network Info',
       disk: 'Disk Info',
       vmware: 'VMware Info',
-      raw: 'Raw Data'
+      raw: 'Raw Data',
+      hostList: 'Host List',
+      taskHistory: 'Collection Task History'
+    },
+    collectionTask: {
+      taskId: 'Task ID',
+      taskStatus: 'Task Status',
+      progress: 'Progress',
+      totalHosts: 'Total Hosts',
+      successCount: 'Success',
+      failedCount: 'Failed',
+      createdAt: 'Created At',
+      endTime: 'End Time',
+      relatedHosts: 'Related Hosts',
+      viewDetails: 'View Details',
+      cancel: 'Cancel',
+      cancelTask: 'Cancel Task',
+      confirmCancel: 'Are you sure you want to cancel this collection task? You can restart it after cancellation.',
+      cancelSuccess: 'Task cancelled successfully',
+      cancelFailed: 'Failed to cancel task',
+      autoRefresh: 'Auto Refresh',
+      refreshInterval: 'Refresh Interval',
+      tableView: 'Table View',
+      timelineView: 'Timeline View',
+      filterStatus: 'Filter Status',
+      status: {
+        pending: 'Pending',
+        running: 'Running',
+        completed: 'Completed',
+        failed: 'Failed',
+        cancelled: 'Cancelled'
+      },
+      errorMessage: 'Error Message'
+    },
+    actions: {
+      refresh: 'Refresh',
+      collect: 'Collect',
+      batchCollect: 'Batch Collect',
+      bindCredential: 'Bind Credential',
+      batchBindCredential: 'Batch Bind Credential',
+      unbindCredential: 'Unbind Credential',
+      selectCredential: 'Select Credential',
+      export: 'Export',
+      batchExport: 'Batch Export',
+      viewDetails: 'View Details',
+      cancelCollection: 'Cancel Collection'
+    },
+    messages: {
+      collectSuccess: 'Collection task started',
+      collectFailed: 'Collection task start failed',
+      collectStarted: 'Collection task started',
+      bindSuccess: 'Credential bound successfully',
+      bindFailed: 'Credential bind failed',
+      unbindSuccess: 'Credential unbound successfully',
+      exportSuccess: 'Export successful',
+      exportFailed: 'Export failed',
+      noHosts: 'No host information',
+      credentialRequired: 'Please select a credential',
+      batchBindInfo: 'Will bind {count} hosts to the selected credential',
+      noRunningTask: 'No running collection task found, list refreshed',
+      loadChildrenFailed: 'Failed to load child nodes'
     }
   },
   collection: {

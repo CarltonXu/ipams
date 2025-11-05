@@ -100,6 +100,7 @@ export const API_CONFIG = {
       COLLECTION_HISTORY: (id: string) => `/host/${id}/collection-history`,
       COLLECTION_PROGRESS: (taskId: string) => `/host/collection-progress/${taskId}`,
       COLLECTION_TASKS: '/host/collection-tasks',
+      COLLECTION_TASK_CANCEL: (taskId: string) => `/host/collection-task/${taskId}/cancel`,
       EXPORT: '/host/export',
       EXPORT_TEMPLATES: '/host/export/templates',
       EXPORT_FIELDS: '/host/export/fields'

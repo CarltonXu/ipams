@@ -18,7 +18,9 @@ class CollectorManager:
     """采集管理器单例"""
     
     _instance = None
-    _lock = threading.Lock()
+    _running_tasks = {}  # 存储正在运行的任务信息 {task_id: {'threads': [...], 'host_ids': [...], 'cancelled': False}}
+    _task_lock = threading.Lock()  # 保护_running_tasks的锁
+    _lock = threading.Lock()  # 保护单例创建的锁
     
     def __new__(cls):
         if cls._instance is None:
@@ -38,7 +40,7 @@ class CollectorManager:
         self.max_concurrent = 5
         self.timeout = 300
         self._active_tasks = {}
-        self._task_lock = threading.Lock()
+        # 注意：_task_lock 已在类级别定义
     
     def init_app(self, app):
         """初始化应用配置"""
@@ -374,16 +376,31 @@ class CollectorManager:
             if not app:
                 raise RuntimeError("Cannot get Flask application instance")
             
+            # 记录任务信息
+            with self._task_lock:
+                self._running_tasks[task_id] = {
+                    'threads': [],
+                    'host_ids': host_ids.copy(),
+                    'cancelled': False,
+                    'app': app
+                }
+            
             # 包装执行函数，确保应用上下文正确传递，并传递app实例
             def execute_with_context():
                 with app.app_context():
                     self._execute_batch_collection(task_id, host_ids, app)
             
             # 在后台线程中执行采集
-            threading.Thread(
+            thread = threading.Thread(
                 target=execute_with_context,
                 daemon=True
-            ).start()
+            )
+            thread.start()
+            
+            # 记录主线程
+            with self._task_lock:
+                if task_id in self._running_tasks:
+                    self._running_tasks[task_id]['main_thread'] = thread
             
             return task_id
             
@@ -432,6 +449,29 @@ class CollectorManager:
                 progress.current_step = f'开始采集 {len(host_ids)} 台主机'
                 db.session.commit()
             
+            # 为每个主机创建进度记录（如果不存在），这样可以立即通过host_id找到任务
+            for host_id in host_ids:
+                host_progress = CollectionProgress.query.filter_by(
+                    task_id=task_id,
+                    host_id=host_id
+                ).first()
+                
+                if not host_progress:
+                    host_info = HostInfo.query.get(host_id)
+                    host_ip = host_info.ip.ip_address if host_info and host_info.ip else host_id
+                    host_progress = CollectionProgress(
+                        task_id=task_id,
+                        host_id=host_id,
+                        total_count=1,
+                        completed_count=0,
+                        failed_count=0,
+                        status='running',
+                        current_step=f'等待采集主机: {host_ip}'
+                    )
+                    db.session.add(host_progress)
+            
+            db.session.commit()
+            
             logger.info(
                 f"批量采集任务已启动: 任务ID={task_id}, 主机数量={len(host_ids)}",
                 extra={
@@ -455,7 +495,21 @@ class CollectorManager:
                 
                 threads = []
                 for host_id in batch:
+                    # 检查任务是否已取消
+                    with self._task_lock:
+                        task_info = self._running_tasks.get(task_id)
+                        if task_info and task_info.get('cancelled', False):
+                            logger.info(f"Task {task_id} cancelled, stopping batch collection")
+                            break
+                    
                     def collect_with_context(host_id, task_id, app_instance):
+                        # 再次检查是否已取消
+                        with self._task_lock:
+                            task_info = self._running_tasks.get(task_id)
+                            if task_info and task_info.get('cancelled', False):
+                                logger.info(f"Task {task_id} cancelled before starting host {host_id}")
+                                return
+                        
                         with app_instance.app_context():
                             self._collect_in_batch(host_id, task_id, app_instance)
                     
@@ -467,21 +521,56 @@ class CollectorManager:
                     
                     thread.start()
                     threads.append(thread)
+                    
+                    # 记录线程
+                    with self._task_lock:
+                        if task_id in self._running_tasks:
+                            self._running_tasks[task_id]['threads'].append(thread)
                 
                 # 等待批次完成
                 for thread in threads:
                     thread.join()
             
-            # 最终统计结果
-            progress = CollectionProgress.query.filter_by(task_id=task_id).first()
-            if progress:
-                progress.status = 'completed'
-                progress.current_step = '采集完成'
-                progress.updated_at = datetime.utcnow()
+            # 检查任务是否被取消
+            cancelled = False
+            with self._task_lock:
+                task_info = self._running_tasks.get(task_id)
+                if task_info and task_info.get('cancelled', False):
+                    cancelled = True
+                    task.status = 'cancelled'
+                    if progress:
+                        progress.status = 'cancelled'
+                        progress.current_step = '任务已取消'
+                        progress.updated_at = datetime.utcnow()
+                    
+                    # 更新所有未完成的主机状态为pending
+                    if task_id in self._running_tasks:
+                        host_ids = self._running_tasks[task_id].get('host_ids', [])
+                        for host_id in host_ids:
+                            host_info = HostInfo.query.get(host_id)
+                            if host_info and host_info.collection_status == 'collecting':
+                                host_info.collection_status = 'pending'
+                                host_info.collection_error = '任务已取消'
+                else:
+                    # 正常完成
+                    if progress:
+                        progress.status = 'completed'
+                        progress.current_step = '采集完成'
+                        progress.updated_at = datetime.utcnow()
+                    
+                    task.status = 'completed'
             
-            task.status = 'completed'
-            task.end_time = datetime.utcnow()
+            if not cancelled:
+                task.end_time = datetime.utcnow()
+            else:
+                task.end_time = datetime.utcnow()  # 取消时也记录结束时间
+            
             db.session.commit()
+            
+            # 清理任务记录
+            with self._task_lock:
+                if task_id in self._running_tasks:
+                    del self._running_tasks[task_id]
             
             logger.info(
                 f"批量采集任务已完成: 任务ID={task_id}, 成功={task.success_count}, 失败={task.failed_count}, 总计={task.total_hosts}",
@@ -501,12 +590,154 @@ class CollectorManager:
             with app.app_context():
                 task = CollectionTask.query.get(task_id)
                 progress = CollectionProgress.query.filter_by(task_id=task_id).first()
+                
+                # 检查是否是被取消的
+                cancelled = False
+                with self._task_lock:
+                    task_info = self._running_tasks.get(task_id)
+                    if task_info and task_info.get('cancelled', False):
+                        cancelled = True
+                
                 if task:
-                    task.status = 'failed'
+                    task.status = 'cancelled' if cancelled else 'failed'
+                    task.end_time = datetime.utcnow()
                 if progress:
-                    progress.status = 'failed'
-                    progress.error_message = str(e)
+                    progress.status = 'cancelled' if cancelled else 'failed'
+                    if not cancelled:
+                        progress.error_message = str(e)
+                    progress.updated_at = datetime.utcnow()
+                
+                # 如果任务被取消，更新所有关联主机的状态
+                if cancelled:
+                    if task_id in self._running_tasks:
+                        host_ids = self._running_tasks[task_id].get('host_ids', [])
+                        for host_id in host_ids:
+                            host_info = HostInfo.query.get(host_id)
+                            if host_info and host_info.collection_status == 'collecting':
+                                host_info.collection_status = 'pending'
+                                host_info.collection_error = '任务已取消'
+                
                 db.session.commit()
+            
+            # 清理任务记录
+            with self._task_lock:
+                if task_id in self._running_tasks:
+                    del self._running_tasks[task_id]
+    
+    def cancel_collection_task(self, task_id: str, user_id: str) -> bool:
+        """
+        取消采集任务
+        
+        Args:
+            task_id: 任务ID
+            user_id: 用户ID（用于权限验证）
+            
+        Returns:
+            bool: 是否成功取消
+        """
+        try:
+            from flask import current_app
+            app = current_app._get_current_object() if current_app else None
+            
+            with app.app_context() if app else None:
+                # 验证任务存在且属于该用户
+                task = CollectionTask.query.get(task_id)
+                if not task:
+                    logger.error(f"CollectionTask {task_id} not found")
+                    return False
+                
+                if task.user_id != user_id:
+                    logger.error(f"User {user_id} does not have permission to cancel task {task_id}")
+                    return False
+                
+                # 只能取消待处理或运行中的任务
+                if task.status not in ['pending', 'running']:
+                    logger.warning(f"Cannot cancel task {task_id} with status {task.status}")
+                    return False
+                
+                # 标记任务为已取消
+                with self._task_lock:
+                    if task_id in self._running_tasks:
+                        self._running_tasks[task_id]['cancelled'] = True
+                
+                # 更新任务状态
+                task.status = 'cancelled'
+                task.end_time = datetime.utcnow()
+                
+                # 更新进度状态
+                progress = CollectionProgress.query.filter_by(task_id=task_id).first()
+                if progress:
+                    progress.status = 'cancelled'
+                    progress.current_step = '任务已取消'
+                    progress.updated_at = datetime.utcnow()
+                
+                # 更新所有关联主机的状态
+                # 方法1：从_running_tasks中获取主机ID列表
+                host_ids_to_update = []
+                if task_id in self._running_tasks:
+                    host_ids_to_update = self._running_tasks[task_id].get('host_ids', [])
+                
+                # 方法2：通过CollectionProgress查询所有关联的主机（更可靠）
+                # 这样可以确保即使任务不在_running_tasks中也能找到所有主机
+                progress_records = CollectionProgress.query.filter_by(task_id=task_id).all()
+                for p in progress_records:
+                    if p.host_id and p.host_id not in host_ids_to_update:
+                        host_ids_to_update.append(p.host_id)
+                
+                # 如果还是没找到，尝试通过任务关联的主机推断
+                # 查询状态为collecting且最后更新时间在任务创建时间附近的主机
+                if not host_ids_to_update and task.created_at:
+                    from datetime import timedelta
+                    time_window_start = task.created_at - timedelta(minutes=1)
+                    time_window_end = datetime.utcnow()
+                    
+                    # 查询该时间窗口内状态为collecting的主机（可能是这个任务的）
+                    inferred_hosts = HostInfo.query.filter(
+                        HostInfo.collection_status == 'collecting',
+                        HostInfo.updated_at.between(time_window_start, time_window_end),
+                        HostInfo.deleted == False
+                    ).limit(task.total_hosts).all()
+                    
+                    for host in inferred_hosts:
+                        if host.id not in host_ids_to_update:
+                            host_ids_to_update.append(host.id)
+                
+                # 更新所有关联主机的状态
+                for host_id in host_ids_to_update:
+                    host_info = HostInfo.query.get(host_id)
+                    if host_info:
+                        # 如果主机状态是collecting，重置为pending
+                        if host_info.collection_status == 'collecting':
+                            host_info.collection_status = 'pending'  # 重置为pending，允许重新采集
+                            host_info.collection_error = '任务已取消'
+                            logger.info(
+                                f"Updated host {host_id} status to pending after task cancellation",
+                                extra={
+                                    'host_id': host_id,
+                                    'task_id': task_id,
+                                    'operation': 'host_status_updated_after_cancel'
+                                }
+                            )
+                
+                db.session.commit()
+                
+                logger.info(
+                    f"采集任务已取消: 任务ID={task_id}",
+                    extra={
+                        'task_id': task_id,
+                        'user_id': user_id,
+                        'operation': 'task_cancelled'
+                    }
+                )
+                
+                return True
+                
+        except Exception as e:
+            logger.error(f"Error cancelling collection task {task_id}: {str(e)}")
+            if app:
+                with app.app_context():
+                    db.session.rollback()
+            return False
     
     def _collect_in_batch(self, host_id: str, task_id: str, app=None):
         """
@@ -520,6 +751,18 @@ class CollectorManager:
         注意：此方法应该在应用上下文中调用
         """
         try:
+            # 检查任务是否已取消
+            with self._task_lock:
+                task_info = self._running_tasks.get(task_id)
+                if task_info and task_info.get('cancelled', False):
+                    logger.info(f"Task {task_id} cancelled, skipping host {host_id}")
+                    # 更新主机状态
+                    host_info = HostInfo.query.get(host_id)
+                    if host_info and host_info.collection_status == 'collecting':
+                        host_info.collection_status = 'pending'
+                        host_info.collection_error = '任务已取消'
+                        db.session.commit()
+                    return
             host_info = HostInfo.query.get(host_id)
             if not host_info:
                 logger.error(f"HostInfo {host_id} not found")
@@ -539,10 +782,35 @@ class CollectorManager:
                 }
             )
             
-            # 获取进度记录并更新当前步骤
+            # 获取进度记录并更新当前步骤和主机ID
             progress = CollectionProgress.query.filter_by(task_id=task_id).first()
             if progress:
                 progress.current_step = f'正在采集主机: {host_ip}'
+                # 如果progress没有host_id，设置为当前主机ID（主要用于单个主机任务）
+                # 对于批量任务，我们会在下面创建单独的进度记录来追踪每个主机
+                if not progress.host_id:
+                    progress.host_id = host_id
+                db.session.commit()
+            
+            # 为批量任务创建每个主机的进度追踪记录（如果不存在）
+            # 这样可以准确追踪每个主机的采集状态
+            host_progress = CollectionProgress.query.filter_by(
+                task_id=task_id,
+                host_id=host_id
+            ).first()
+            
+            if not host_progress:
+                # 创建一个专门用于追踪单个主机的进度记录
+                host_progress = CollectionProgress(
+                    task_id=task_id,
+                    host_id=host_id,
+                    total_count=1,
+                    completed_count=0,
+                    failed_count=0,
+                    status='running',
+                    current_step=f'正在采集主机: {host_ip}'
+                )
+                db.session.add(host_progress)
                 db.session.commit()
             
             # 如果是VMware主机，需要设置进度回调来更新进度
@@ -640,7 +908,32 @@ class CollectorManager:
             task = CollectionTask.query.get(task_id)
             progress = CollectionProgress.query.filter_by(task_id=task_id).first()
             
+            # 检查任务是否已取消（在更新结果前检查）
+            cancelled = False
+            with self._task_lock:
+                task_info = self._running_tasks.get(task_id)
+                if task_info and task_info.get('cancelled', False):
+                    cancelled = True
+            
+            if cancelled:
+                logger.info(f"Task {task_id} cancelled, skipping result update for host {host_id}")
+                # 更新主机状态
+                host_info.collection_status = 'pending'
+                host_info.collection_error = '任务已取消'
+                # 更新任务计数
+                if task:
+                    task.failed_count += 1
+                if progress:
+                    progress.failed_count += 1
+                db.session.commit()
+                return
+            
             if result['success']:
+                # 更新主机状态为成功
+                host_info.collection_status = 'success'
+                host_info.last_collected_at = datetime.utcnow()
+                host_info.collection_error = None
+                
                 task.success_count += 1
                 if progress:
                     # 对于VMware，completed_count已经在回调中更新了
@@ -654,9 +947,12 @@ class CollectorManager:
                         if progress.total_count == 1:
                             progress.total_count = 1 + vm_count
             else:
-                task.failed_count += 1
+                # 更新主机状态为失败
+                host_info.collection_status = 'failed'
                 error_msg = result.get('error', 'Collection returned no data')
                 host_info.collection_error = error_msg
+                
+                task.failed_count += 1
                 
                 if progress:
                     progress.failed_count += 1
@@ -702,6 +998,11 @@ class CollectorManager:
                     host_ip = host_info.ip.ip_address if host_info.ip else host_id
                 else:
                     host_ip = host_id
+                
+                # 更新主机状态为失败
+                if host_info:
+                    host_info.collection_status = 'failed'
+                    host_info.collection_error = error_msg
                 
                 if task:
                     task.failed_count += 1

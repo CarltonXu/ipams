@@ -311,6 +311,21 @@ export const useHostInfoStore = defineStore('hostInfo', {
         this.error = error.response?.data?.error || t('common.fetchError');
         throw error;
       }
+    },
+
+    /**
+     * 取消采集任务
+     */
+    async cancelCollectionTask(taskId: string) {
+      try {
+        const response = await axios.post(
+          `${API_CONFIG.BASE_API_URL}${API_CONFIG.ENDPOINTS.HOST.COLLECTION_TASK_CANCEL(taskId)}`
+        );
+        return response.data;
+      } catch (error: any) {
+        this.error = error.response?.data?.error || t('common.operationFailed');
+        throw error;
+      }
     }
   }
 });

@@ -97,6 +97,8 @@ export default {
     unknownError: '未知错误',
     fields: '字段',
     confirm: '确认',
+    second: '秒',
+    operationFailed: '操作失败',
     warning: '警告',
     cancel: '取消',
     save: '保存',
@@ -1272,18 +1274,6 @@ export default {
     network: '网络',
     collectionStatus: '采集状态',
     lastCollected: '最后采集时间',
-    actions: {
-      refresh: '刷新',
-      collect: '采集',
-      batchCollect: '批量采集',
-      bindCredential: '绑定凭证',
-      batchBindCredential: '批量绑定凭证',
-      unbindCredential: '解绑凭证',
-      selectCredential: '选择凭证',
-      export: '导出',
-      batchExport: '批量导出',
-      viewDetails: '查看详情'
-    },
     types: {
       physical: '物理机',
       vmware: 'VMware虚拟机',
@@ -1298,19 +1288,6 @@ export default {
     filters: {
       all: '全部',
       search: '搜索主机'
-    },
-    messages: {
-      collectSuccess: '采集任务已启动',
-      collectFailed: '采集任务启动失败',
-      collectStarted: '采集任务已启动',
-      bindSuccess: '凭证绑定成功',
-      bindFailed: '凭证绑定失败',
-      unbindSuccess: '凭证解绑成功',
-      exportSuccess: '导出成功',
-      exportFailed: '导出失败',
-      noHosts: '暂无主机信息',
-      credentialRequired: '请选择凭证',
-      batchBindInfo: '将绑定 {count} 个主机到选定的凭证'
     },
     collectionProgress: {
       title: '采集进度',
@@ -1333,7 +1310,67 @@ export default {
       network: '网络信息',
       disk: '磁盘信息',
       vmware: 'VMware信息',
-      raw: '原始数据'
+      raw: '原始数据',
+      hostList: '主机列表',
+      taskHistory: '采集任务历史'
+    },
+    collectionTask: {
+      taskId: '任务ID',
+      taskStatus: '任务状态',
+      progress: '进度',
+      totalHosts: '总主机数',
+      successCount: '成功',
+      failedCount: '失败',
+      createdAt: '创建时间',
+      endTime: '结束时间',
+      relatedHosts: '关联主机',
+      viewDetails: '查看详情',
+      cancel: '取消',
+      cancelTask: '取消任务',
+      confirmCancel: '确定要取消此采集任务吗？取消后可以重新发起采集。',
+      cancelSuccess: '任务已取消',
+      cancelFailed: '取消任务失败',
+      autoRefresh: '自动刷新',
+      refreshInterval: '刷新间隔',
+      tableView: '表格视图',
+      timelineView: '时间线视图',
+      filterStatus: '过滤状态',
+      status: {
+        pending: '待处理',
+        running: '进行中',
+        completed: '已完成',
+        failed: '失败',
+        cancelled: '已取消'
+      },
+      errorMessage: '错误信息'
+    },
+    actions: {
+      refresh: '刷新',
+      collect: '采集',
+      batchCollect: '批量采集',
+      bindCredential: '绑定凭证',
+      batchBindCredential: '批量绑定凭证',
+      unbindCredential: '解绑凭证',
+      selectCredential: '选择凭证',
+      export: '导出',
+      batchExport: '批量导出',
+      viewDetails: '查看详情',
+      cancelCollection: '取消采集'
+    },
+    messages: {
+      collectSuccess: '采集任务已启动',
+      collectFailed: '采集任务启动失败',
+      collectStarted: '采集任务已启动',
+      bindSuccess: '凭证绑定成功',
+      bindFailed: '凭证绑定失败',
+      unbindSuccess: '凭证解绑成功',
+      exportSuccess: '导出成功',
+      exportFailed: '导出失败',
+      noHosts: '暂无主机信息',
+      credentialRequired: '请选择凭证',
+      batchBindInfo: '将绑定 {count} 个主机到选定的凭证',
+      noRunningTask: '未找到正在进行的采集任务，已刷新列表',
+      loadChildrenFailed: '加载子节点失败'
     }
   },
   collection: {

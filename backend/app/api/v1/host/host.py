@@ -347,6 +347,10 @@ def collect_host_info(current_user, host_id):
         if not current_user.is_admin and host.ip.assigned_user_id != current_user.id:
             return jsonify({'error': 'Permission denied'}), 403
         
+        # 立即更新主机状态为'collecting'，防止重复点击
+        host.collection_status = 'collecting'
+        db.session.commit()
+        
         # 使用批量采集API来处理单个主机，这样可以支持进度显示
         task_id = collector_manager.collect_batch_hosts([host_id], current_user.id)
         
@@ -372,6 +376,14 @@ def batch_collect_hosts(current_user):
         
         if not host_ids:
             return jsonify({'error': 'host_ids required'}), 400
+        
+        # 立即批量更新所有主机状态为'collecting'，防止重复点击
+        hosts = HostInfo.query.filter(HostInfo.id.in_(host_ids), HostInfo.deleted == False).all()
+        for host in hosts:
+            # 检查权限
+            if current_user.is_admin or (host.ip and host.ip.assigned_user_id == current_user.id):
+                host.collection_status = 'collecting'
+        db.session.commit()
         
         # 创建批量采集任务
         task_id = collector_manager.collect_batch_hosts(host_ids, current_user.id)
@@ -767,18 +779,72 @@ def get_collection_progress(current_user, task_id):
 def get_collection_tasks(current_user):
     """
     获取当前用户的采集任务列表
-    支持分页和状态过滤
+    支持分页、状态过滤和按主机ID过滤
     """
     try:
         page = request.args.get('page', 1, type=int)
         page_size = request.args.get('page_size', 20, type=int)
         status = request.args.get('status')  # pending, running, completed, failed
+        host_id = request.args.get('host_id')  # 按主机ID过滤
         
         # 构建查询
         query = CollectionTask.query.filter_by(user_id=current_user.id)
         
         if status:
             query = query.filter_by(status=status)
+        
+        # 如果指定了host_id，需要通过CollectionProgress关联查询
+        if host_id:
+            # 查找包含该主机的任务
+            # 方法1：通过CollectionProgress查询（更准确）
+            progress_with_host = CollectionProgress.query.filter_by(host_id=host_id).all()
+            task_ids_from_progress = [p.task_id for p in progress_with_host]
+            
+            # 方法2：如果指定了状态过滤，且是pending或running，通过时间窗口查找最近的任务
+            # 这可以处理任务刚创建但CollectionProgress还没创建的情况
+            task_ids_from_time = []
+            if status in ['pending', 'running'] or not status:
+                from datetime import timedelta
+                # 查找最近5分钟内创建的任务
+                time_threshold = datetime.utcnow() - timedelta(minutes=5)
+                recent_tasks = CollectionTask.query.filter(
+                    CollectionTask.user_id == current_user.id,
+                    CollectionTask.created_at >= time_threshold,
+                    CollectionTask.status.in_(['pending', 'running'])
+                ).all()
+                
+                # 检查这些任务是否包含该主机（通过查询CollectionProgress或通过时间推断）
+                for task in recent_tasks:
+                    # 检查是否有该主机的进度记录
+                    host_progress = CollectionProgress.query.filter_by(
+                        task_id=task.id,
+                        host_id=host_id
+                    ).first()
+                    if host_progress:
+                        task_ids_from_time.append(task.id)
+                    # 如果没有进度记录，但任务状态匹配且时间很近，也可能包含该主机
+                    # 这种情况下，如果任务状态是pending且是最近创建的，很可能包含该主机
+                    elif task.status == 'pending' and task.created_at >= datetime.utcnow() - timedelta(minutes=1):
+                        # 通过查询主机是否有对应的状态变化来推断
+                        # 如果主机状态是collecting且最后更新时间在任务创建时间附近，可能是该任务
+                        host_info = HostInfo.query.get(host_id)
+                        if host_info and host_info.collection_status == 'collecting':
+                            task_ids_from_time.append(task.id)
+            
+            # 合并两种方法找到的任务ID
+            all_task_ids = list(set(task_ids_from_progress + task_ids_from_time))
+            
+            if all_task_ids:
+                query = query.filter(CollectionTask.id.in_(all_task_ids))
+            else:
+                # 如果没有找到相关任务，返回空结果
+                return jsonify({
+                    'tasks': [],
+                    'total': 0,
+                    'pages': 0,
+                    'page_size': page_size,
+                    'current_page': page
+                }), 200
         
         # 按创建时间倒序
         query = query.order_by(desc(CollectionTask.created_at))
@@ -799,6 +865,68 @@ def get_collection_tasks(current_user):
             if progress:
                 task_dict['progress'] = progress.to_dict()
             
+            # 获取该任务关联的所有主机信息
+            # 方法1：通过CollectionProgress查询所有相关的主机
+            progress_records = CollectionProgress.query.filter_by(task_id=task.id).all()
+            host_ids_from_progress = set()
+            for p in progress_records:
+                if p.host_id:
+                    host_ids_from_progress.add(p.host_id)
+            
+            # 方法2：如果任务已完成，可以通过查询最近采集的主机来推断
+            # 但更可靠的方法是：在任务创建时记录主机ID列表
+            # 为了兼容现有数据，我们通过查询该任务创建时间附近、状态为collecting/success/failed的主机
+            # 但这个方法不够准确，所以我们优先使用方法1
+            
+            # 如果从progress中获取到主机ID，查询主机信息
+            related_hosts = []
+            if host_ids_from_progress:
+                hosts = HostInfo.query.filter(
+                    HostInfo.id.in_(list(host_ids_from_progress)),
+                    HostInfo.deleted == False
+                ).options(joinedload(HostInfo.ip)).all()
+                
+                for host in hosts:
+                    related_hosts.append({
+                        'id': host.id,
+                        'hostname': host.hostname,
+                        'ip_address': host.ip.ip_address if host.ip else None,
+                        'host_type': host.host_type,
+                        'collection_status': host.collection_status,
+                        'collection_error': host.collection_error
+                    })
+            
+            # 如果从progress中没有获取到主机ID（可能是旧数据），尝试通过时间推断
+            # 查询任务创建时间前后1分钟内，状态发生变化的主机
+            if not related_hosts and task.created_at:
+                from datetime import timedelta
+                time_window_start = task.created_at - timedelta(minutes=1)
+                time_window_end = task.created_at + timedelta(minutes=5)
+                
+                # 查询该时间窗口内最后采集的主机（通过last_collected_at）
+                inferred_hosts = HostInfo.query.filter(
+                    HostInfo.last_collected_at.between(time_window_start, time_window_end),
+                    HostInfo.deleted == False
+                ).options(joinedload(HostInfo.ip)).limit(task.total_hosts).all()
+                
+                for host in inferred_hosts:
+                    related_hosts.append({
+                        'id': host.id,
+                        'hostname': host.hostname,
+                        'ip_address': host.ip.ip_address if host.ip else None,
+                        'host_type': host.host_type,
+                        'collection_status': host.collection_status,
+                        'collection_error': host.collection_error
+                    })
+            
+            task_dict['related_hosts'] = related_hosts
+            
+            # 如果指定了host_id过滤，只保留匹配的主机
+            if host_id:
+                task_dict['related_hosts'] = [h for h in related_hosts if h['id'] == host_id]
+                if task_dict['related_hosts']:
+                    task_dict['related_host'] = task_dict['related_hosts'][0]  # 保持向后兼容
+            
             tasks_data.append(task_dict)
         
         return jsonify({
@@ -811,5 +939,47 @@ def get_collection_tasks(current_user):
         
     except Exception as e:
         logger.error(f"Error fetching collection tasks: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@host_bp.route('/host/collection-task/<task_id>/cancel', methods=['POST'])
+@token_required
+def cancel_collection_task(current_user, task_id):
+    """
+    取消采集任务
+    
+    Args:
+        task_id: 采集任务ID
+    """
+    try:
+        # 验证任务存在
+        task = CollectionTask.query.get(task_id)
+        if not task:
+            return jsonify({'error': 'Task not found'}), 404
+        
+        # 检查权限
+        if task.user_id != current_user.id and not current_user.is_admin:
+            return jsonify({'error': 'Permission denied'}), 403
+        
+        # 只能取消待处理或运行中的任务
+        if task.status not in ['pending', 'running']:
+            return jsonify({
+                'error': f'Cannot cancel task with status: {task.status}',
+                'current_status': task.status
+            }), 400
+        
+        # 调用采集管理器取消任务
+        success = collector_manager.cancel_collection_task(task_id, current_user.id)
+        
+        if success:
+            return jsonify({
+                'message': 'Task cancelled successfully',
+                'task_id': task_id
+            }), 200
+        else:
+            return jsonify({'error': 'Failed to cancel task'}), 500
+        
+    except Exception as e:
+        logger.error(f"Error cancelling collection task: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
