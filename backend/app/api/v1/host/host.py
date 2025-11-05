@@ -7,6 +7,7 @@ from sqlalchemy import and_, or_, desc, asc, func
 from sqlalchemy.orm import joinedload
 from datetime import datetime
 import uuid
+import time
 
 from app.models.models import db, HostInfo, HostCredentialBinding, CollectionTask, Credential, IP, CollectionProgress
 from app.core.security.auth import token_required
@@ -24,9 +25,13 @@ def get_hosts(current_user):
     """
     获取主机信息列表
     支持分页、搜索和过滤
-    自动为已认领的IP创建HostInfo记录（如果不存在）
+    注意：HostInfo记录应在IP认领时自动创建，这里不再进行全表扫描检查
     """
     try:
+        # 性能监控：记录开始时间
+        start_time = time.time()
+        perf_log = {}
+        
         page = request.args.get('page', type=int)
         page_size = request.args.get('page_size', type=int)
         query = request.args.get('query')
@@ -34,51 +39,8 @@ def get_hosts(current_user):
         collection_status = request.args.get('collection_status')
         sort_by = request.args.get('sort_by')
         sort_order = request.args.get('sort_order', 'asc')
-        
-        # 优化：批量确保存在HostInfo记录，避免N+1查询
-        # 使用子查询找出没有HostInfo的IP，然后批量创建
-        if current_user.is_admin:
-            ip_filter = and_(IP.deleted == False, IP.status == 'active')
-        else:
-            ip_filter = and_(IP.deleted == False, IP.status == 'active', IP.assigned_user_id == current_user.id)
-        
-        # 找出没有HostInfo的IP（使用LEFT JOIN）
-        ips_without_hostinfo = db.session.query(IP.id, IP.host_type).filter(ip_filter).outerjoin(
-            HostInfo, and_(
-                HostInfo.ip_id == IP.id,
-                HostInfo.deleted == False
-            )
-        ).filter(HostInfo.id.is_(None)).all()
-        
-        # 批量创建缺失的HostInfo记录，同步IP的host_type
-        if ips_without_hostinfo:
-            new_hostinfos = [
-                HostInfo(
-                    ip_id=ip_id,
-                    host_type=ip_host_type,  # 从IP同步host_type
-                    collection_status='pending'
-                )
-                for ip_id, ip_host_type in ips_without_hostinfo
-            ]
-            db.session.bulk_save_objects(new_hostinfos)
-            db.session.commit()
-        
-        # 同步更新已存在但host_type为空的HostInfo记录
-        # 找出host_type为空的HostInfo，但IP有host_type的记录
-        hosts_without_hosttype = db.session.query(HostInfo, IP.host_type).join(
-            IP, HostInfo.ip_id == IP.id
-        ).filter(
-            and_(
-                HostInfo.deleted == False,
-                HostInfo.host_type.is_(None),
-                IP.host_type.isnot(None)
-            )
-        ).all()
-        
-        if hosts_without_hosttype:
-            for host_info, ip_host_type in hosts_without_hosttype:
-                host_info.host_type = ip_host_type
-            db.session.commit()
+        # 性能优化：是否计算总数（默认计算，但可以通过参数跳过以提高性能）
+        include_count = request.args.get('include_count', 'true').lower() == 'true'
         
         # 构建基础查询（只查询根主机，不包括子主机）
         # 使用 eager loading 优化关联查询，避免懒加载造成的N+1问题
@@ -89,6 +51,8 @@ def get_hosts(current_user):
         if query:  # 如果搜索条件包含IP地址，需要JOIN
             needs_ip_join = True
         if not current_user.is_admin:  # 非管理员需要权限过滤
+            needs_ip_join = True
+        if host_type and host_type != 'all':  # 如果过滤host_type，可能需要JOIN来访问IP.host_type
             needs_ip_join = True
         
         if needs_ip_join:
@@ -112,9 +76,7 @@ def get_hosts(current_user):
         # 应用过滤条件
         if host_type and host_type != 'all':
             # 如果HostInfo.host_type为空，则使用IP.host_type作为fallback
-            # 需要JOIN IP表来访问IP.host_type
-            if not needs_ip_join:
-                hosts_query = hosts_query.join(IP)
+            # needs_ip_join已经在上面判断时包含了host_type的情况
             hosts_query = hosts_query.filter(
                 or_(
                     HostInfo.host_type == host_type,
@@ -136,62 +98,186 @@ def get_hosts(current_user):
                     desc(sort_column) if sort_order == 'desc' else asc(sort_column)
                 )
         
-        # 执行分页查询
-        hosts_paginated = hosts_query.paginate(
-            page=page,
-            per_page=page_size,
-            error_out=False
-        )
+        # 确保page和page_size有默认值
+        page = page if page and page > 0 else 1
+        page_size = page_size if page_size and page_size > 0 else 10
+        offset = (page - 1) * page_size
+        limit = page_size
+        
+        # 执行查询，只获取当前页的数据
+        query_start = time.time()
+        hosts_list = hosts_query.offset(offset).limit(limit).all()
+        perf_log['main_query'] = round((time.time() - query_start) * 1000, 2)  # 毫秒
         
         # 批量加载凭证绑定信息（优化：使用eager loading避免N+1查询）
-        host_ids = [h.id for h in hosts_paginated.items]
+        host_ids = [h.id for h in hosts_list]
         bindings_map = {}
         if host_ids:
+            bindings_start = time.time()
             bindings = HostCredentialBinding.query.filter(
                 HostCredentialBinding.host_id.in_(host_ids)
             ).options(
                 joinedload(HostCredentialBinding.credential)  # 预加载凭证信息
             ).all()
+            perf_log['bindings_query'] = round((time.time() - bindings_start) * 1000, 2)
             for binding in bindings:
                 if binding.host_id not in bindings_map:
                     bindings_map[binding.host_id] = []
-                bindings_map[binding.host_id].append(binding.to_dict())
+                # 简化to_dict，只返回必要字段
+                bindings_map[binding.host_id].append({
+                    'id': binding.id,
+                    'host_id': binding.host_id,
+                    'credential_id': binding.credential_id,
+                    'created_at': binding.created_at.isoformat() if binding.created_at else None,
+                    'credential': {
+                        'id': binding.credential.id if binding.credential else None,
+                        'name': binding.credential.name if binding.credential else None,
+                        'credential_type': binding.credential.credential_type if binding.credential else None,
+                        'username': binding.credential.username if binding.credential else None
+                    } if binding.credential else None
+                })
         
         # 构建返回数据（支持树形结构）
         # 优化：批量加载子主机，避免递归查询中的N+1问题
         child_hosts_map = {}
         if host_ids:
+            child_start = time.time()
             # 一次性加载所有子主机
             child_hosts = HostInfo.query.filter(
                 HostInfo.parent_host_id.in_(host_ids),
                 HostInfo.deleted == False
             ).options(joinedload(HostInfo.ip)).all()
+            perf_log['child_hosts_query'] = round((time.time() - child_start) * 1000, 2)
             for child in child_hosts:
                 if child.parent_host_id not in child_hosts_map:
                     child_hosts_map[child.parent_host_id] = []
                 child_hosts_map[child.parent_host_id].append(child)
         
+        # 优化序列化：手动构建字典，避免嵌套的to_dict调用
+        serialize_start = time.time()
         hosts_data = []
-        for host in hosts_paginated.items:
-            # 使用预加载的子主机数据，避免递归查询
-            host_dict = host.to_dict(include_children=False)
-            # 手动添加子主机数据
+        for host in hosts_list:
+            # 手动构建host_dict，避免多次to_dict调用
+            host_dict = {
+                'id': host.id,
+                'ip_id': host.ip_id,
+                'host_type': host.host_type,
+                'hostname': host.hostname,
+                'os_name': host.os_name,
+                'os_version': host.os_version,
+                'cpu_model': host.cpu_model,
+                'cpu_cores': host.cpu_cores,
+                'memory_total': host.memory_total,
+                'collection_status': host.collection_status,
+                'collection_error': host.collection_error,
+                'last_collected_at': host.last_collected_at.isoformat() if host.last_collected_at else None,
+                'created_at': host.created_at.isoformat() if host.created_at else None,
+                'updated_at': host.updated_at.isoformat() if host.updated_at else None,
+            }
+            
+            # 添加IP信息（简化版，避免嵌套to_dict）
+            if host.ip:
+                host_dict['ip'] = {
+                    'id': host.ip.id,
+                    'ip_address': host.ip.ip_address,
+                    'status': host.ip.status,
+                    'device_name': host.ip.device_name,
+                    'os_type': host.ip.os_type,
+                    'host_type': host.ip.host_type,
+                    'assigned_user_id': host.ip.assigned_user_id
+                }
+            else:
+                host_dict['ip'] = None
+            
+            # 手动添加子主机数据（简化版）
             if host.id in child_hosts_map:
                 host_dict['child_hosts'] = [
-                    child.to_dict(include_children=False) 
+                    {
+                        'id': child.id,
+                        'ip_id': child.ip_id,
+                        'host_type': child.host_type,
+                        'hostname': child.hostname,
+                        'collection_status': child.collection_status,
+                        'ip': {
+                            'id': child.ip.id,
+                            'ip_address': child.ip.ip_address,
+                            'host_type': child.ip.host_type,
+                            'os_type': child.ip.os_type
+                        } if child.ip else None
+                    }
                     for child in child_hosts_map[host.id]
                 ]
             else:
                 host_dict['child_hosts'] = []
+            
             host_dict['credential_bindings'] = bindings_map.get(host.id, [])
             hosts_data.append(host_dict)
+        perf_log['serialization'] = round((time.time() - serialize_start) * 1000, 2)
+        
+        # 优化COUNT查询：如果include_count为false，跳过COUNT查询以提高性能
+        if include_count and page:
+            count_start = time.time()
+            # 使用子查询优化COUNT，避免重复执行复杂的JOIN和过滤
+            count_query = db.session.query(func.count(HostInfo.id)).filter_by(deleted=False, parent_host_id=None)
+            
+            # 应用相同的过滤条件（但不需要JOIN所有数据）
+            if needs_ip_join:
+                count_query = count_query.join(IP)
+                if not current_user.is_admin:
+                    count_query = count_query.filter(IP.assigned_user_id == current_user.id)
+            
+            if query:
+                if not needs_ip_join:
+                    count_query = count_query.join(IP)
+                count_query = count_query.filter(
+                    or_(
+                        HostInfo.hostname.ilike(f'%{query}%'),
+                        IP.ip_address.ilike(f'%{query}%'),
+                        HostInfo.os_name.ilike(f'%{query}%')
+                    )
+                )
+            
+            if host_type and host_type != 'all':
+                if not needs_ip_join:
+                    count_query = count_query.join(IP)
+                count_query = count_query.filter(
+                    or_(
+                        HostInfo.host_type == host_type,
+                        and_(
+                            HostInfo.host_type.is_(None),
+                            IP.host_type == host_type
+                        )
+                    )
+                )
+            
+            if collection_status and collection_status != 'all':
+                count_query = count_query.filter(HostInfo.collection_status == collection_status)
+            
+            total_count = count_query.scalar()
+            total_pages = (total_count + page_size - 1) // page_size
+            perf_log['count_query'] = round((time.time() - count_start) * 1000, 2)
+        else:
+            total_count = None if not include_count else len(hosts_list)
+            total_pages = None if not include_count else 1
+            perf_log['count_query'] = 0  # 跳过了COUNT查询
+        
+        # 记录总耗时
+        total_time = round((time.time() - start_time) * 1000, 2)
+        perf_log['total'] = total_time
+        
+        # 性能日志（仅在开发环境或慢查询时记录）
+        if total_time > 1000:  # 超过1秒记录警告
+            logger.warning(f"Slow query detected: {perf_log} | params: page={page}, page_size={page_size}, query={query}, host_type={host_type}, collection_status={collection_status}")
+        elif total_time > 500:  # 超过500ms记录信息
+            logger.info(f"Query performance: {perf_log} | params: page={page}, page_size={page_size}")
         
         return jsonify({
             'hosts': hosts_data,
-            'total': hosts_paginated.total,
-            'pages': hosts_paginated.pages,
+            'total': total_count,
+            'pages': total_pages,
             'page_size': page_size,
-            'current_page': hosts_paginated.page
+            'current_page': page,
+            'performance': perf_log if request.args.get('debug') == 'true' else None  # 仅在debug模式下返回性能数据
         }), 200
         
     except Exception as e:
@@ -526,8 +612,8 @@ def batch_bind_credentials(current_user):
                             continue
                         elif ip_os_type == 'Windows' and credential.credential_type != 'windows':
                             errors.append(f"Host {host_id}: Windows hosts can only bind windows credentials. Selected credential type: {credential.credential_type}")
-                            skipped_count += 1
-                            continue
+                    skipped_count += 1
+                    continue
                 
                 # 检查是否已经绑定
                 existing = HostCredentialBinding.query.filter_by(
