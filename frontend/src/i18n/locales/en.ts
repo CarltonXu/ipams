@@ -125,16 +125,23 @@ export default {
   },
   menu: {
     home: 'Home',
-    ipManagement: 'IP Management',
+    ipManagement: 'IP Management', // Keep old key for compatibility
+    ipAddressManagement: 'IP Address Management',
     credentials: 'Credentials',
-    hostInfo: 'Host Information',
+    hostInfo: 'Host Information', // Keep old key for compatibility
+    resourceCollection: 'Resource Collection',
     scanConfig: 'Scan Config',
-    task: 'Task Managent',
+    task: 'Task Management',
     settings: 'Settings',
-    monitor: 'Monitor',
+    monitor: 'Resource Monitor',
     userManagement: 'User Management',
     notifications: 'Notification History',
-    notificationSettings: 'Notification Settings'
+    notificationSettings: 'Notification Settings',
+    category: {
+      basicResource: 'Basic Resources',
+      resourceCollection: 'Resource Collection',
+      systemManagement: 'System Management'
+    }
   },
   auth: {
     login: 'Login',

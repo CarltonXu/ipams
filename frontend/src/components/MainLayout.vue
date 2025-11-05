@@ -21,12 +21,12 @@
     </el-header>
 
     <!-- 左侧导航栏 -->
-    <el-aside class="sidebar">
+    <el-aside :class="['sidebar', { 'sidebar-collapsed': sidebarCollapsed }]">
       <sidebar />
     </el-aside>
 
     <!-- 主体内容 -->
-    <el-main class="content">
+    <el-main :class="['content', { 'content-expanded': sidebarCollapsed }]">
       <router-view />
     </el-main>
     <el-footer class="footer">
@@ -37,11 +37,31 @@
 </template>
 
 <script setup lang="ts">
+import { ref, onMounted, onUnmounted } from 'vue';
 import HeaderRight from '../components/HeaderRight.vue';
 import HeaderCenter from '../components/HeaderCenter.vue';
 import FooterNav from '../components/FooterNav.vue';
 import Sidebar from '../components/Sidebar.vue';
 import { NMessageProvider } from 'naive-ui';
+
+const sidebarCollapsed = ref(false);
+
+const handleSidebarToggle = (event: CustomEvent) => {
+  sidebarCollapsed.value = event.detail.collapsed;
+};
+
+onMounted(() => {
+  window.addEventListener('sidebar-toggle', handleSidebarToggle as EventListener);
+  // 从localStorage读取初始状态
+  const saved = localStorage.getItem('sidebarCollapsed');
+  if (saved !== null) {
+    sidebarCollapsed.value = saved === 'true';
+  }
+});
+
+onUnmounted(() => {
+  window.removeEventListener('sidebar-toggle', handleSidebarToggle as EventListener);
+});
 </script>
 
 <style scoped>
@@ -74,7 +94,7 @@ import { NMessageProvider } from 'naive-ui';
 
 .sidebar {
   background-color: #fff;
-  width: 18rem;
+  width: 240px;
   height: 100%;
   position: fixed;
   margin: 0;
@@ -85,14 +105,23 @@ import { NMessageProvider } from 'naive-ui';
   box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
   scrollbar-color: rgb(184.875, 44.625, 126.225) #c2c2c4;
   scrollbar-width: thin;
+  transition: width 0.3s;
+}
+
+.sidebar-collapsed {
+  width: 64px;
 }
 
 .content {
-  margin-left: 300px; /* 预留左侧导航栏宽度 */
-  padding: 32px; /* 内边距可根据需要调整 */
-  height: calc(100vh - 64px - 36px); /* 减去顶部导航栏（64px）和底部导航栏（36px）的高度 */
-  /* overflow-y: auto; /* 允许垂直滚动，仅在内容溢出时显示 */
+  margin-left: 240px;
+  padding: 32px;
+  height: calc(100vh - 64px - 36px);
   background-color: #fff;
+  transition: margin-left 0.3s;
+}
+
+.content-expanded {
+  margin-left: 64px;
 }
 
 .header-left {

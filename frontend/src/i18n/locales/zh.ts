@@ -125,16 +125,23 @@ export default {
   },
   menu: {
     home: '首页',
-    ipManagement: '主机管理',
+    ipManagement: '主机管理', // 保留旧键以兼容
+    ipAddressManagement: 'IP地址管理',
     credentials: '凭证管理',
-    hostInfo: '主机信息',
+    hostInfo: '主机信息', // 保留旧键以兼容
+    resourceCollection: '资源采集',
     scanConfig: '配置扫描',
     task: '任务管理',
     settings: '系统设置',
     monitor: '资源监控',
     userManagement: '用户管理',
     notifications: '通知历史',
-    notificationSettings: '通知配置'
+    notificationSettings: '通知配置',
+    category: {
+      basicResource: '基础资源',
+      resourceCollection: '资源采集',
+      systemManagement: '系统管理'
+    }
   },
   auth: {
     login: '登录',
