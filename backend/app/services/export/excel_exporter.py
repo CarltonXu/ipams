@@ -499,18 +499,19 @@ class ExcelExporter:
                 return network_interfaces
             return json.dumps(network_interfaces, ensure_ascii=False) if network_interfaces else ""
     
-    def get_template_list(self) -> List[Dict[str, str]]:
+    def get_template_list(self) -> List[Dict[str, Any]]:
         """
         获取预设模板列表
         
         Returns:
-            模板列表
+            模板列表，包含id、name、field_count和fields
         """
         return [
             {
                 'id': key,
                 'name': value['name'],
-                'field_count': len(value['fields'])
+                'field_count': len(value['fields']),
+                'fields': value['fields']  # 包含字段列表
             }
             for key, value in self.TEMPLATES.items()
         ]

@@ -93,6 +93,7 @@ export interface ExportTemplate {
   id: string;
   name: string;
   field_count: number;
+  fields?: string[];  // 模板包含的字段列表
 }
 
 export interface ExportField {

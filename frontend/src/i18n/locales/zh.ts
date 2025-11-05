@@ -1547,7 +1547,8 @@ export default {
     messages: {
       noFieldsSelected: '请至少选择一个字段',
       exportSuccess: '导出成功',
-      exportFailed: '导出失败'
+      exportFailed: '导出失败',
+      templateFieldsNotFound: '模板字段未找到，请手动选择字段'
     }
   }
 };

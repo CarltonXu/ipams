@@ -153,14 +153,18 @@ const handleTemplateSelect = (templateId: string) => {
   } else {
     selectedTemplate.value = templateId;
     const template = templates.value.find(t => t.id === templateId);
-    if (template && template.fields) {
+    if (template && template.fields && template.fields.length > 0) {
+      // 使用模板的字段列表
       selectedFields.value = [...template.fields];
       // 自动展开包含选中字段的分类
       fields.value.forEach(field => {
-        if (template.fields.includes(field.field)) {
+        if (template.fields!.includes(field.field)) {
           expandedCategories.value.add(field.category);
         }
       });
+    } else {
+      // 如果模板没有fields字段，尝试从TEMPLATES配置中获取（兼容旧版本）
+      ElMessage.warning(t('export.messages.templateFieldsNotFound'));
     }
   }
 };
@@ -339,7 +343,7 @@ const loadFields = async () => {
             </span>
           </span>
         </div>
-        <el-scrollbar height="320px" class="fields-scrollbar">
+        <el-scrollbar class="fields-scrollbar">
           <div class="fields-container">
             <div
               v-for="[category, categoryFields] in categorizedFields"
@@ -415,6 +419,7 @@ const loadFields = async () => {
 <style scoped>
 .export-dialog {
   --el-dialog-border-radius: 12px;
+  margin-top: 80px;
 }
 
 .export-container {
@@ -532,6 +537,7 @@ const loadFields = async () => {
   border: 1px solid var(--el-border-color-lighter);
   border-radius: 8px;
   padding: 8px;
+  height: 65vh;
 }
 
 .fields-container {

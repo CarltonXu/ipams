@@ -1468,7 +1468,8 @@ export default {
     messages: {
       noFieldsSelected: 'Please select at least one field',
       exportSuccess: 'Export successful',
-      exportFailed: 'Export failed'
+      exportFailed: 'Export failed',
+      templateFieldsNotFound: 'Template fields not found, please select fields manually'
     }
   }
 };
