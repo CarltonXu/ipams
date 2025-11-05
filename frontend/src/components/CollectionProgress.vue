@@ -198,10 +198,15 @@ onUnmounted(() => {
           <el-alert
             :title="t('hostInfo.collectionProgress.error', '错误信息')"
             type="error"
-            :description="progress.error_message"
             show-icon
             :closable="false"
-          />
+          >
+            <template #default>
+              <div class="error-message-content">
+                <pre class="error-text">{{ progress.error_message }}</pre>
+              </div>
+            </template>
+          </el-alert>
         </div>
 
         <!-- 状态标签 -->
@@ -300,6 +305,25 @@ onUnmounted(() => {
 
 .error-section {
   margin-top: 10px;
+}
+
+.error-message-content {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.error-text {
+  margin: 0;
+  padding: 0;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'Courier New', monospace;
+  font-size: 12px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--el-color-danger);
+  background-color: var(--el-fill-color-lighter);
+  padding: 10px;
+  border-radius: 4px;
 }
 
 .status-section {

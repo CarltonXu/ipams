@@ -61,6 +61,19 @@ class AnsibleCollector:
                 
                 if result.get('success'):
                     host_info = self._parse_linux_result(result)
+                    # 检查解析结果是否为空
+                    if not host_info:
+                        error_msg = 'Failed to parse collection result or no data collected'
+                        logger.warning(
+                            f"Linux collection result is empty for {host_ip}: {error_msg}",
+                            extra={
+                                'host_ip': host_ip,
+                                'error': error_msg,
+                                'operation': 'linux_collect'
+                            }
+                        )
+                        return {'success': False, 'error': error_msg}
+                    
                     logger.info(
                         "Linux collection completed",
                         extra={
@@ -80,18 +93,21 @@ class AnsibleCollector:
                             'operation': 'linux_collect'
                         }
                     )
-                    return {}
+                    # 返回包含错误信息的字典，而不是空字典
+                    return {'success': False, 'error': error_msg}
                     
         except Exception as e:
+            error_msg = str(e)
             logger.error(
-                f"Error collecting Linux info from {host_ip}: {str(e)}",
+                f"Error collecting Linux info from {host_ip}: {error_msg}",
                 extra={
                     'host_ip': host_ip,
-                    'error': str(e),
+                    'error': error_msg,
                     'operation': 'linux_collect'
                 }
             )
-            return {}
+            # 返回包含错误信息的字典，而不是空字典
+            return {'success': False, 'error': error_msg}
     
     def collect_windows_info(self, host_ip: str, username: str, password: str, port: int = 5985) -> Dict[str, Any]:
         """
@@ -134,6 +150,19 @@ class AnsibleCollector:
                 
                 if result.get('success'):
                     host_info = self._parse_windows_result(result)
+                    # 检查解析结果是否为空
+                    if not host_info:
+                        error_msg = 'Failed to parse collection result or no data collected'
+                        logger.warning(
+                            f"Windows collection result is empty for {host_ip}: {error_msg}",
+                            extra={
+                                'host_ip': host_ip,
+                                'error': error_msg,
+                                'operation': 'windows_collect'
+                            }
+                        )
+                        return {'success': False, 'error': error_msg}
+                    
                     logger.info(
                         "Windows collection completed",
                         extra={
@@ -153,18 +182,21 @@ class AnsibleCollector:
                             'operation': 'windows_collect'
                         }
                     )
-                    return {}
+                    # 返回包含错误信息的字典，而不是空字典
+                    return {'success': False, 'error': error_msg}
                     
         except Exception as e:
+            error_msg = str(e)
             logger.error(
-                f"Error collecting Windows info from {host_ip}: {str(e)}",
+                f"Error collecting Windows info from {host_ip}: {error_msg}",
                 extra={
                     'host_ip': host_ip,
-                    'error': str(e),
+                    'error': error_msg,
                     'operation': 'windows_collect'
                 }
             )
-            return {}
+            # 返回包含错误信息的字典，而不是空字典
+            return {'success': False, 'error': error_msg}
     
     def _prepare_inventory(self, host_ip: str, username: str, password: Optional[str], 
                           private_key: Optional[str], os_type: str, port: int) -> str:
@@ -237,7 +269,10 @@ class AnsibleCollector:
                 # 先返回成功状态，后续可以从fact_cache或文件中读取
                 return {'success': True, 'runner': r}
             else:
-                error_msg = f"Playbook failed with status: {r.status}"
+                # 从事件中提取详细的错误信息
+                error_msg = self._extract_error_from_events(r)
+                if not error_msg:
+                    error_msg = f"Playbook failed with status: {r.status}"
                 return {'success': False, 'error': error_msg, 'runner': r}
                 
         except Exception as e:
@@ -288,6 +323,87 @@ class AnsibleCollector:
         except Exception as e:
             logger.error(f"Error parsing Linux result: {str(e)}")
             return {}
+    
+    def _extract_error_from_events(self, runner) -> str:
+        """
+        从 ansible-runner 的事件中提取详细的错误信息
+        
+        Args:
+            runner: ansible-runner 的 runner 对象
+            
+        Returns:
+            错误信息字符串
+        """
+        try:
+            error_messages = []
+            processed_hosts = set()  # 避免重复处理同一主机
+            
+            if runner and hasattr(runner, 'events'):
+                for event in runner.events:
+                    event_type = event.get('event')
+                    event_data = event.get('event_data', {})
+                    host = event_data.get('host', '')
+                    
+                    # 查找失败和不可达的事件
+                    if event_type in ['runner_on_failed', 'runner_on_unreachable']:
+                        res = event_data.get('res', {})
+                        msg = res.get('msg', '')
+                        
+                        # 构建主机标识
+                        host_key = f"{host}:{event_type}"
+                        if host_key in processed_hosts:
+                            continue
+                        processed_hosts.add(host_key)
+                        
+                        # 对于 unreachable，提取更详细的信息
+                        if event_type == 'runner_on_unreachable':
+                            # 提取完整的错误消息
+                            if msg:
+                                # 提取关键错误信息（如 SSH 连接失败的原因）
+                                if 'WARNING: REMOTE HOST IDENTIFICATION HAS CHANGED' in msg:
+                                    # 提取 SSH 主机密钥变更的详细信息
+                                    lines = msg.split('\n')
+                                    key_info = []
+                                    for line in lines:
+                                        if 'WARNING' in line or 'fingerprint' in line or 'Offending' in line or 'Permission denied' in line:
+                                            key_info.append(line.strip())
+                                    if key_info:
+                                        error_messages.append(f"[{host}] SSH连接失败:\n" + '\n'.join(key_info))
+                                    else:
+                                        error_messages.append(f"[{host}] {msg}")
+                                else:
+                                    error_messages.append(f"[{host}] {msg}")
+                            else:
+                                error_messages.append(f"[{host}] 主机不可达: 无法连接到目标主机")
+                        elif event_type == 'runner_on_failed':
+                            # 提取失败原因
+                            if msg:
+                                error_messages.append(f"[{host}] 任务失败: {msg}")
+                            else:
+                                error_messages.append(f"[{host}] 任务执行失败")
+                        
+                        # 提取 stderr 中的详细信息
+                        if 'stderr' in res and res['stderr']:
+                            stderr = res['stderr'].strip()
+                            if stderr and stderr not in error_messages:
+                                # 只提取关键错误行
+                                stderr_lines = stderr.split('\n')
+                                for line in stderr_lines:
+                                    if any(keyword in line.lower() for keyword in ['error', 'failed', 'denied', 'refused', 'timeout']):
+                                        if line.strip() and line.strip() not in error_messages:
+                                            error_messages.append(line.strip())
+                                        break  # 只取第一行关键错误
+            
+            # 如果找到了错误信息，合并返回
+            if error_messages:
+                # 合并所有错误信息，用换行符分隔，最多返回前5条
+                return '\n'.join(error_messages[:5])
+            
+            return ""
+            
+        except Exception as e:
+            logger.error(f"Error extracting error from events: {str(e)}")
+            return ""
     
     def _parse_windows_result(self, result: Dict[str, Any]) -> Dict[str, Any]:
         """

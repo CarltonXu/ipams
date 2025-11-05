@@ -737,6 +737,12 @@ def get_collection_progress(current_user, task_id):
             completed = task.success_count + task.failed_count
             progress_percent = round((completed / task.total_hosts) * 100, 2)
         
+        # 尝试从 CollectionProgress 获取详细错误信息（如果有）
+        progress_detail = CollectionProgress.query.filter_by(task_id=task_id).first()
+        error_message = None
+        if progress_detail and progress_detail.error_message:
+            error_message = progress_detail.error_message
+        
         return jsonify({
             'task_id': task.id,
             'total_count': task.total_hosts,
@@ -746,6 +752,7 @@ def get_collection_progress(current_user, task_id):
             'status': task.status,
             'current_step': f"Processing hosts ({task.success_count + task.failed_count}/{task.total_hosts})",
             'progress_percent': progress_percent,
+            'error_message': error_message,  # 添加错误信息字段
             'created_at': task.created_at.isoformat() if task.created_at else None,
             'updated_at': task.end_time.isoformat() if task.end_time else None
         }), 200

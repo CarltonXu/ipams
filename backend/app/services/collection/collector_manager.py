@@ -655,8 +655,28 @@ class CollectorManager:
                             progress.total_count = 1 + vm_count
             else:
                 task.failed_count += 1
+                error_msg = result.get('error', 'Collection returned no data')
+                host_info.collection_error = error_msg
+                
                 if progress:
                     progress.failed_count += 1
+                    # 将错误信息追加到进度记录中
+                    host_ip = host_info.ip.ip_address if host_info.ip else host_id
+                    error_entry = f"[{host_ip}] {error_msg}"
+                    
+                    # 如果已有错误信息，追加新的；否则创建新的
+                    if progress.error_message:
+                        # 检查是否已有该主机的错误信息，避免重复
+                        if f"[{host_ip}]" not in progress.error_message:
+                            progress.error_message = progress.error_message + "\n" + error_entry
+                    else:
+                        progress.error_message = error_entry
+                    
+                    # 限制错误信息长度，避免过长
+                    if progress.error_message and len(progress.error_message) > 2000:
+                        # 只保留最新的错误信息
+                        lines = progress.error_message.split('\n')
+                        progress.error_message = '\n'.join(lines[-10:])  # 保留最后10条错误
             
             if progress:
                 progress.updated_at = datetime.utcnow()
@@ -674,11 +694,34 @@ class CollectorManager:
             with app.app_context():
                 task = CollectionTask.query.get(task_id)
                 progress = CollectionProgress.query.filter_by(task_id=task_id).first()
+                host_info = HostInfo.query.get(host_id)
+                
+                error_msg = str(e)
+                if host_info:
+                    host_info.collection_error = error_msg
+                    host_ip = host_info.ip.ip_address if host_info.ip else host_id
+                else:
+                    host_ip = host_id
+                
                 if task:
                     task.failed_count += 1
                 if progress:
                     progress.failed_count += 1
                     progress.updated_at = datetime.utcnow()
+                    
+                    # 将异常错误信息追加到进度记录中
+                    error_entry = f"[{host_ip}] 采集异常: {error_msg}"
+                    if progress.error_message:
+                        if f"[{host_ip}]" not in progress.error_message:
+                            progress.error_message = progress.error_message + "\n" + error_entry
+                    else:
+                        progress.error_message = error_entry
+                    
+                    # 限制错误信息长度
+                    if progress.error_message and len(progress.error_message) > 2000:
+                        lines = progress.error_message.split('\n')
+                        progress.error_message = '\n'.join(lines[-10:])
+                
                 db.session.commit()
     
     def _get_credential(self, host_info: HostInfo, credential_id: Optional[str] = None) -> Optional[Credential]:
@@ -786,10 +829,21 @@ class CollectorManager:
             else:
                 return {'success': False, 'error': 'Unsupported credential type'}
             
-            if result:
-                return {'success': True, 'data': result}
-            else:
-                return {'success': False, 'error': 'Collection returned no data'}
+            # 检查返回结果格式
+            if isinstance(result, dict):
+                # 如果结果已经是标准格式（包含 success 字段），直接返回
+                if 'success' in result:
+                    if result.get('success'):
+                        return {'success': True, 'data': result.get('data', result)}
+                    else:
+                        # 失败情况，返回错误信息
+                        return {'success': False, 'error': result.get('error', 'Collection failed')}
+                # 如果结果是非空字典但没有 success 字段，认为是成功的数据
+                elif result:
+                    return {'success': True, 'data': result}
+            
+            # 空结果或非字典类型
+            return {'success': False, 'error': 'Collection returned no data'}
                 
         except Exception as e:
             logger.error(f"Error executing collection: {str(e)}")
