@@ -18,6 +18,9 @@
           v-model="hostTypeFilter"
           class="filter-select"
           :placeholder="$t('hostInfo.hostType')"
+          clearable
+          @change="handleFilterChange"
+          @clear="() => handleFilterClear('hostType')"
         >
           <el-option :label="$t('hostInfo.filters.all')" value="all" />
           <el-option :label="$t('hostInfo.types.physical')" value="physical" />
@@ -29,6 +32,9 @@
           v-model="statusFilter"
           class="filter-select"
           :placeholder="$t('hostInfo.collectionStatus')"
+          clearable
+          @change="handleFilterChange"
+          @clear="() => handleFilterClear('status')"
         >
           <el-option :label="$t('hostInfo.filters.all')" value="all" />
           <el-option :label="$t('hostInfo.status.pending')" value="pending" />
@@ -525,6 +531,24 @@ const handleRefresh = () => {
 };
 
 const handleSearch = () => {
+  pagination.value.currentPage = 1;
+  loadHosts();
+};
+
+// 处理筛选器变化，自动触发接口调用
+const handleFilterChange = () => {
+  pagination.value.currentPage = 1;
+  loadHosts();
+};
+
+// 处理筛选器清除，重置为all并触发接口调用
+const handleFilterClear = (filterType: 'hostType' | 'status') => {
+  // clearable触发时，v-model已经是null或undefined，需要重置为'all'
+  if (filterType === 'hostType') {
+    hostTypeFilter.value = 'all';
+  } else if (filterType === 'status') {
+    statusFilter.value = 'all';
+  }
   pagination.value.currentPage = 1;
   loadHosts();
 };
