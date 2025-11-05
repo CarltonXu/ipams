@@ -1225,6 +1225,7 @@ export default {
         cancelled: 'Cancelled'
       }
     },
+    credential: 'Credential',
     tabs: {
       basic: 'Basic Info',
       hardware: 'Hardware Info',
@@ -1234,6 +1235,12 @@ export default {
       raw: 'Raw Data',
       hostList: 'Host List',
       taskHistory: 'Collection Task History'
+    },
+    credentialInfo: {
+      currentCredential: 'Current Credential',
+      changeCredential: 'Change Credential',
+      selectNewCredential: 'Select New Credential',
+      sameCredential: 'Selected credential is the same as the current one'
     },
     collectionTask: {
       taskId: 'Task ID',

@@ -11,6 +11,7 @@ interface Props {
   modelValue: boolean;
   hostId: string;
   hostIp: string;
+  currentBindings?: any[];  // 当前已绑定的凭证
 }
 
 const props = defineProps<Props>();
@@ -23,6 +24,14 @@ const visible = computed({
 
 const selectedCredentialId = ref<string>('');
 const loading = ref(false);
+
+// 当前已绑定的凭证（只取第一个，因为只允许一个）
+const currentBinding = computed(() => {
+  if (props.currentBindings && props.currentBindings.length > 0) {
+    return props.currentBindings[0];
+  }
+  return null;
+});
 
 const availableCredentials = computed(() => {
   return credentialStore.credentials.filter(c => !(c as any).deleted);
@@ -44,7 +53,12 @@ onMounted(async () => {
 watch(() => props.modelValue, (newVal) => {
   if (newVal) {
     loadCredentials();
-    selectedCredentialId.value = '';
+    // 如果有当前绑定的凭证，默认选中它
+    if (currentBinding.value && currentBinding.value.credential_id) {
+      selectedCredentialId.value = currentBinding.value.credential_id;
+    } else {
+      selectedCredentialId.value = '';
+    }
   }
 });
 
@@ -62,12 +76,20 @@ const handleBind = async () => {
     return;
   }
 
+  // 如果选择的凭证和当前绑定的一样，提示用户
+  if (currentBinding.value && currentBinding.value.credential_id === selectedCredentialId.value) {
+    ElMessage.info(t('hostInfo.credentialInfo.sameCredential', '选择的凭证与当前绑定的凭证相同'));
+    visible.value = false;
+    return;
+  }
+
   loading.value = true;
   try {
-    // 发送事件让父组件处理绑定
+    // 发送事件让父组件处理绑定（如果已有绑定，会先解绑再绑定新的）
     emit('bindSuccess', {
       hostId: props.hostId,
-      credentialId: selectedCredentialId.value
+      credentialId: selectedCredentialId.value,
+      currentBindingId: currentBinding.value?.id || null
     });
     visible.value = false;
   } finally {
@@ -93,11 +115,36 @@ const handleClose = () => {
         <p><strong>{{ $t('hostInfo.ip') }}:</strong> {{ hostIp }}</p>
       </div>
 
+      <!-- 显示当前已绑定的凭证 -->
+      <div v-if="currentBinding && currentBinding.credential" class="current-credential">
+        <el-alert
+          :title="$t('hostInfo.credentialInfo.currentCredential', '当前绑定的凭证')"
+          type="info"
+          :closable="false"
+          show-icon
+        >
+          <template #default>
+            <div class="current-credential-info">
+              <el-tag type="success" size="small">
+                {{ currentBinding.credential.name }}
+              </el-tag>
+              <el-tag
+                :type="getTypeTagType(currentBinding.credential.credential_type)"
+                size="small"
+                style="margin-left: 8px"
+              >
+                {{ $t(`credential.types.${currentBinding.credential.credential_type}`) }}
+              </el-tag>
+            </div>
+          </template>
+        </el-alert>
+      </div>
+
       <el-form label-position="top" class="bind-form">
-        <el-form-item :label="$t('credential.title')" required>
+        <el-form-item :label="currentBinding ? $t('hostInfo.credentialInfo.changeCredential', '更换凭证') : $t('credential.title')" required>
           <el-select
             v-model="selectedCredentialId"
-            :placeholder="$t('hostInfo.actions.selectCredential') || '请选择凭证'"
+            :placeholder="currentBinding ? $t('hostInfo.credentialInfo.selectNewCredential', '选择新的凭证') : ($t('hostInfo.actions.selectCredential') || '请选择凭证')"
             filterable
             style="width: 100%"
           >
@@ -171,6 +218,16 @@ const handleClose = () => {
 
 .no-credentials {
   margin-top: 20px;
+}
+
+.current-credential {
+  margin-bottom: 20px;
+}
+
+.current-credential-info {
+  display: flex;
+  align-items: center;
+  margin-top: 8px;
 }
 
 .dialog-footer {

@@ -123,6 +123,29 @@
               </el-tag>
             </template>
           </el-table-column>
+          <el-table-column :label="$t('hostInfo.credential', '凭证')" width="250">
+            <template #default="{ row }">
+              <div v-if="row.credential_bindings && row.credential_bindings.length > 0" class="credential-display">
+                <el-tag
+                  v-for="binding in row.credential_bindings"
+                  :key="binding.id"
+                  type="success"
+                  size="small"
+                  style="margin-right: 4px"
+                >
+                  {{ binding.credential?.name || '-' }}
+                </el-tag>
+                <el-tag
+                  v-if="row.credential_bindings[0]?.credential"
+                  :type="getCredentialTypeTagType(row.credential_bindings[0].credential.credential_type)"
+                  size="small"
+                >
+                  {{ $t(`credential.types.${row.credential_bindings[0].credential.credential_type}`) }}
+                </el-tag>
+              </div>
+              <span v-else class="no-credential">-</span>
+            </template>
+          </el-table-column>
           <el-table-column prop="last_collected_at" :label="$t('hostInfo.lastCollected')" width="180">
             <template #default="{ row }">
               {{ formatDate(row.last_collected_at) }}
@@ -272,6 +295,7 @@
       v-model="bindCredentialDialogVisible"
       :host-id="currentBindingHost?.id || ''"
       :host-ip="currentBindingHost?.ip || ''"
+      :current-bindings="currentBindingHost?.credential_bindings || []"
       @bindSuccess="handleBindSuccess"
     />
 
@@ -640,13 +664,31 @@ const handleViewDetails = (host: HostInfo) => {
 const handleBindCredential = (host: HostInfo) => {
   currentBindingHost.value = {
     id: host.id,
-    ip: host.ip?.ip_address || ''
+    ip: host.ip?.ip_address || '',
+    credential_bindings: host.credential_bindings || []
   };
   bindCredentialDialogVisible.value = true;
 };
 
-const handleBindSuccess = async (data: {hostId: string, credentialId: string}) => {
+const handleBindSuccess = async (data: {hostId: string, credentialId: string, currentBindingId?: string | null}) => {
   try {
+    // 如果已有绑定，先解绑旧的
+    if (data.currentBindingId) {
+      const host = originalHostsData.value.find(h => h.id === data.hostId);
+      if (host && host.credential_bindings && host.credential_bindings.length > 0) {
+        const binding = host.credential_bindings.find((b: any) => b.id === data.currentBindingId);
+        if (binding && binding.credential_id) {
+          try {
+            await hostInfoStore.unbindCredential(data.hostId, binding.credential_id);
+          } catch (error: any) {
+            // 解绑失败不影响绑定新凭证
+            console.warn('Failed to unbind old credential:', error);
+          }
+        }
+      }
+    }
+    
+    // 绑定新凭证
     await hostInfoStore.bindCredential(data.hostId, {
       credential_id: data.credentialId
     });
@@ -736,11 +778,30 @@ const getTypeTagType = (type: string) => {
 const isSelectable = (row: HostInfo) => {
   return !row.parent_host_id;
 };
+
+const getCredentialTypeTagType = (type: string) => {
+  const typeMap: Record<string, string> = {
+    linux: 'success',
+    windows: 'primary',
+    vmware: 'warning'
+  };
+  return typeMap[type] || 'info';
+};
 </script>
 
 <style scoped>
 .host-management {
   padding: 20px;
+}
+
+.credential-display {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.no-credential {
+  color: var(--el-text-color-placeholder);
 }
 
 .toolbar {

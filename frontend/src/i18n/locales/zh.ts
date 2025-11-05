@@ -1304,6 +1304,7 @@ export default {
         cancelled: '已取消'
       }
     },
+    credential: '凭证',
     tabs: {
       basic: '基本信息',
       hardware: '硬件信息',
@@ -1313,6 +1314,12 @@ export default {
       raw: '原始数据',
       hostList: '主机列表',
       taskHistory: '采集任务历史'
+    },
+    credentialInfo: {
+      currentCredential: '当前绑定的凭证',
+      changeCredential: '更换凭证',
+      selectNewCredential: '选择新的凭证',
+      sameCredential: '选择的凭证与当前绑定的凭证相同'
     },
     collectionTask: {
       taskId: '任务ID',
