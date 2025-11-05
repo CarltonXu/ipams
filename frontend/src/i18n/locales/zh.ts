@@ -1493,10 +1493,19 @@ export default {
     }
   },
   export: {
-    title: '导出配置',
+    title: '批量导出配置',
+    selectedHosts: '已选择 {count} 台主机',
+    selectedFields: '已选择 {count} 个字段',
     selectFields: '选择导出字段',
-    selectTemplate: '选择模板',
+    selectTemplate: '快速模板',
+    searchPlaceholder: '搜索字段名称...',
+    selected: '已选择',
     templates: {
+      basic: '基础信息',
+      detailed: '详细信息',
+      full: '完整信息'
+    },
+    templateNames: {
       basic: '基础信息',
       detailed: '详细信息',
       full: '完整信息'
@@ -1510,9 +1519,30 @@ export default {
       vmware: 'VMware',
       status: '状态'
     },
+    fieldLabels: {
+      'ip_address': 'IP地址',
+      'hostname': '主机名',
+      'host_type': '主机类型',
+      'os_name': '操作系统',
+      'os_version': '系统版本',
+      'kernel_version': '内核版本',
+      'cpu_model': 'CPU型号',
+      'cpu_cores': 'CPU核心数',
+      'memory_total': '总内存(MB)',
+      'network_interfaces': '网络接口',
+      'disk_info': '磁盘信息',
+      'vmware_info': 'VMware信息',
+      'collection_status': '采集状态',
+      'last_collected_at': '最后采集时间',
+      'collection_error': '采集错误'
+    },
     actions: {
       export: '导出',
-      cancel: '取消'
+      cancel: '取消',
+      selectAll: '全选',
+      deselectAll: '清空',
+      expandAll: '展开全部',
+      collapseAll: '折叠全部'
     },
     messages: {
       noFieldsSelected: '请至少选择一个字段',

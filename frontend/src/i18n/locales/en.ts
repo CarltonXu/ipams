@@ -1414,10 +1414,19 @@ export default {
     }
   },
   export: {
-    title: 'Export Configuration',
+    title: 'Batch Export Configuration',
+    selectedHosts: 'Selected {count} hosts',
+    selectedFields: 'Selected {count} fields',
     selectFields: 'Select Export Fields',
-    selectTemplate: 'Select Template',
+    selectTemplate: 'Quick Templates',
+    searchPlaceholder: 'Search field names...',
+    selected: 'Selected',
     templates: {
+      basic: 'Basic Info',
+      detailed: 'Detailed Info',
+      full: 'Full Info'
+    },
+    templateNames: {
       basic: 'Basic Info',
       detailed: 'Detailed Info',
       full: 'Full Info'
@@ -1431,9 +1440,30 @@ export default {
       vmware: 'VMware',
       status: 'Status'
     },
+    fieldLabels: {
+      'ip_address': 'IP Address',
+      'hostname': 'Hostname',
+      'host_type': 'Host Type',
+      'os_name': 'Operating System',
+      'os_version': 'OS Version',
+      'kernel_version': 'Kernel Version',
+      'cpu_model': 'CPU Model',
+      'cpu_cores': 'CPU Cores',
+      'memory_total': 'Total Memory (MB)',
+      'network_interfaces': 'Network Interfaces',
+      'disk_info': 'Disk Information',
+      'vmware_info': 'VMware Information',
+      'collection_status': 'Collection Status',
+      'last_collected_at': 'Last Collected At',
+      'collection_error': 'Collection Error'
+    },
     actions: {
       export: 'Export',
-      cancel: 'Cancel'
+      cancel: 'Cancel',
+      selectAll: 'Select All',
+      deselectAll: 'Clear All',
+      expandAll: 'Expand All',
+      collapseAll: 'Collapse All'
     },
     messages: {
       noFieldsSelected: 'Please select at least one field',
