@@ -1370,7 +1370,9 @@ export default {
       credentialRequired: '请选择凭证',
       batchBindInfo: '将绑定 {count} 个主机到选定的凭证',
       noRunningTask: '未找到正在进行的采集任务，已刷新列表',
-      loadChildrenFailed: '加载子节点失败'
+      loadChildrenFailed: '加载子节点失败',
+      noValidHostsForBind: '没有可绑定凭证的主机（VMware子主机不能绑定凭证）',
+      someHostsSkipped: '已跳过 {count} 个VMware子主机'
     }
   },
   collection: {

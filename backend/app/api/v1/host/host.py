@@ -245,6 +245,12 @@ def bind_credential(current_user, host_id):
         if not host:
             return jsonify({'error': 'Host not found'}), 404
         
+        # 检查是否是VMware子主机，子主机不能绑定凭证
+        if host.parent_host_id:
+            return jsonify({
+                'error': 'Cannot bind credential to VMware child host. Child hosts use parent host credentials for collection.'
+            }), 400
+        
         # 检查权限
         if not current_user.is_admin and host.ip.assigned_user_id != current_user.id:
             return jsonify({'error': 'Permission denied'}), 403
@@ -434,6 +440,12 @@ def batch_bind_credentials(current_user):
                 
                 if not host:
                     errors.append(f"Host {host_id}: not found")
+                    skipped_count += 1
+                    continue
+                
+                # 检查是否是VMware子主机，子主机不能绑定凭证
+                if host.parent_host_id:
+                    errors.append(f"Host {host_id}: Cannot bind credential to VMware child host. Child hosts use parent host credentials for collection.")
                     skipped_count += 1
                     continue
                 

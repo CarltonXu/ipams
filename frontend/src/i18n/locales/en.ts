@@ -1291,7 +1291,9 @@ export default {
       credentialRequired: 'Please select a credential',
       batchBindInfo: 'Will bind {count} hosts to the selected credential',
       noRunningTask: 'No running collection task found, list refreshed',
-      loadChildrenFailed: 'Failed to load child nodes'
+      loadChildrenFailed: 'Failed to load child nodes',
+      noValidHostsForBind: 'No valid hosts for binding credentials (VMware child hosts cannot bind credentials)',
+      someHostsSkipped: 'Skipped {count} VMware child hosts'
     }
   },
   collection: {

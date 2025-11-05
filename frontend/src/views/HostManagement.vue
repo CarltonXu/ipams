@@ -131,7 +131,9 @@
           <el-table-column :label="$t('common.actions')" width="300" align="center">
             <template #default="{ row }">
               <el-button-group>
+                <!-- VMware子主机不显示绑定凭证按钮 -->
                 <el-button
+                  v-if="!row.parent_host_id"
                   type="warning"
                   size="small"
                   @click="handleBindCredential(row)"
@@ -666,10 +668,26 @@ const confirmBatchBind = async () => {
     return;
   }
   
+  // 过滤掉VMware子主机（不应该绑定凭证）
+  const validHostIds = selectedHostIds.value.filter(hostId => {
+    const host = originalHostsData.value.find(h => h.id === hostId);
+    return host && !host.parent_host_id;
+  });
+  
+  if (validHostIds.length === 0) {
+    ElMessage.warning(t('hostInfo.messages.noValidHostsForBind', '没有可绑定凭证的主机（VMware子主机不能绑定凭证）'));
+    return;
+  }
+  
+  if (validHostIds.length < selectedHostIds.value.length) {
+    const skippedCount = selectedHostIds.value.length - validHostIds.length;
+    ElMessage.warning(t('hostInfo.messages.someHostsSkipped', { count: skippedCount }, `已跳过 ${skippedCount} 个VMware子主机`));
+  }
+  
   loading.value = true;
   try {
     await hostInfoStore.batchBindCredentials({
-      host_ids: selectedHostIds.value,
+      host_ids: validHostIds,
       credential_id: batchBindCredentialId.value
     });
     ElMessage.success(t('hostInfo.messages.bindSuccess'));
