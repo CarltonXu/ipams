@@ -341,6 +341,176 @@ class CollectorManager:
             logger.error(f"Error executing VMware collection with progress: {str(e)}")
             return {'success': False, 'error': str(e)}
     
+    def _collect_vmware_child_vm(self, child_host_info: HostInfo, task_id: str, 
+                                 progress_callback: Optional[Callable] = None) -> Dict[str, Any]:
+        """
+        采集VMware子VM（使用父主机的凭证）
+        
+        Args:
+            child_host_info: 子VM主机信息
+            task_id: 任务ID
+            progress_callback: 进度回调（可选，用于显示进度）
+            
+        Returns:
+            采集结果
+        """
+        try:
+            # 获取父主机（vCenter）
+            parent_host = HostInfo.query.get(child_host_info.parent_host_id)
+            if not parent_host:
+                return {'success': False, 'error': f'Parent host not found for child VM {child_host_info.id}'}
+            
+            # 获取父主机的IP地址（vCenter地址）
+            parent_ip = parent_host.ip.ip_address if parent_host.ip else None
+            if not parent_ip:
+                return {'success': False, 'error': f'Parent host IP not found for child VM {child_host_info.id}'}
+            
+            # 获取父主机的凭证
+            from app.models.models import HostCredentialBinding, Credential
+            binding = HostCredentialBinding.query.filter_by(host_id=parent_host.id).first()
+            if not binding:
+                return {'success': False, 'error': f'No credential bound to parent host {parent_host.id}'}
+            
+            credential = Credential.query.get(binding.credential_id)
+            if not credential or credential.deleted:
+                return {'success': False, 'error': f'Credential not found or deleted for parent host {parent_host.id}'}
+            
+            if credential.credential_type != 'vmware':
+                return {'success': False, 'error': f'Parent host credential is not VMware type'}
+            
+            # 解密凭证
+            from app.core.security.encryption import decrypt_credential
+            username = decrypt_credential(credential.username) if credential.username else None
+            password = decrypt_credential(credential.password) if credential.password else None
+            
+            if not username or not password:
+                return {'success': False, 'error': 'VMware credential username or password is empty'}
+            
+            # 获取子VM的名称或UUID
+            vm_name = None
+            vm_uuid = None
+            
+            # 优先从vmware_info中获取
+            if child_host_info.vmware_info:
+                if isinstance(child_host_info.vmware_info, dict):
+                    vm_name = child_host_info.vmware_info.get('vm_name')
+                    vm_uuid = child_host_info.vmware_info.get('vm_uuid')
+            
+            # 如果没有，从raw_data中获取
+            if not vm_name and not vm_uuid:
+                if child_host_info.raw_data and isinstance(child_host_info.raw_data, dict):
+                    vmware_info = child_host_info.raw_data.get('vmware_info', {})
+                    if isinstance(vmware_info, dict):
+                        vm_name = vmware_info.get('vm_name')
+                        vm_uuid = vmware_info.get('vm_uuid')
+            
+            # 如果还是没有，尝试从hostname获取
+            if not vm_name:
+                vm_name = child_host_info.hostname
+            
+            if not vm_name and not vm_uuid:
+                return {'success': False, 'error': 'Cannot find VM name or UUID for child VM'}
+            
+            logger.info(
+                f"开始采集VMware子VM: vCenter={parent_ip}, VM名称={vm_name}, VM UUID={vm_uuid}",
+                extra={
+                    'parent_host_id': parent_host.id,
+                    'child_host_id': child_host_info.id,
+                    'vcenter_ip': parent_ip,
+                    'vm_name': vm_name,
+                    'vm_uuid': vm_uuid,
+                    'task_id': task_id,
+                    'operation': 'vmware_child_vm_collect_start'
+                }
+            )
+            
+            # 更新进度（不使用回调，直接更新）
+            progress = CollectionProgress.query.filter_by(task_id=task_id).first()
+            if progress:
+                progress.current_step = f'正在采集VM: {vm_name or vm_uuid}'
+                progress.updated_at = datetime.utcnow()
+                db.session.commit()
+            
+            # 调用VMware采集器，只采集这一台VM
+            from flask import current_app
+            vm_data = self.vmware_collector.collect_vm_info(
+                vcenter_host=parent_ip,
+                username=username,
+                password=password,
+                vm_name=vm_name,
+                vm_uuid=vm_uuid,
+                collect_all_vms=False,  # 只采集指定的VM
+                progress_callback=None,  # 单个VM不需要进度回调
+                max_workers=None
+            )
+            
+            if not vm_data:
+                return {'success': False, 'error': f'VM not found: {vm_name or vm_uuid}'}
+            
+            # 更新进度：采集完成，但不在这里更新completed_count，让后续逻辑统一处理
+            if progress:
+                progress.current_step = f'VM采集完成: {vm_name or vm_uuid}'
+                progress.updated_at = datetime.utcnow()
+                db.session.commit()
+            
+            # 更新子VM的主机信息
+            # vm_data是单个VM的字典，需要包装成标准格式
+            if isinstance(vm_data, dict):
+                # 将VM数据包装成标准格式
+                collection_data = {
+                    'hostname': vm_data.get('vm_name') or vm_data.get('hostname'),
+                    'os_name': vm_data.get('os_name'),
+                    'os_version': vm_data.get('os_version'),
+                    'kernel_version': vm_data.get('kernel_version'),
+                    'cpu_model': vm_data.get('cpu_model'),
+                    'cpu_cores': vm_data.get('cpu_cores'),
+                    'memory_total': vm_data.get('memory_total'),
+                    'memory_free_mb': vm_data.get('memory_free_mb'),
+                    'os_bit': vm_data.get('os_bit'),
+                    'boot_method': vm_data.get('boot_method'),
+                    'disk_info': vm_data.get('disk_info'),
+                    'network_interfaces': vm_data.get('network_interfaces'),
+                    'vmware_info': vm_data  # 保留完整的VMware信息
+                }
+                self._update_host_info(child_host_info, collection_data)
+            
+            # 更新子VM的采集状态和原始数据
+            child_host_info.collection_status = 'success'
+            child_host_info.last_collected_at = datetime.utcnow()
+            child_host_info.collection_error = None
+            if isinstance(vm_data, dict):
+                child_host_info.raw_data = vm_data
+            db.session.commit()
+            
+            logger.info(
+                f"VMware子VM采集完成: vCenter={parent_ip}, VM名称={vm_name}",
+                extra={
+                    'parent_host_id': parent_host.id,
+                    'child_host_id': child_host_info.id,
+                    'vcenter_ip': parent_ip,
+                    'vm_name': vm_name,
+                    'task_id': task_id,
+                    'operation': 'vmware_child_vm_collect_complete'
+                }
+            )
+            
+            return {
+                'success': True,
+                'data': vm_data
+            }
+            
+        except Exception as e:
+            logger.error(
+                f"Error collecting VMware child VM: {str(e)}",
+                extra={
+                    'child_host_id': child_host_info.id,
+                    'task_id': task_id,
+                    'operation': 'vmware_child_vm_collect_error'
+                },
+                exc_info=True
+            )
+            return {'success': False, 'error': str(e)}
+    
     def collect_batch_hosts(self, host_ids: List[str], user_id: str) -> str:
         """
         批量采集主机信息
@@ -884,25 +1054,32 @@ class CollectorManager:
                             exc_info=True
                         )
             
-            # 执行采集（如果是VMware，传递进度回调）
-            # 检查凭证类型，判断是否为VMware（因为host_type可能为None）
-            credential_type = None
-            from app.models.models import HostCredentialBinding, Credential
-            binding = HostCredentialBinding.query.filter_by(host_id=host_id).first()
-            if binding:
-                cred = Credential.query.get(binding.credential_id)
-                if cred and not cred.deleted:
-                    credential_type = cred.credential_type
-            
-            is_vmware = host_info.host_type == 'vmware' or credential_type == 'vmware'
-            
-            if is_vmware:
-                # 对于VMware，需要传递进度回调
-                if progress_callback is None:
-                    logger.error(f"progress_callback is None for VMware host! host_id={host_id}, task_id={task_id}")
-                result = self._collect_single_host_with_progress(host_id, progress_callback)
+            # 检查是否是VMware子主机（有parent_host_id）
+            if host_info.parent_host_id:
+                # 这是VMware子VM，需要从父主机获取凭证并只采集这一台VM
+                # 注意：子VM采集不应该使用progress_callback，因为它是为批量VM采集设计的
+                # 子VM采集应该直接更新进度，而不是通过回调
+                result = self._collect_vmware_child_vm(host_info, task_id, None)
             else:
-                result = self.collect_single_host(host_id)
+                # 执行采集（如果是VMware父主机，传递进度回调）
+                # 检查凭证类型，判断是否为VMware（因为host_type可能为None）
+                credential_type = None
+                from app.models.models import HostCredentialBinding, Credential
+                binding = HostCredentialBinding.query.filter_by(host_id=host_id).first()
+                if binding:
+                    cred = Credential.query.get(binding.credential_id)
+                    if cred and not cred.deleted:
+                        credential_type = cred.credential_type
+                
+                is_vmware = host_info.host_type == 'vmware' or credential_type == 'vmware'
+                
+                if is_vmware:
+                    # 对于VMware父主机，需要传递进度回调
+                    if progress_callback is None:
+                        logger.error(f"progress_callback is None for VMware host! host_id={host_id}, task_id={task_id}")
+                    result = self._collect_single_host_with_progress(host_id, progress_callback)
+                else:
+                    result = self.collect_single_host(host_id)
             
             # 更新任务计数和进度
             task = CollectionTask.query.get(task_id)
@@ -936,16 +1113,27 @@ class CollectorManager:
                 
                 task.success_count += 1
                 if progress:
-                    # 对于VMware，completed_count已经在回调中更新了
-                    # 这里确保至少是1（父主机采集完成）
-                    if host_info.host_type != 'vmware' or progress.completed_count == 0:
+                    # 检查是否是VMware子VM（有parent_host_id）
+                    if host_info.parent_host_id:
+                        # 子VM采集：直接设置为1（因为只采集了1台主机）
+                        # 确保total_count至少是1
+                        if progress.total_count == 0:
+                            progress.total_count = 1
+                        progress.completed_count = 1
+                    elif host_info.host_type == 'vmware':
+                        # VMware父主机批量采集：completed_count已经在回调中更新了
+                        # 这里确保至少是1（父主机采集完成）
+                        if progress.completed_count == 0:
+                            progress.completed_count = 1
+                        
+                        # 如果VMware采集完成，total_count应该包含所有VM
+                        if 'vms' in result.get('data', {}):
+                            vm_count = len(result['data'].get('vms', []))
+                            if progress.total_count == 1:
+                                progress.total_count = 1 + vm_count
+                    else:
+                        # 非VMware主机：直接增加completed_count
                         progress.completed_count += 1
-                    
-                    # 如果VMware采集完成，total_count应该包含所有VM
-                    if host_info.host_type == 'vmware' and 'vms' in result.get('data', {}):
-                        vm_count = len(result['data'].get('vms', []))
-                        if progress.total_count == 1:
-                            progress.total_count = 1 + vm_count
             else:
                 # 更新主机状态为失败
                 host_info.collection_status = 'failed'
@@ -976,10 +1164,20 @@ class CollectorManager:
             
             if progress:
                 progress.updated_at = datetime.utcnow()
+                # 确保completed_count不超过total_count（防止重复计数）
+                total_completed = progress.completed_count + progress.failed_count
+                if total_completed > progress.total_count and progress.total_count > 0:
+                    # 如果超过总数，重置为总数（防止进度超过100%）
+                    if progress.completed_count > progress.total_count:
+                        progress.completed_count = progress.total_count - progress.failed_count
+                        if progress.completed_count < 0:
+                            progress.completed_count = 0
+                
                 # 计算进度百分比
                 if progress.total_count > 0:
-                    progress_percent = (progress.completed_count + progress.failed_count) / progress.total_count * 100
-                    progress.current_step = f'已完成 {progress.completed_count + progress.failed_count}/{progress.total_count} ({progress_percent:.1f}%)'
+                    total_completed = progress.completed_count + progress.failed_count
+                    progress_percent = min(100.0, (total_completed / progress.total_count) * 100)
+                    progress.current_step = f'已完成 {total_completed}/{progress.total_count} ({progress_percent:.1f}%)'
             
             db.session.commit()
             

@@ -134,17 +134,27 @@ class VMwareCollector:
                     return {'vms': vm_list, 'total': total, 'completed': completed_count, 'failed': failed_count}
                 
                 # 查找单个虚拟机
+                # 优先使用UUID查找（更可靠），如果UUID不存在或失败，再使用名称查找
                 vm = None
                 if vm_uuid:
+                    logger.info(f"Attempting to find VM by UUID: {vm_uuid}")
                     vm = self._get_vm_by_uuid(content, vm_uuid)
+                    if vm:
+                        logger.info(f"VM found by UUID: {vm_uuid}")
+                    else:
+                        logger.warning(f"VM not found by UUID: {vm_uuid}, trying name: {vm_name}")
+                        # UUID查找失败，尝试使用名称
+                        if vm_name:
+                            vm = self._get_vm_by_name(content, vm_name)
                 elif vm_name:
+                    logger.info(f"Attempting to find VM by name: {vm_name}")
                     vm = self._get_vm_by_name(content, vm_name)
                 else:
                     logger.error("Either vm_name or vm_uuid must be provided")
                     return {}
                 
                 if not vm:
-                    logger.error(f"VM not found: {vm_name or vm_uuid}")
+                    logger.error(f"VM not found: name={vm_name}, uuid={vm_uuid}")
                     return {}
                 
                 # 采集虚拟机信息
@@ -203,8 +213,10 @@ class VMwareCollector:
             虚拟机对象
         """
         try:
+            from pyVmomi import vim
+            
             container = content.rootFolder
-            view_type = [type(vm_name)] if isinstance(vm_name, str) else [type('')]
+            view_type = [vim.VirtualMachine]  # 修复：应该使用vim.VirtualMachine而不是type(vm_name)
             recursive = True
             
             container_view = content.viewManager.CreateContainerView(
@@ -213,15 +225,24 @@ class VMwareCollector:
                 recursive=recursive
             )
             
+            # 尝试精确匹配
             for managed_object in container_view.view:
-                if managed_object.name == vm_name:
+                if hasattr(managed_object, 'name') and managed_object.name == vm_name:
+                    container_view.Destroy()
+                    return managed_object
+            
+            # 如果精确匹配失败，尝试不区分大小写的匹配
+            for managed_object in container_view.view:
+                if hasattr(managed_object, 'name') and managed_object.name and managed_object.name.lower() == vm_name.lower():
+                    container_view.Destroy()
                     return managed_object
                     
             container_view.Destroy()
+            logger.warning(f"VM not found by exact name '{vm_name}', trying case-insensitive match...")
             return None
             
         except Exception as e:
-            logger.error(f"Error finding VM by name: {str(e)}")
+            logger.error(f"Error finding VM by name: {str(e)}", exc_info=True)
             return None
     
     def _get_vm_by_uuid(self, content, vm_uuid: str):
@@ -236,15 +257,26 @@ class VMwareCollector:
             虚拟机对象
         """
         try:
+            # 首先尝试使用instanceUuid（推荐）
             vm = content.searchIndex.FindByUuid(
                 uuid=vm_uuid,
                 vmSearch=True,
                 instanceUuid=True
             )
+            if vm:
+                return vm
+            
+            # 如果instanceUuid失败，尝试使用biosUuid
+            logger.debug(f"VM not found with instanceUuid, trying biosUuid: {vm_uuid}")
+            vm = content.searchIndex.FindByUuid(
+                uuid=vm_uuid,
+                vmSearch=True,
+                instanceUuid=False
+            )
             return vm
             
         except Exception as e:
-            logger.error(f"Error finding VM by UUID: {str(e)}")
+            logger.error(f"Error finding VM by UUID: {str(e)}", exc_info=True)
             return None
     
     def _collect_vm_details(self, vm, content) -> Dict[str, Any]:

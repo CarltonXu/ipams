@@ -13,7 +13,7 @@ interface Props {
 }
 
 const props = defineProps<Props>();
-const emit = defineEmits(['update:modelValue', 'completed']);
+const emit = defineEmits(['update:modelValue', 'completed', 'failed', 'statusChanged']);
 
 interface ProgressData {
   task_id: string;
@@ -85,8 +85,12 @@ const fetchProgress = async () => {
     // 如果任务完成或失败，停止刷新并触发事件
     if (data.status === 'completed' || data.status === 'failed' || data.status === 'cancelled') {
       clearRefreshTimer();
+      // 触发状态变化事件，让父组件知道任务已完成/失败
+      emit('statusChanged', data);
       if (data.status === 'completed') {
         emit('completed', data);
+      } else if (data.status === 'failed') {
+        emit('failed', data);
       }
     }
   } catch (error: any) {
@@ -128,6 +132,10 @@ watch(isRunning, (newVal) => {
 const handleClose = () => {
   clearRefreshTimer();
   visible.value = false;
+  // 关闭对话框时，如果任务已完成或失败，通知父组件刷新列表
+  if (progress.value && (progress.value.status === 'completed' || progress.value.status === 'failed' || progress.value.status === 'cancelled')) {
+    emit('statusChanged', progress.value);
+  }
 };
 
 // 手动刷新

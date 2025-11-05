@@ -347,6 +347,8 @@
       v-model="progressDialogVisible"
       :task-id="currentTaskId"
       @completed="handleProgressCompleted"
+      @failed="handleProgressFailed"
+      @statusChanged="handleProgressStatusChanged"
     />
   </div>
 </template>
@@ -568,6 +570,18 @@ const handleProgressCompleted = async () => {
   await loadHosts();
   // 可以选择自动关闭对话框或保持打开让用户查看结果
   // progressDialogVisible.value = false;
+};
+
+// 处理进度失败事件
+const handleProgressFailed = async () => {
+  // 采集失败后刷新主机列表，确保状态更新
+  await loadHosts();
+};
+
+// 处理进度状态变化事件（完成/失败/取消）
+const handleProgressStatusChanged = async () => {
+  // 无论任务完成、失败或取消，都刷新主机列表以确保状态同步
+  await loadHosts();
 };
 
 // 取消采集任务

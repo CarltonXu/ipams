@@ -852,7 +852,12 @@ class CollectionProgress(db.Model):
         """转换为字典"""
         progress_percent = 0
         if self.total_count > 0:
-            progress_percent = round((self.completed_count / self.total_count) * 100, 2)
+            # 计算进度百分比：已完成数 + 失败数 / 总数
+            total_completed = self.completed_count + self.failed_count
+            progress_percent = round((total_completed / self.total_count) * 100, 2)
+            # 确保进度不超过100%
+            if progress_percent > 100:
+                progress_percent = 100.0
         
         return {
             'id': self.id,
