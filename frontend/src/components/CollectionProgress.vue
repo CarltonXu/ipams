@@ -144,7 +144,7 @@ onUnmounted(() => {
 <template>
   <el-dialog
     v-model="visible"
-    :title="t('host.collectionProgress.title', '采集进度')"
+    :title="t('hostInfo.collectionProgress.title', '采集进度')"
     width="600px"
     :close-on-click-modal="false"
     @close="handleClose"
@@ -165,19 +165,19 @@ onUnmounted(() => {
           <el-row :gutter="20">
             <el-col :span="8">
               <div class="stat-item">
-                <div class="stat-label">{{ t('host.collectionProgress.total', '总数') }}</div>
+                <div class="stat-label">{{ t('hostInfo.collectionProgress.total', '总数') }}</div>
                 <div class="stat-value">{{ progress.total_count }}</div>
               </div>
             </el-col>
             <el-col :span="8">
               <div class="stat-item">
-                <div class="stat-label">{{ t('host.collectionProgress.completed', '已完成') }}</div>
+                <div class="stat-label">{{ t('hostInfo.collectionProgress.completed', '已完成') }}</div>
                 <div class="stat-value success">{{ progress.completed_count }}</div>
               </div>
             </el-col>
             <el-col :span="8">
               <div class="stat-item">
-                <div class="stat-label">{{ t('host.collectionProgress.failed', '失败') }}</div>
+                <div class="stat-label">{{ t('hostInfo.collectionProgress.failed', '失败') }}</div>
                 <div class="stat-value error" v-if="progress.failed_count > 0">
                   {{ progress.failed_count }}
                 </div>
@@ -189,14 +189,14 @@ onUnmounted(() => {
 
         <!-- 当前步骤 -->
         <div class="step-section" v-if="progress.current_step">
-          <div class="step-label">{{ t('host.collectionProgress.currentStep', '当前步骤') }}</div>
+          <div class="step-label">{{ t('hostInfo.collectionProgress.currentStep', '当前步骤') }}</div>
           <div class="step-content">{{ progress.current_step }}</div>
         </div>
 
         <!-- 错误信息 -->
         <div class="error-section" v-if="progress.error_message">
           <el-alert
-            :title="t('host.collectionProgress.error', '错误信息')"
+            :title="t('hostInfo.collectionProgress.error', '错误信息')"
             type="error"
             :description="progress.error_message"
             show-icon
@@ -210,13 +210,13 @@ onUnmounted(() => {
             :type="progress.status === 'completed' ? 'success' : progress.status === 'failed' ? 'danger' : 'primary'"
             size="large"
           >
-            {{ t(`host.collectionProgress.status.${progress.status}`, progress.status) }}
+            {{ t(`hostInfo.collectionProgress.status.${progress.status}`, progress.status) }}
           </el-tag>
         </div>
       </div>
 
       <div v-else class="empty-content">
-        <el-empty :description="t('host.collectionProgress.noData', '暂无进度数据')" />
+        <el-empty :description="t('hostInfo.collectionProgress.noData', '暂无进度数据')" />
       </div>
     </div>
 

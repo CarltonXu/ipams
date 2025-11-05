@@ -12,6 +12,7 @@ def get_encryption_key():
     """
     获取加密密钥
     从环境变量或配置中读取
+    Fernet 需要 32 字节的 URL-safe base64 编码密钥
     """
     key = os.getenv('ENCRYPTION_KEY')
     if not key:
@@ -22,7 +23,23 @@ def get_encryption_key():
             logger.error("ENCRYPTION_KEY not found in environment or app config")
             raise ValueError("ENCRYPTION_KEY not configured. Please set it in environment variables or app config.")
     
-    return key.encode()
+    # Fernet 需要的是字符串形式的 base64 编码密钥，不是 bytes
+    # 如果 key 已经是字符串，直接返回；如果是 bytes，需要解码
+    if isinstance(key, bytes):
+        key = key.decode('utf-8')
+    
+    # 验证密钥格式：Fernet key 必须是 32 字节的 URL-safe base64 编码
+    # URL-safe base64 编码的 32 字节密钥长度应该是 44 个字符
+    try:
+        # 尝试创建一个 Fernet 实例来验证密钥格式
+        Fernet(key)
+    except Exception as e:
+        logger.error(f"Invalid ENCRYPTION_KEY format: {str(e)}")
+        logger.error("ENCRYPTION_KEY must be a 32-byte URL-safe base64-encoded string (44 characters)")
+        logger.error("You can generate a new key by running: python -m app.core.security.encryption")
+        raise ValueError(f"Invalid ENCRYPTION_KEY format: {str(e)}. Please generate a valid key using: python -m app.core.security.encryption")
+    
+    return key
 
 
 def encrypt_credential(plain_text):
@@ -36,10 +53,11 @@ def encrypt_credential(plain_text):
         str: 加密后的密文
     """
     try:
-        key = get_encryption_key()
-        f = Fernet(key)
-        encrypted_text = f.encrypt(plain_text.encode())
-        return encrypted_text.decode()
+        key_str = get_encryption_key()
+        # Fernet 构造函数接受字符串形式的 base64 编码密钥
+        f = Fernet(key_str)
+        encrypted_text = f.encrypt(plain_text.encode('utf-8'))
+        return encrypted_text.decode('utf-8')
     except Exception as e:
         logger.error(f"Encryption failed: {str(e)}")
         raise ValueError(f"Failed to encrypt credential: {str(e)}")
@@ -56,10 +74,11 @@ def decrypt_credential(encrypted_text):
         str: 解密后的明文
     """
     try:
-        key = get_encryption_key()
-        f = Fernet(key)
-        decrypted_text = f.decrypt(encrypted_text.encode())
-        return decrypted_text.decode()
+        key_str = get_encryption_key()
+        # Fernet 构造函数接受字符串形式的 base64 编码密钥
+        f = Fernet(key_str)
+        decrypted_text = f.decrypt(encrypted_text.encode('utf-8'))
+        return decrypted_text.decode('utf-8')
     except Exception as e:
         logger.error(f"Decryption failed: {str(e)}")
         raise ValueError(f"Failed to decrypt credential: {str(e)}")
