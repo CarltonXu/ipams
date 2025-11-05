@@ -1325,7 +1325,68 @@ export default {
       batchCollectCredentialRequired: 'The following hosts have no credentials bound. Please bind credentials before collection: {hostNames}',
       confirmBatchCollect: 'Confirm Batch Collection',
       batchCollectPartial: 'Only {count} hosts have credentials bound. Collect only these hosts?',
-      noValidHostsForCollect: 'No valid hosts for collection (all hosts have no credentials bound)'
+      noValidHostsForCollect: 'No valid hosts for collection (all hosts have no credentials bound)',
+      loadDetailsFailed: 'Failed to load host details, showing basic information'
+    },
+    detail: {
+      network: {
+        interface: 'Interface',
+        deviceName: 'Device Name',
+        deviceId: 'Device ID',
+        macAddress: 'MAC Address',
+        ipAddress: 'IP Address',
+        connectionStatus: 'Connection Status',
+        connected: 'Connected',
+        disconnected: 'Disconnected',
+        networkName: 'Network Name',
+        network: 'Network',
+        addressType: 'Address Type',
+        portgroup: 'Port Group',
+        wakeOnLan: 'Wake-on-LAN',
+        enabled: 'Enabled',
+        disabled: 'Disabled',
+        interfaceType: 'Interface Type',
+        speed: 'Speed',
+        state: 'State',
+        noData: 'No network interface information'
+      },
+      disk: {
+        disk: 'Disk',
+        deviceName: 'Device Name',
+        mountPoint: 'Mount Point',
+        capacity: 'Capacity',
+        capacityKB: 'Capacity (KB)',
+        freeSpace: 'Free Space',
+        usedSpace: 'Used Space',
+        usageRate: 'Usage Rate',
+        fileSystem: 'File System',
+        volumeName: 'Volume Name',
+        diskMode: 'Disk Mode',
+        thinProvisioned: 'Thin Provisioned',
+        yes: 'Yes',
+        no: 'No',
+        eagerlyScrub: 'Eagerly Scrub',
+        uuid: 'UUID',
+        fileName: 'File Name',
+        datastore: 'Datastore',
+        deviceType: 'Device Type',
+        vendor: 'Vendor',
+        model: 'Model',
+        noData: 'No disk information'
+      },
+      raw: {
+        noData: 'No raw data'
+      }
+    },
+    driveTypes: {
+      unknown: 'Unknown',
+      noRoot: 'No Root Directory',
+      removable: 'Removable Disk',
+      fixed: 'Fixed Disk',
+      network: 'Network Drive',
+      cdrom: 'CD-ROM',
+      ram: 'RAM Disk',
+      type: 'Type'
     }
   },
   collection: {

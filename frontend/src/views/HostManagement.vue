@@ -139,25 +139,25 @@
           </el-table-column>
           <el-table-column :label="$t('hostInfo.credential', '凭证')" width="250">
             <template #default="{ row }">
-              <div v-if="row.credential_bindings && row.credential_bindings.length > 0" class="credential-display">
-                <el-tag
-                  v-for="binding in row.credential_bindings"
-                  :key="binding.id"
-                  type="success"
-                  size="small"
-                  style="margin-right: 4px"
-                >
-                  {{ binding.credential?.name || '-' }}
-                </el-tag>
-                <el-tag
-                  v-if="row.credential_bindings[0]?.credential"
-                  :type="getCredentialTypeTagType(row.credential_bindings[0].credential.credential_type)"
-                  size="small"
-                >
-                  {{ $t(`credential.types.${row.credential_bindings[0].credential.credential_type}`) }}
-                </el-tag>
-              </div>
-              <span v-else class="no-credential">-</span>
+                <div v-if="row.credential_bindings && row.credential_bindings.length > 0" class="credential-display">
+                  <el-tag
+                    v-for="binding in row.credential_bindings"
+                    :key="binding.id"
+                    type="success"
+                    size="small"
+                    style="margin-right: 4px"
+                  >
+                    {{ binding.credential?.name || '-' }}
+                  </el-tag>
+                  <el-tag
+                    v-if="row.credential_bindings[0]?.credential"
+                    :type="getCredentialTypeTagType(row.credential_bindings[0].credential.credential_type)"
+                    size="small"
+                  >
+                    {{ $t(`credential.types.${row.credential_bindings[0].credential.credential_type}`) }}
+                  </el-tag>
+                </div>
+                <span v-else class="no-credential">-</span>
             </template>
           </el-table-column>
           <el-table-column prop="last_collected_at" :label="$t('hostInfo.lastCollected')" width="180">
@@ -232,10 +232,10 @@
     <!-- 主机详情抽屉 -->
     <el-drawer
       v-model="detailDrawerVisible"
-      :title="selectedHost?.ip?.ip_address || ''"
+      :title="selectedHost?.ip?.ip_address + ' / ' + selectedHost?.hostname || ''"
       size="50%"
     >
-      <div v-if="selectedHost" class="host-detail" v-loading="detailLoading" element-loading-text="加载中...">
+      <div v-if="selectedHost" class="host-detail" v-loading="detailLoading" :element-loading-text="t('common.loading')">
         <el-tabs @tab-change="handleDetailTabChange">
           <el-tab-pane :label="$t('hostInfo.tabs.basic')">
             <el-descriptions :column="2" border>
@@ -275,24 +275,192 @@
           </el-tab-pane>
 
           <el-tab-pane :label="$t('hostInfo.tabs.network')">
-            <pre v-if="selectedHost.network_interfaces" class="json-display">
-              {{ JSON.stringify(selectedHost.network_interfaces, null, 2) }}
-            </pre>
-            <span v-else>-</span>
+            <div v-if="selectedHost.network_interfaces && networkInterfacesList.length > 0" class="network-container">
+              <el-card
+                v-for="(iface, index) in networkInterfacesList"
+                :key="index"
+                shadow="hover"
+                class="network-card"
+                :style="{ marginBottom: '15px' }"
+              >
+                <template #header>
+                  <div class="network-card-header">
+                    <el-tag :type="iface.connected ? 'success' : 'info'" size="large">
+                      {{ iface.label || iface.device || `${t('hostInfo.detail.network.interface')} ${index + 1}` }}
+                    </el-tag>
+                    <el-tag v-if="iface.connected" type="success" size="small">
+                      {{ t('hostInfo.detail.network.connected') }}
+                    </el-tag>
+                    <el-tag v-else type="info" size="small">
+                      {{ t('hostInfo.detail.network.disconnected') }}
+                    </el-tag>
+                  </div>
+                </template>
+                <el-descriptions :column="2" border>
+                  <el-descriptions-item :label="t('hostInfo.detail.network.deviceName')" v-if="iface.label || iface.device || iface.name">
+                    <code>{{ iface.label || iface.device || iface.name }}</code>
+                  </el-descriptions-item>
+                  <el-descriptions-item :label="t('hostInfo.detail.network.deviceId')" v-if="iface.deviceConfigId || iface.device">
+                    <code>{{ iface.deviceConfigId || iface.device }}</code>
+                  </el-descriptions-item>
+                  <el-descriptions-item :label="t('hostInfo.detail.network.macAddress')" v-if="iface.mac_address">
+                    <el-tag type="primary">{{ iface.mac_address }}</el-tag>
+                  </el-descriptions-item>
+                  <el-descriptions-item :label="t('hostInfo.detail.network.ipAddress')" v-if="iface.ip_addresses && iface.ip_addresses.length > 0">
+                    <div class="ip-list">
+                      <el-tag
+                        v-for="(ip, ipIndex) in iface.ip_addresses"
+                        :key="ipIndex"
+                        :type="ip.includes(':') ? 'warning' : 'success'"
+                        style="margin-right: 8px; margin-bottom: 4px;"
+                      >
+                        {{ ip }}
+                      </el-tag>
+                    </div>
+                  </el-descriptions-item>
+                  <el-descriptions-item :label="t('hostInfo.detail.network.connectionStatus')" v-if="iface.connected !== undefined && iface.connected !== null">
+                    <el-tag :type="iface.connected ? 'success' : 'info'">
+                      {{ iface.connected ? t('hostInfo.detail.network.connected') : t('hostInfo.detail.network.disconnected') }}
+                    </el-tag>
+                  </el-descriptions-item>
+                  <el-descriptions-item :label="t('hostInfo.detail.network.networkName')" v-if="iface.network_name">
+                    {{ iface.network_name }}
+                  </el-descriptions-item>
+                  <el-descriptions-item :label="t('hostInfo.detail.network.network')" v-if="iface.network">
+                    {{ iface.network }}
+                  </el-descriptions-item>
+                  <el-descriptions-item :label="t('hostInfo.detail.network.addressType')" v-if="iface.address_type">
+                    <el-tag type="info" size="small">{{ iface.address_type }}</el-tag>
+                  </el-descriptions-item>
+                  <el-descriptions-item :label="t('hostInfo.detail.network.portgroup')" v-if="iface.portgroup_key">
+                    <code>{{ iface.portgroup_key }}</code>
+                  </el-descriptions-item>
+                  <el-descriptions-item :label="t('hostInfo.detail.network.wakeOnLan')" v-if="iface.wake_on_lan_enabled !== undefined">
+                    <el-tag :type="iface.wake_on_lan_enabled ? 'success' : 'info'" size="small">
+                      {{ iface.wake_on_lan_enabled ? t('hostInfo.detail.network.enabled') : t('hostInfo.detail.network.disabled') }}
+                    </el-tag>
+                  </el-descriptions-item>
+                  <el-descriptions-item :label="t('hostInfo.detail.network.interfaceType')" v-if="iface.type">
+                    <el-tag type="info" size="small">{{ iface.type }}</el-tag>
+                  </el-descriptions-item>
+                  <el-descriptions-item :label="t('hostInfo.detail.network.speed')" v-if="iface.speed">
+                    {{ formatNetworkSpeed(iface.speed) }}
+                  </el-descriptions-item>
+                  <el-descriptions-item :label="t('hostInfo.detail.network.state')" v-if="iface.state">
+                    <el-tag :type="iface.state === 'UP' ? 'success' : 'info'" size="small">
+                      {{ iface.state }}
+                    </el-tag>
+                  </el-descriptions-item>
+                </el-descriptions>
+              </el-card>
+            </div>
+            <el-empty v-else :description="t('hostInfo.detail.network.noData')" />
           </el-tab-pane>
 
           <el-tab-pane :label="$t('hostInfo.tabs.disk')">
-            <pre v-if="selectedHost.disk_info" class="json-display">
-              {{ JSON.stringify(selectedHost.disk_info, null, 2) }}
-            </pre>
-            <span v-else>-</span>
+            <div v-if="selectedHost.disk_info && diskInfoList.length > 0" class="disk-container">
+              <el-card
+                v-for="(disk, index) in diskInfoList"
+                :key="index"
+                shadow="hover"
+                class="disk-card"
+                :style="{ marginBottom: '15px' }"
+              >
+                <template #header>
+                  <div class="disk-card-header">
+                    <el-tag type="primary" size="large">
+                      {{ disk.label || disk.device || disk.DeviceID || disk.DEVICE || disk.disk_path || disk.MOUNT || disk.mount || `${t('hostInfo.detail.disk.disk')} ${index + 1}` }}
+                    </el-tag>
+                    <el-tag
+                      v-if="getDiskUsePercent(disk) !== null"
+                      :type="getDiskUsePercentType(getDiskUsePercent(disk) || 0)"
+                      size="small"
+                    >
+                      {{ t('hostInfo.detail.disk.usageRate') }}: {{ getDiskUsePercent(disk) }}%
+                    </el-tag>
+                  </div>
+                </template>
+                <el-descriptions :column="2" border>
+                  <el-descriptions-item :label="t('hostInfo.detail.disk.deviceName')" v-if="disk.label || disk.device || disk.DeviceID || disk.DEVICE">
+                    <code>{{ disk.label || disk.device || disk.DeviceID || disk.DEVICE }}</code>
+                  </el-descriptions-item>
+                  <el-descriptions-item :label="t('hostInfo.detail.disk.mountPoint')" v-if="disk.disk_path || disk.MOUNT || disk.mount">
+                    <code>{{ disk.disk_path || disk.MOUNT || disk.mount }}</code>
+                  </el-descriptions-item>
+                  <el-descriptions-item :label="t('hostInfo.detail.disk.capacity')" v-if="getDiskCapacity(disk)">
+                    {{ formatDiskSize(getDiskCapacity(disk)) }}
+                  </el-descriptions-item>
+                  <el-descriptions-item :label="t('hostInfo.detail.disk.capacityKB')" v-if="disk.capacity_kb">
+                    {{ formatBytes(disk.capacity_kb * 1024) }}
+                  </el-descriptions-item>
+                  <el-descriptions-item :label="t('hostInfo.detail.disk.freeSpace')" v-if="getDiskFreeSpace(disk)">
+                    <el-tag type="success">{{ formatDiskSize(getDiskFreeSpace(disk)) }}</el-tag>
+                  </el-descriptions-item>
+                  <el-descriptions-item :label="t('hostInfo.detail.disk.usedSpace')" v-if="getDiskUsedSpace(disk)">
+                    <el-tag type="warning">{{ formatDiskSize(getDiskUsedSpace(disk)) }}</el-tag>
+                  </el-descriptions-item>
+                  <el-descriptions-item :label="t('hostInfo.detail.disk.usageRate')" v-if="getDiskUsePercent(disk) !== null">
+                    <el-tag :type="getDiskUsePercentType(getDiskUsePercent(disk) || 0)" size="small">
+                      {{ getDiskUsePercent(disk) }}%
+                    </el-tag>
+                  </el-descriptions-item>
+                  <el-descriptions-item :label="t('hostInfo.detail.disk.fileSystem')" v-if="disk.file_system || disk.FileSystem || disk.FSTYPE || disk.fstype">
+                    <el-tag type="info">{{ disk.file_system || disk.FileSystem || disk.FSTYPE || disk.fstype }}</el-tag>
+                  </el-descriptions-item>
+                  <el-descriptions-item :label="t('hostInfo.detail.disk.volumeName')" v-if="disk.VolumeName">
+                    {{ disk.VolumeName }}
+                  </el-descriptions-item>
+                  <el-descriptions-item :label="t('hostInfo.detail.disk.diskMode')" v-if="disk.disk_mode">
+                    <el-tag :type="disk.disk_mode.includes('persistent') ? 'success' : 'warning'">
+                      {{ disk.disk_mode }}
+                    </el-tag>
+                  </el-descriptions-item>
+                  <el-descriptions-item :label="t('hostInfo.detail.disk.thinProvisioned')" v-if="disk.thin_provisioned !== undefined">
+                    <el-tag :type="disk.thin_provisioned ? 'warning' : 'success'">
+                      {{ disk.thin_provisioned ? t('hostInfo.detail.disk.yes') : t('hostInfo.detail.disk.no') }}
+                    </el-tag>
+                  </el-descriptions-item>
+                  <el-descriptions-item :label="t('hostInfo.detail.disk.eagerlyScrub')" v-if="disk.eagerly_scrub !== undefined">
+                    <el-tag :type="disk.eagerly_scrub ? 'warning' : 'success'" size="small">
+                      {{ disk.eagerly_scrub ? t('hostInfo.detail.disk.yes') : t('hostInfo.detail.disk.no') }}
+                    </el-tag>
+                  </el-descriptions-item>
+                  <el-descriptions-item :label="t('hostInfo.detail.disk.uuid')" v-if="disk.uuid">
+                    <code style="font-size: 11px;">{{ disk.uuid }}</code>
+                  </el-descriptions-item>
+                  <el-descriptions-item :label="t('hostInfo.detail.disk.fileName')" v-if="disk.file_name">
+                    <code style="font-size: 11px;">{{ disk.file_name }}</code>
+                  </el-descriptions-item>
+                  <el-descriptions-item :label="t('hostInfo.detail.disk.datastore')" v-if="disk.datastore">
+                    {{ disk.datastore }}
+                  </el-descriptions-item>
+                  <el-descriptions-item :label="t('hostInfo.detail.disk.deviceType')" v-if="disk.TYPE || disk.DriveType">
+                    <el-tag type="info" size="small">{{ disk.TYPE || getDriveTypeName(disk.DriveType) }}</el-tag>
+                  </el-descriptions-item>
+                  <el-descriptions-item :label="t('hostInfo.detail.disk.vendor')" v-if="disk.VENDOR">
+                    {{ disk.VENDOR }}
+                  </el-descriptions-item>
+                  <el-descriptions-item :label="t('hostInfo.detail.disk.model')" v-if="disk.MODEL">
+                    {{ disk.MODEL }}
+                  </el-descriptions-item>
+                </el-descriptions>
+                <div v-if="getDiskUsePercent(disk) !== null" class="disk-progress" style="margin-top: 15px;">
+                  <el-progress
+                    :percentage="getDiskUsePercent(disk) || 0"
+                    :status="getDiskUsePercentStatus(getDiskUsePercent(disk) || 0)"
+                    :stroke-width="12"
+                  />
+                </div>
+              </el-card>
+            </div>
+            <el-empty v-else :description="t('hostInfo.detail.disk.noData')" />
           </el-tab-pane>
 
           <el-tab-pane :label="$t('hostInfo.tabs.raw')">
-            <pre v-if="selectedHost.raw_data" class="json-display">
-              {{ JSON.stringify(selectedHost.raw_data, null, 2) }}
-            </pre>
-            <span v-else>-</span>
+            <div v-if="selectedHost.raw_data" class="raw-data-container">
+              <JsonTreeView :data="selectedHost.raw_data" />
+            </div>
+            <el-empty v-else :description="t('hostInfo.detail.raw.noData')" />
           </el-tab-pane>
         </el-tabs>
       </div>
@@ -380,6 +548,7 @@ import ExportDialog from '../components/ExportDialog.vue';
 import BindCredentialDialog from '../components/BindCredentialDialog.vue';
 import CollectionProgress from '../components/CollectionProgress.vue';
 import CollectionTaskHistory from '../components/CollectionTaskHistory.vue';
+import JsonTreeView from '../components/JsonTreeView.vue';
 import type { HostInfo } from '../types/hostInfo';
 
 const { t } = useI18n();
@@ -878,6 +1047,242 @@ const handleDetailTabChange = (tabName: string | number) => {
   }
 };
 
+// 网络接口列表计算属性
+const networkInterfacesList = computed(() => {
+  if (!selectedHost.value?.network_interfaces) return [];
+  const interfaces = selectedHost.value.network_interfaces;
+  if (Array.isArray(interfaces)) {
+    return interfaces.map((iface: any) => {
+      // 处理IP地址数组
+      let ip_addresses: string[] = [];
+      if (iface.ip_addresses && Array.isArray(iface.ip_addresses)) {
+        ip_addresses = iface.ip_addresses;
+      } else if (iface.ip_address) {
+        ip_addresses = Array.isArray(iface.ip_address) ? iface.ip_address : [iface.ip_address];
+      }
+      
+      return {
+        ...iface,
+        ip_addresses,
+        connected: iface.connected !== undefined ? iface.connected : true // 默认已连接
+      };
+    });
+  }
+  return [];
+});
+
+// 磁盘信息列表计算属性
+const diskInfoList = computed(() => {
+  if (!selectedHost.value?.disk_info) return [];
+  const disks = selectedHost.value.disk_info;
+  return Array.isArray(disks) ? disks : [];
+});
+
+// 格式化字节数
+const formatBytes = (bytes: number | string | null | undefined): string => {
+  if (bytes === null || bytes === undefined) return '-';
+  const numBytes = typeof bytes === 'string' ? parseInt(bytes) : bytes;
+  if (isNaN(numBytes) || numBytes < 0) return '-';
+  
+  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+  let size = numBytes;
+  let unitIndex = 0;
+  
+  while (size >= 1024 && unitIndex < units.length - 1) {
+    size /= 1024;
+    unitIndex++;
+  }
+  
+  return `${size.toFixed(2)} ${units[unitIndex]}`;
+};
+
+// 获取磁盘容量（兼容多种格式）
+const getDiskCapacity = (disk: any): string | number | null => {
+  // 优先检查字节数格式
+  if (disk.capacity_bytes) return disk.capacity_bytes;
+  if (disk.capacity_guest) return disk.capacity_guest;
+  // 检查Windows格式
+  if (disk.Size !== undefined && disk.Size !== null) return disk.Size;
+  // 检查Linux小写格式（可能是格式化的字符串如"50G"）
+  if (disk.size) return disk.size;
+  // 检查其他格式
+  if (disk.capacity) return disk.capacity;
+  return null;
+};
+
+// 获取磁盘可用空间（兼容多种格式）
+const getDiskFreeSpace = (disk: any): string | number | null => {
+  // 优先检查字节数格式
+  if (disk.free_space !== undefined && disk.free_space !== null) return disk.free_space;
+  // 检查Windows格式
+  if (disk.FreeSpace !== undefined && disk.FreeSpace !== null) return disk.FreeSpace;
+  // 检查Linux小写格式（可能是格式化的字符串如"10G"）
+  if (disk.avail) return disk.avail;
+  return null;
+};
+
+// 获取磁盘已用空间（兼容多种格式）
+const getDiskUsedSpace = (disk: any): string | number | null => {
+  // 优先检查Windows格式
+  if (disk.UsedSpace !== undefined && disk.UsedSpace !== null) return disk.UsedSpace;
+  // 检查Linux小写格式（可能是格式化的字符串如"40G"）
+  if (disk.used) return disk.used;
+  // 计算方式：如果有容量和可用空间，计算已用空间
+  const capacity = getDiskCapacity(disk);
+  const freeSpace = getDiskFreeSpace(disk);
+  if (capacity && freeSpace && typeof capacity === 'number' && typeof freeSpace === 'number') {
+    return capacity - freeSpace;
+  }
+  return null;
+};
+
+// 格式化磁盘大小（支持字符串格式如"50G"和数字字节）
+const formatDiskSize = (size: string | number | null | undefined): string => {
+  if (!size) return '-';
+  // 如果是字符串格式（如"50G", "100M"），直接返回
+  if (typeof size === 'string') {
+    // 移除百分号（如果是use_percent）
+    if (size.endsWith('%')) {
+      return size;
+    }
+    // 如果已经是格式化的大小，直接返回
+    if (/^\d+[KMGT]?[B]?$/.test(size.toUpperCase())) {
+      return size;
+    }
+    // 尝试解析为数字
+    const numSize = parseFloat(size);
+    if (!isNaN(numSize)) {
+      return formatBytes(numSize);
+    }
+    return size;
+  }
+  // 如果是数字，格式化为字节
+  return formatBytes(size);
+};
+
+// 计算磁盘使用率（兼容多种格式）
+const diskUsePercent = (disk: any): number | null => {
+  // 优先检查Windows格式
+  if (disk.UsePercent !== undefined && disk.UsePercent !== null) {
+    return typeof disk.UsePercent === 'string' ? parseFloat(disk.UsePercent) : disk.UsePercent;
+  }
+  // 检查Linux小写格式（可能包含%符号）
+  if (disk.use_percent !== undefined && disk.use_percent !== null) {
+    const percent = typeof disk.use_percent === 'string' 
+      ? parseFloat(disk.use_percent.replace('%', '')) 
+      : disk.use_percent;
+    if (!isNaN(percent)) return Math.round(percent);
+  }
+  // 计算方式：如果有容量和可用空间，计算使用率
+  const capacity = getDiskCapacity(disk);
+  const freeSpace = getDiskFreeSpace(disk);
+  if (capacity && freeSpace) {
+    // 如果都是数字，直接计算
+    if (typeof capacity === 'number' && typeof freeSpace === 'number' && capacity > 0) {
+      const used = capacity - freeSpace;
+      return Math.round((used / capacity) * 100);
+    }
+    // 如果是字符串格式，需要解析
+    if (typeof capacity === 'string' && typeof freeSpace === 'string') {
+      const capacityBytes = parseSizeString(capacity);
+      const freeBytes = parseSizeString(freeSpace);
+      if (capacityBytes > 0 && freeBytes >= 0) {
+        const used = capacityBytes - freeBytes;
+        return Math.round((used / capacityBytes) * 100);
+      }
+    }
+  }
+  return null;
+};
+
+// 解析大小字符串（如"50G", "100M", "1.5T"）为字节数
+const parseSizeString = (sizeStr: string): number => {
+  if (!sizeStr || typeof sizeStr !== 'string') return 0;
+  const cleanStr = sizeStr.trim().toUpperCase().replace(/[B]/g, ''); // 移除可能的B后缀
+  // 匹配格式：数字（可能带小数点）+ 单位（K/M/G/T）
+  const match = cleanStr.match(/^([\d.]+)\s*([KMGT]?)$/);
+  if (!match) {
+    // 如果没有单位，尝试直接解析为数字
+    const numValue = parseFloat(cleanStr);
+    return isNaN(numValue) ? 0 : Math.round(numValue);
+  }
+  
+  const value = parseFloat(match[1]);
+  const unit = match[2] || '';
+  
+  const multipliers: Record<string, number> = {
+    '': 1,
+    'K': 1024,
+    'M': 1024 * 1024,
+    'G': 1024 * 1024 * 1024,
+    'T': 1024 * 1024 * 1024 * 1024
+  };
+  
+  return Math.round(value * (multipliers[unit] || 1));
+};
+
+// 获取磁盘使用率（统一接口）
+const getDiskUsePercent = (disk: any): number | null => {
+  return diskUsePercent(disk);
+};
+
+// 计算磁盘已用空间（兼容多种格式）- 保留作为备用，主要用于进度条计算
+const diskUseSpace = (disk: any): number | null => {
+  const usedSpace = getDiskUsedSpace(disk);
+  if (usedSpace === null) return null;
+  if (typeof usedSpace === 'number') return usedSpace;
+  if (typeof usedSpace === 'string') {
+    const bytes = parseSizeString(usedSpace);
+    return bytes > 0 ? bytes : null;
+  }
+  return null;
+};
+
+// 获取磁盘使用率标签类型
+const getDiskUsePercentType = (percent: number): string => {
+  if (percent >= 90) return 'danger';
+  if (percent >= 70) return 'warning';
+  return 'success';
+};
+
+// 获取磁盘使用率进度条状态
+const getDiskUsePercentStatus = (percent: number): string | undefined => {
+  if (percent >= 90) return 'exception';
+  if (percent >= 70) return 'warning';
+  return undefined;
+};
+
+// 格式化网络速度
+const formatNetworkSpeed = (speed: number | string): string => {
+  if (!speed) return '-';
+  const numSpeed = typeof speed === 'string' ? parseInt(speed) : speed;
+  if (isNaN(numSpeed)) return String(speed);
+  
+  if (numSpeed >= 1000000000) {
+    return `${(numSpeed / 1000000000).toFixed(2)} Gbps`;
+  } else if (numSpeed >= 1000000) {
+    return `${(numSpeed / 1000000).toFixed(2)} Mbps`;
+  } else if (numSpeed >= 1000) {
+    return `${(numSpeed / 1000).toFixed(2)} Kbps`;
+  }
+  return `${numSpeed} bps`;
+};
+
+// 获取Windows驱动器类型名称
+const getDriveTypeName = (driveType: number | string): string => {
+  const typeMap: Record<number, string> = {
+    0: t('hostInfo.driveTypes.unknown'),
+    1: t('hostInfo.driveTypes.noRoot'),
+    2: t('hostInfo.driveTypes.removable'),
+    3: t('hostInfo.driveTypes.fixed'),
+    4: t('hostInfo.driveTypes.network'),
+    5: t('hostInfo.driveTypes.cdrom'),
+    6: t('hostInfo.driveTypes.ram')
+  };
+  const numType = typeof driveType === 'string' ? parseInt(driveType) : driveType;
+  return typeMap[numType] || `${t('hostInfo.driveTypes.type')}${driveType}`;
+};
+
 const handleBindCredential = (host: HostInfo) => {
   currentBindingHost.value = {
     id: host.id,
@@ -1075,6 +1480,59 @@ const getCredentialTypeTagType = (type: string) => {
   font-size: 12px;
   font-family: 'Courier New', monospace;
   max-height: 400px;
+}
+
+/* 网络接口卡片样式 */
+.network-container {
+  padding: 10px 0;
+}
+
+.network-card {
+  transition: all 0.3s;
+}
+
+.network-card:hover {
+  box-shadow: var(--el-box-shadow-light);
+}
+
+.network-card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+/* 磁盘卡片样式 */
+.disk-container {
+  padding: 10px 0;
+}
+
+.disk-card {
+  transition: all 0.3s;
+}
+
+.disk-card:hover {
+  box-shadow: var(--el-box-shadow-light);
+}
+
+.disk-card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.disk-progress {
+  margin-top: 15px;
+}
+
+/* Raw Data 容器样式 */
+.raw-data-container {
+  padding: 10px 0;
 }
 
 .credential-option {

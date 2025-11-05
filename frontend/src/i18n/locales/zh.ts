@@ -1404,7 +1404,68 @@ export default {
       batchCollectCredentialRequired: '以下主机未绑定凭证，请先绑定凭证后再进行采集：{hostNames}',
       confirmBatchCollect: '确认批量采集',
       batchCollectPartial: '只有 {count} 台主机已绑定凭证，是否只采集这些主机？',
-      noValidHostsForCollect: '没有可采集的主机（所有主机都未绑定凭证）'
+      noValidHostsForCollect: '没有可采集的主机（所有主机都未绑定凭证）',
+      loadDetailsFailed: '加载主机详情失败，显示基础信息'
+    },
+    detail: {
+      network: {
+        interface: '接口',
+        deviceName: '设备名称',
+        deviceId: '设备ID',
+        macAddress: 'MAC地址',
+        ipAddress: 'IP地址',
+        connectionStatus: '连接状态',
+        connected: '已连接',
+        disconnected: '未连接',
+        networkName: '网络名称',
+        network: '网络',
+        addressType: '地址类型',
+        portgroup: '端口组',
+        wakeOnLan: 'Wake-on-LAN',
+        enabled: '启用',
+        disabled: '禁用',
+        interfaceType: '接口类型',
+        speed: '速度',
+        state: '状态',
+        noData: '暂无网络接口信息'
+      },
+      disk: {
+        disk: '磁盘',
+        deviceName: '设备名称',
+        mountPoint: '挂载点',
+        capacity: '容量',
+        capacityKB: '容量(KB)',
+        freeSpace: '可用空间',
+        usedSpace: '已用空间',
+        usageRate: '使用率',
+        fileSystem: '文件系统',
+        volumeName: '卷名',
+        diskMode: '磁盘模式',
+        thinProvisioned: '精简配置',
+        yes: '是',
+        no: '否',
+        eagerlyScrub: '快速擦除',
+        uuid: 'UUID',
+        fileName: '文件名',
+        datastore: '数据存储',
+        deviceType: '设备类型',
+        vendor: '厂商',
+        model: '型号',
+        noData: '暂无磁盘信息'
+      },
+      raw: {
+        noData: '暂无原始数据'
+      }
+    },
+    driveTypes: {
+      unknown: '未知',
+      noRoot: '无根目录',
+      removable: '可移动磁盘',
+      fixed: '本地磁盘',
+      network: '网络驱动器',
+      cdrom: 'CD-ROM',
+      ram: 'RAM磁盘',
+      type: '类型'
     }
   },
   collection: {
