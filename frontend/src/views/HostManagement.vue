@@ -99,28 +99,28 @@
           @selection-change="handleSelectionChange"
         >
           <el-table-column type="selection" width="55" :selectable="isSelectable" />
-          <el-table-column prop="ip.ip_address" :label="$t('hostInfo.ip')" min-width="120">
+          <el-table-column prop="ip.ip_address" :label="$t('hostInfo.ip')" min-width="60">
             <template #default="{ row }">
               {{ row.parent_host_id ? '-' : row.ip?.ip_address }}
             </template>
           </el-table-column>
           <el-table-column prop="hostname" :label="$t('hostInfo.hostname')" min-width="150">
             <template #default="{ row }">
-              {{ row.raw_data?.vmware_info?.vm_name || row.hostname || '-' }}
+              {{ row.hostname || '-' }}
             </template>
           </el-table-column>
-          <el-table-column prop="ip.host_type" :label="$t('hostInfo.hostType')" width="120">
+          <el-table-column prop="ip.host_type" :label="$t('hostInfo.hostType')" width="190" align="center">
             <template #default="{ row }">
-              <el-tag v-if="row.ip?.host_type" :type="getHostTypeTagType(row.ip.host_type)">
-                {{ $t(`hostInfo.types.${row.ip.host_type}`) }}
+              <el-tag v-if="row.host_type" :type="getHostTypeTagType(row.host_type)">
+                {{ $t(`hostInfo.types.${row.host_type}`) }}
               </el-tag>
               <span v-else>-</span>
             </template>
           </el-table-column>
-          <el-table-column prop="ip.os_type" :label="$t('hostInfo.osType')" width="120">
+          <el-table-column prop="ip.os_type" :label="$t('hostInfo.osType')" width="120" align="center">
             <template #default="{ row }">
               <el-tag v-if="row.ip?.os_type" type="info">
-                {{ row.ip.os_type }}
+                {{ row.parent_host_id ? 'N/A' : (row.ip.os_type || 'N/A') }}
               </el-tag>
               <span v-else>-</span>
             </template>
@@ -130,7 +130,7 @@
               {{ row.os_name || '-' }}
             </template>
           </el-table-column>
-          <el-table-column prop="collection_status" :label="$t('hostInfo.collectionStatus')" width="120">
+          <el-table-column prop="collection_status" :label="$t('hostInfo.collectionStatus')" width="160" align="center">
             <template #default="{ row }">
               <el-tag :type="getStatusTagType(row.collection_status)">
                 {{ $t(`hostInfo.status.${row.collection_status}`) }}
@@ -235,8 +235,8 @@
       :title="selectedHost?.ip?.ip_address || ''"
       size="50%"
     >
-      <div v-if="selectedHost" class="host-detail">
-        <el-tabs>
+      <div v-if="selectedHost" class="host-detail" v-loading="detailLoading" element-loading-text="加载中...">
+        <el-tabs @tab-change="handleDetailTabChange">
           <el-tab-pane :label="$t('hostInfo.tabs.basic')">
             <el-descriptions :column="2" border>
               <el-descriptions-item :label="$t('hostInfo.ip')">
@@ -394,6 +394,8 @@ const detailDrawerVisible = ref(false);
 const exportDialogVisible = ref(false);
 const bindCredentialDialogVisible = ref(false);
 const selectedHost = ref<HostInfo | null>(null);
+const detailLoading = ref(false);
+const hostDetailLoaded = ref(false); // 标记是否已加载完整详情
 const currentBindingHost = ref<{id: string, ip: string, host_type?: string, os_type?: string, credential_bindings?: any[]} | null>(null);
 
 // 批量绑定相关
@@ -840,9 +842,40 @@ const handleBatchExport = () => {
   exportDialogVisible.value = true;
 };
 
-const handleViewDetails = (host: HostInfo) => {
+const handleViewDetails = async (host: HostInfo) => {
+  // 先设置基础信息，立即显示抽屉
   selectedHost.value = host;
   detailDrawerVisible.value = true;
+  hostDetailLoaded.value = false;
+  
+  // 热加载完整详情数据
+  detailLoading.value = true;
+  try {
+    const fullHostData = await hostInfoStore.fetchHostById(host.id);
+    if (fullHostData) {
+      // 合并完整数据到selectedHost
+      selectedHost.value = { ...host, ...fullHostData };
+      hostDetailLoaded.value = true;
+    }
+  } catch (error) {
+    console.error('Failed to load host details:', error);
+    ElMessage.warning(t('hostInfo.messages.loadDetailsFailed', '加载主机详情失败，显示基础信息'));
+  } finally {
+    detailLoading.value = false;
+  }
+};
+
+// 处理详情标签页切换（备用：如果数据加载失败，切换标签时可以重新尝试加载）
+const handleDetailTabChange = (tabName: string | number) => {
+  // 如果详情数据还未加载完成，切换到需要详细数据的标签页时，可以重新尝试加载
+  if (!hostDetailLoaded.value && selectedHost.value && typeof tabName === 'number') {
+    // 索引2、3、4分别对应network、disk、raw标签页（需要详细数据）
+    const detailTabIndices = [2, 3, 4];
+    if (detailTabIndices.includes(tabName)) {
+      // 重新尝试加载完整数据
+      handleViewDetails(selectedHost.value);
+    }
+  }
 };
 
 const handleBindCredential = (host: HostInfo) => {

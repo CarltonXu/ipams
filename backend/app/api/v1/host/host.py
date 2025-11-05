@@ -109,7 +109,6 @@ def get_hosts(current_user):
         hosts_list = hosts_query.offset(offset).limit(limit).all()
         perf_log['main_query'] = round((time.time() - query_start) * 1000, 2)  # 毫秒
         
-        # 批量加载凭证绑定信息（优化：使用eager loading避免N+1查询）
         host_ids = [h.id for h in hosts_list]
         bindings_map = {}
         if host_ids:
@@ -123,7 +122,6 @@ def get_hosts(current_user):
             for binding in bindings:
                 if binding.host_id not in bindings_map:
                     bindings_map[binding.host_id] = []
-                # 简化to_dict，只返回必要字段
                 bindings_map[binding.host_id].append({
                     'id': binding.id,
                     'host_id': binding.host_id,
@@ -137,12 +135,9 @@ def get_hosts(current_user):
                     } if binding.credential else None
                 })
         
-        # 构建返回数据（支持树形结构）
-        # 优化：批量加载子主机，避免递归查询中的N+1问题
         child_hosts_map = {}
         if host_ids:
             child_start = time.time()
-            # 一次性加载所有子主机
             child_hosts = HostInfo.query.filter(
                 HostInfo.parent_host_id.in_(host_ids),
                 HostInfo.deleted == False
@@ -153,11 +148,9 @@ def get_hosts(current_user):
                     child_hosts_map[child.parent_host_id] = []
                 child_hosts_map[child.parent_host_id].append(child)
         
-        # 优化序列化：手动构建字典，避免嵌套的to_dict调用
         serialize_start = time.time()
         hosts_data = []
         for host in hosts_list:
-            # 手动构建host_dict，避免多次to_dict调用
             host_dict = {
                 'id': host.id,
                 'ip_id': host.ip_id,
@@ -175,7 +168,6 @@ def get_hosts(current_user):
                 'updated_at': host.updated_at.isoformat() if host.updated_at else None,
             }
             
-            # 添加IP信息（简化版，避免嵌套to_dict）
             if host.ip:
                 host_dict['ip'] = {
                     'id': host.ip.id,
@@ -189,15 +181,17 @@ def get_hosts(current_user):
             else:
                 host_dict['ip'] = None
             
-            # 手动添加子主机数据（简化版）
             if host.id in child_hosts_map:
                 host_dict['child_hosts'] = [
                     {
                         'id': child.id,
                         'ip_id': child.ip_id,
+                        'parent_host_id': child.parent_host_id,
                         'host_type': child.host_type,
                         'hostname': child.hostname,
+                        'os_name': child.os_name,
                         'collection_status': child.collection_status,
+                        'last_collected_at': child.last_collected_at.isoformat() if child.last_collected_at else None,
                         'ip': {
                             'id': child.ip.id,
                             'ip_address': child.ip.ip_address,
