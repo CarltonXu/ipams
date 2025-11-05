@@ -8,6 +8,7 @@ export interface IP {
   manufacturer: string;
   model: string;
   os_type: string;
+  host_type?: string;
   purpose: string;
   location: string;
   last_scanned: string;

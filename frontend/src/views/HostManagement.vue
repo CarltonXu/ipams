@@ -103,10 +103,18 @@
               {{ row.raw_data?.vmware_info?.vm_name || row.hostname || '-' }}
             </template>
           </el-table-column>
-          <el-table-column prop="host_type" :label="$t('hostInfo.hostType')" width="120">
+          <el-table-column prop="ip.host_type" :label="$t('hostInfo.hostType')" width="120">
             <template #default="{ row }">
-              <el-tag v-if="row.host_type" :type="getHostTypeTagType(row.host_type)">
-                {{ $t(`hostInfo.types.${row.host_type}`) }}
+              <el-tag v-if="row.ip?.host_type" :type="getHostTypeTagType(row.ip.host_type)">
+                {{ $t(`hostInfo.types.${row.ip.host_type}`) }}
+              </el-tag>
+              <span v-else>-</span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="ip.os_type" :label="$t('hostInfo.osType')" width="120">
+            <template #default="{ row }">
+              <el-tag v-if="row.ip?.os_type" type="info">
+                {{ row.ip.os_type }}
               </el-tag>
               <span v-else>-</span>
             </template>
@@ -295,6 +303,8 @@
       v-model="bindCredentialDialogVisible"
       :host-id="currentBindingHost?.id || ''"
       :host-ip="currentBindingHost?.ip || ''"
+      :host-type="currentBindingHost?.host_type"
+      :os-type="currentBindingHost?.os_type"
       :current-bindings="currentBindingHost?.credential_bindings || []"
       @bindSuccess="handleBindSuccess"
     />
@@ -378,7 +388,7 @@ const detailDrawerVisible = ref(false);
 const exportDialogVisible = ref(false);
 const bindCredentialDialogVisible = ref(false);
 const selectedHost = ref<HostInfo | null>(null);
-const currentBindingHost = ref<{id: string, ip: string} | null>(null);
+const currentBindingHost = ref<{id: string, ip: string, host_type?: string, os_type?: string, credential_bindings?: any[]} | null>(null);
 
 // 批量绑定相关
 const batchBindDialogVisible = ref(false);
@@ -815,6 +825,8 @@ const handleBindCredential = (host: HostInfo) => {
   currentBindingHost.value = {
     id: host.id,
     ip: host.ip?.ip_address || '',
+    host_type: host.ip?.host_type,
+    os_type: host.ip?.os_type,
     credential_bindings: host.credential_bindings || []
   };
   bindCredentialDialogVisible.value = true;

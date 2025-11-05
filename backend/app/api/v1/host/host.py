@@ -271,6 +271,28 @@ def bind_credential(current_user, host_id):
         if not credential:
             return jsonify({'error': 'Credential not found'}), 404
         
+        # 根据IP的host_type和os_type验证凭证类型
+        ip = host.ip
+        if ip:
+            ip_host_type = ip.host_type
+            ip_os_type = ip.os_type
+            
+            # 验证规则
+            if ip_host_type == 'vmware':
+                if credential.credential_type != 'vmware':
+                    return jsonify({
+                        'error': f'VMware hosts can only bind vmware credentials. Selected credential type: {credential.credential_type}'
+                    }), 400
+            elif ip_host_type in ['physical', 'other_virtualization']:
+                if ip_os_type == 'Linux' and credential.credential_type != 'linux':
+                    return jsonify({
+                        'error': f'Linux hosts can only bind linux credentials. Selected credential type: {credential.credential_type}'
+                    }), 400
+                elif ip_os_type == 'Windows' and credential.credential_type != 'windows':
+                    return jsonify({
+                        'error': f'Windows hosts can only bind windows credentials. Selected credential type: {credential.credential_type}'
+                    }), 400
+        
         # 检查是否已经绑定
         existing_binding = HostCredentialBinding.query.filter_by(
             host_id=host_id,
@@ -454,6 +476,28 @@ def batch_bind_credentials(current_user):
                     errors.append(f"Host {host_id}: permission denied")
                     skipped_count += 1
                     continue
+                
+                # 根据IP的host_type和os_type验证凭证类型
+                ip = host.ip
+                if ip:
+                    ip_host_type = ip.host_type
+                    ip_os_type = ip.os_type
+                    
+                    # 验证规则
+                    if ip_host_type == 'vmware':
+                        if credential.credential_type != 'vmware':
+                            errors.append(f"Host {host_id}: VMware hosts can only bind vmware credentials. Selected credential type: {credential.credential_type}")
+                            skipped_count += 1
+                            continue
+                    elif ip_host_type in ['physical', 'other_virtualization']:
+                        if ip_os_type == 'Linux' and credential.credential_type != 'linux':
+                            errors.append(f"Host {host_id}: Linux hosts can only bind linux credentials. Selected credential type: {credential.credential_type}")
+                            skipped_count += 1
+                            continue
+                        elif ip_os_type == 'Windows' and credential.credential_type != 'windows':
+                            errors.append(f"Host {host_id}: Windows hosts can only bind windows credentials. Selected credential type: {credential.credential_type}")
+                            skipped_count += 1
+                            continue
                 
                 # 检查是否已经绑定
                 existing = HostCredentialBinding.query.filter_by(

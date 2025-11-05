@@ -203,14 +203,24 @@ class CollectorManager:
                 else:
                     return {'success': False, 'error': 'No credential available'}
             
-            # 检查凭证类型，判断是否为VMware
+            # 根据IP的host_type判断采集方式（优先使用IP的host_type，如果没有则使用HostInfo的host_type或凭证类型）
+            ip_host_type = None
+            if host_info.ip:
+                ip_host_type = host_info.ip.host_type
+            
             credential_type = None
             if custom_credential:
                 credential_type = custom_credential.get('credential_type')
             elif credential_obj:
                 credential_type = credential_obj.credential_type
             
-            is_vmware = host_info.host_type == 'vmware' or credential_type == 'vmware'
+            # 优先使用IP的host_type，如果没有则回退到HostInfo的host_type或凭证类型
+            is_vmware = False
+            if ip_host_type:
+                is_vmware = ip_host_type == 'vmware'
+            else:
+                # 回退逻辑：使用HostInfo的host_type或凭证类型
+                is_vmware = host_info.host_type == 'vmware' or credential_type == 'vmware'
             
             if is_vmware and progress_callback:
                 # 对于VMware，使用带进度回调的采集

@@ -126,7 +126,7 @@ export default {
   menu: {
     home: 'Home',
     ipManagement: 'IP Management', // Keep old key for compatibility
-    ipAddressManagement: 'IP Address Management',
+    ipAddressManagement: 'IP Management',
     credentials: 'Credentials',
     hostInfo: 'Host Information', // Keep old key for compatibility
     hostManagement: 'Host Management', // Keep old key for compatibility
@@ -298,7 +298,7 @@ export default {
     en: 'English',
   },
   ip: {
-    title: 'IP Address Management',
+    title: 'IP Management',
     subtitle: 'Easily manage your IP addresses with filters and search functionality',
     status: {
       all: 'All Status',
@@ -356,6 +356,13 @@ export default {
         selectUser: 'Select a user',
         deviceName: 'Device Name',
         deviceNamePlaceholder: 'Enter your device name, Like (e.g., Nginx, Other)',
+        hostType: 'Host Type',
+        hostTypeTip: 'Select host type (Physical, VMware, etc.)',
+        hostTypeOptions: {
+          physical: 'Physical',
+          vmware: 'VMware',
+          other: 'Other Virtualization'
+        },
         osType: 'OS Type',
         osTypeTip: 'Select the operating system running on this device (e.g., Linux, Windows, Other)',
         deviceType: 'Device Type',
@@ -1195,6 +1202,7 @@ export default {
     ip: 'IP Address',
     hostname: 'Hostname',
     hostType: 'Host Type',
+    osType: 'OS Type',
     osName: 'Operating System',
     osVersion: 'Version',
     kernel: 'Kernel',
@@ -1249,7 +1257,8 @@ export default {
       currentCredential: 'Current Credential',
       changeCredential: 'Change Credential',
       selectNewCredential: 'Select New Credential',
-      sameCredential: 'Selected credential is the same as the current one'
+      sameCredential: 'Selected credential is the same as the current one',
+      noMatchingCredential: 'No matching credentials (check host type and OS type)'
     },
     collectionTask: {
       taskId: 'Task ID',

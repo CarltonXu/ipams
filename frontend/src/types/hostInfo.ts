@@ -34,6 +34,7 @@ export interface HostInfo {
     status: string;
     device_name?: string;
     os_type?: string;
+    host_type?: string;
   };
   child_hosts?: HostInfo[];  // 子主机列表（树形结构）
   credential_bindings?: HostInfoBinding[];  // 绑定的凭证

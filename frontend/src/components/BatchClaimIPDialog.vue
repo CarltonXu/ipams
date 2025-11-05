@@ -24,6 +24,13 @@
               />
             </el-select>
           </el-form-item>
+          <el-form-item :label="$t('ip.dialog.claim.hostType')">
+            <el-select v-model="commonForm.host_type" clearable>
+              <el-option :label="$t('ip.dialog.claim.hostTypeOptions.physical')" value="physical" />
+              <el-option :label="$t('ip.dialog.claim.hostTypeOptions.vmware')" value="vmware" />
+              <el-option :label="$t('ip.dialog.claim.hostTypeOptions.other')" value="other_virtualization" />
+            </el-select>
+          </el-form-item>
           <el-form-item :label="$t('ip.dialog.claim.osType')">
             <el-select v-model="commonForm.os_type" clearable>
               <el-option label="Windows" value="Windows" />
@@ -88,6 +95,15 @@
                   :label="user.username"
                   :value="user.id"
                 />
+              </el-select>
+            </template>
+          </el-table-column>
+          <el-table-column :label="$t('ip.dialog.claim.hostType')" width="150">
+            <template #default="{ row }">
+              <el-select v-model="row.host_type" style="width: 100%">
+                <el-option :label="$t('ip.dialog.claim.hostTypeOptions.physical')" value="physical" />
+                <el-option :label="$t('ip.dialog.claim.hostTypeOptions.vmware')" value="vmware" />
+                <el-option :label="$t('ip.dialog.claim.hostTypeOptions.other')" value="other_virtualization" />
               </el-select>
             </template>
           </el-table-column>
@@ -161,6 +177,7 @@ interface IPConfig {
   ip_address: string;
   device_name: string;
   os_type: string;
+  host_type: string;
   device_type: string;
   manufacturer: string;
   model: string;
@@ -187,6 +204,7 @@ const users = computed(() => userStore.users);
 // 公共配置表单
 const commonForm = ref({
   os_type: 'Linux',
+  host_type: 'physical',
   device_type: 'Server',
   manufacturer: 'VMware',
   model: 'PowerEdge R730',
@@ -206,6 +224,7 @@ watch(() => props.ips, (newIPs) => {
     ip_address: ip.ip_address,
     device_name: '',
     os_type: 'Other',
+    host_type: '',
     device_type: 'Other',
     manufacturer: 'Other',
     model: 'Other',
@@ -219,6 +238,7 @@ const applyCommonConfig = () => {
   ipConfigs.value = ipConfigs.value.map(config => ({
     ...config,
     os_type: commonForm.value.os_type || config.os_type,
+    host_type: commonForm.value.host_type || config.host_type,
     device_type: commonForm.value.device_type || config.device_type,
     manufacturer: commonForm.value.manufacturer || config.manufacturer,
     model: commonForm.value.model || config.model,

@@ -28,6 +28,7 @@ const form = ref({
   ip_address: '',
   status: '',
   os_type: '',
+  host_type: '',
   device_name: '',
   device_type: '',
   manufacturer: '',
@@ -38,6 +39,11 @@ const form = ref({
 
 // 下拉选项
 const osOptions = ['Linux', 'Windows', 'Other'];
+const hostTypeOptions = [
+  { label: 'Physical', value: 'physical' },
+  { label: 'VMware', value: 'vmware' },
+  { label: 'Other Virtualization', value: 'other_virtualization' }
+];
 const deviceTypeOptions = ['Router', 'Switch', 'Storage', 'Server', 'Other'];
 const manufacturerOptions = ['VMware', 'OpenStack', 'Physical', 'Other'];
 const modelOptions = ['PowerEdge R730', 'DELL R720', 'Other'];
@@ -55,6 +61,7 @@ const initForm = (ip: IP) => {
     ip_address: ip.ip_address || 'Unknown',
     status: ip.status || '',
     os_type: ip.os_type || 'Other',
+    host_type: ip.host_type || '',
     device_name: ip.device_name || '',
     device_type: ip.device_type || 'Other',
     manufacturer: ip.manufacturer || 'Other',
@@ -86,6 +93,7 @@ const handleClaim = async () => {
     const store = useIPStore();
     await store.claimIP(props.ip.id, {
       os_type: form.value.os_type,
+      host_type: form.value.host_type,
       device_name: form.value.device_name,
       device_type: form.value.device_type,
       manufacturer: form.value.manufacturer,
@@ -178,6 +186,18 @@ watch(
             v-model="form.device_name" 
             :placeholder="$t('ip.dialog.claim.deviceNamePlaceholder')" 
           />
+        </el-form-item>
+        <el-form-item :label="$t('ip.dialog.claim.hostType')" required>
+          <el-tooltip :content="$t('ip.dialog.claim.hostTypeTip')" placement="top">
+            <el-select v-model="form.host_type" :placeholder="$t('ip.dialog.claim.hostType')">
+              <el-option 
+                v-for="option in hostTypeOptions" 
+                :key="option.value" 
+                :label="option.label" 
+                :value="option.value" 
+              />
+            </el-select>
+          </el-tooltip>
         </el-form-item>
         <el-form-item :label="$t('ip.dialog.claim.osType')" required>
           <el-tooltip :content="$t('ip.dialog.claim.osTypeTip')" placement="top">

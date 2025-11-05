@@ -143,6 +143,7 @@ export const useIPStore = defineStore('ip', {
       device_name: string;
       purpose: string;
       os_type: string;
+      host_type?: string;
       device_type: string;
       manufacturer: string;
       model: string;
@@ -154,6 +155,7 @@ export const useIPStore = defineStore('ip', {
             device_name: config.device_name,
             purpose: config.purpose,
             os_type: config.os_type,
+            host_type: config.host_type,
             device_type: config.device_type,
             manufacturer: config.manufacturer,
             model: config.model,

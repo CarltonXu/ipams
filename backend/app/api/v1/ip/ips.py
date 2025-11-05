@@ -112,6 +112,8 @@ def claim_ip(current_user, ip_id):
     ip.device_type = data.get('device_type')
     ip.manufacturer = data.get('manufacturer')
     ip.model = data.get('model')
+    ip.os_type = data.get('os_type', 'Other')
+    ip.host_type = data.get('host_type')
     ip.purpose = data.get('purpose')
     ip.status = 'active'
 
@@ -171,6 +173,8 @@ def update_ip(current_user, ip_id):
         ip.device_type = data['device_type']
     if 'os_type' in data:
         ip.os_type = data['os_type']
+    if 'host_type' in data:
+        ip.host_type = data['host_type']
     if 'manufacturer' in data:
         ip.manufacturer = data.get('manufacturer', ip.manufacturer)
     if 'model' in data:

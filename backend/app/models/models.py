@@ -61,6 +61,7 @@ class IP(db.Model):
     manufacturer = db.Column(db.String(100))
     model = db.Column(db.String(100))
     os_type = db.Column(db.Enum('Linux', 'Windows', 'Other', name='os_type_enum'), nullable=False, default='Other')
+    host_type = db.Column(db.String(20), nullable=True)  # physical, vmware, other_virtualization
     purpose = db.Column(db.Text)
     location = db.Column(db.String(255))
     last_scanned = db.Column(db.DateTime, default=datetime.utcnow)
@@ -80,6 +81,7 @@ class IP(db.Model):
             'manufacturer': self.manufacturer or '',
             'model': self.model or '',
             'os_type': self.os_type,
+            'host_type': self.host_type,
             'purpose': self.purpose or '',
             'location': self.location or '',
             'last_scanned': self.last_scanned.isoformat() if self.last_scanned else None,

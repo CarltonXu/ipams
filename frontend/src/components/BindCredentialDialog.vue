@@ -11,6 +11,8 @@ interface Props {
   modelValue: boolean;
   hostId: string;
   hostIp: string;
+  hostType?: string;  // IP的host_type
+  osType?: string;    // IP的os_type
   currentBindings?: any[];  // 当前已绑定的凭证
 }
 
@@ -34,7 +36,25 @@ const currentBinding = computed(() => {
 });
 
 const availableCredentials = computed(() => {
-  return credentialStore.credentials.filter(c => !(c as any).deleted);
+  let credentials = credentialStore.credentials.filter(c => !(c as any).deleted);
+  
+  // 根据host_type和os_type过滤凭证
+  if (props.hostType && props.osType) {
+    if (props.hostType === 'vmware') {
+      // VMware主机只能绑定vmware凭证
+      credentials = credentials.filter(c => c.credential_type === 'vmware');
+    } else if (props.hostType === 'physical' || props.hostType === 'other_virtualization') {
+      // 物理机或其他虚拟化主机根据OS类型过滤
+      if (props.osType === 'Linux') {
+        credentials = credentials.filter(c => c.credential_type === 'linux');
+      } else if (props.osType === 'Windows') {
+        credentials = credentials.filter(c => c.credential_type === 'windows');
+      }
+      // 如果osType是Other，不限制凭证类型
+    }
+  }
+  
+  return credentials;
 });
 
 const getTypeTagType = (type: any): string => {
@@ -166,7 +186,12 @@ const handleClose = () => {
       </el-form>
 
       <div v-if="availableCredentials.length === 0" class="no-credentials">
-        <el-empty :description="$t('credential.messages.noCredentials')" />
+        <el-alert
+          :title="$t('hostInfo.credentialInfo.noMatchingCredential', '没有匹配的凭证（请检查主机类型和操作系统类型）')"
+          type="warning"
+          :closable="false"
+          show-icon
+        />
       </div>
     </div>
 

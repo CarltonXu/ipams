@@ -356,6 +356,13 @@ export default {
         selectUser: '选择用户',
         deviceName: '设备名称',
         deviceNamePlaceholder: '输入设备名称，如(Nginx, Other)',
+        hostType: '主机类型',
+        hostTypeTip: '选择主机类型（物理机、VMware虚拟化等）',
+        hostTypeOptions: {
+          physical: '物理机',
+          vmware: 'VMware',
+          other: '其他虚拟化'
+        },
         osType: '操作系统',
         osTypeTip: '选择设备运行的操作系统(如Linux, Windows, Other)',
         deviceType: '设备类型',
@@ -1274,6 +1281,7 @@ export default {
     ip: 'IP地址',
     hostname: '主机名',
     hostType: '主机类型',
+    osType: '操作系统类型',
     osName: '操作系统',
     osVersion: '版本',
     kernel: '内核',
@@ -1328,7 +1336,8 @@ export default {
       currentCredential: '当前绑定的凭证',
       changeCredential: '更换凭证',
       selectNewCredential: '选择新的凭证',
-      sameCredential: '选择的凭证与当前绑定的凭证相同'
+      sameCredential: '选择的凭证与当前绑定的凭证相同',
+      noMatchingCredential: '没有匹配的凭证（请检查主机类型和操作系统类型）'
     },
     collectionTask: {
       taskId: '任务ID',
